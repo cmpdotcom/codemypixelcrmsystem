@@ -52,7 +52,9 @@ import {
   Database,
   Check,
   CheckCircle2,
+  LogOut,
 } from "lucide-react";
+import { signOut, useSession } from "next-auth/react";
 
 // --- Data Definitions ---
 
@@ -565,6 +567,11 @@ const Sidebar = () => {
 
 // Header Bar
 const Header = () => {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const { data: session } = useSession();
+  const userName = session?.user?.name ?? "Ahmed Raza";
+  const userEmail = session?.user?.email ?? "admin@nexacrm.com";
+
   return (
     <header className="sticky top-0 z-20 bg-[#f4f7fc]/80 backdrop-blur-xl px-8 py-3.5 flex items-center justify-between">
       {/* Search Input */}
@@ -595,16 +602,63 @@ const Header = () => {
           <Grid className="h-4 w-4" />
         </button>
 
-        <div className="flex items-center gap-2.5 pl-2 cursor-pointer">
-          <img
-            className="h-9 w-9 rounded-full border border-white shadow-sm object-cover"
-            src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80"
-            alt="Ahmed Raza"
-          />
-          <div className="hidden sm:block text-left leading-tight">
-            <p className="text-xs font-bold text-slate-900">Ahmed Raza</p>
-            <p className="text-[10px] text-slate-400 font-medium">Admin</p>
-          </div>
+        <div className="relative">
+          <button
+            onClick={() => setMenuOpen(!menuOpen)}
+            className="flex items-center gap-2.5 pl-2 cursor-pointer rounded-lg hover:bg-white/60 transition-colors py-1 pr-2"
+          >
+            <img
+              className="h-9 w-9 rounded-full border border-white shadow-sm object-cover"
+              src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80"
+              alt={userName}
+            />
+            <div className="hidden sm:block text-left leading-tight">
+              <p className="text-xs font-bold text-slate-900">{userName}</p>
+              <p className="text-[10px] text-slate-400 font-medium">Admin</p>
+            </div>
+            <ChevronDown
+              className={`h-3.5 w-3.5 text-slate-400 transition-transform ${
+                menuOpen ? "rotate-180" : ""
+              }`}
+            />
+          </button>
+
+          {/* Dropdown Menu */}
+          {menuOpen && (
+            <>
+              {/* Click-away overlay */}
+              <div
+                className="fixed inset-0 z-30"
+                onClick={() => setMenuOpen(false)}
+              />
+              <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-xl border border-slate-200/80 shadow-lg shadow-slate-200/50 py-1.5 z-40 overflow-hidden">
+                {/* User info header */}
+                <div className="px-3.5 py-2.5 border-b border-slate-100">
+                  <p className="text-xs font-bold text-slate-900 truncate">
+                    {userName}
+                  </p>
+                  <p className="text-[10px] text-slate-400 truncate">
+                    {userEmail}
+                  </p>
+                </div>
+
+                {/* Settings */}
+                <button className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-xs font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors">
+                  <Settings className="h-3.5 w-3.5 text-slate-400" />
+                  <span>Settings</span>
+                </button>
+
+                {/* Log Out */}
+                <button
+                  onClick={() => signOut({ callbackUrl: "/login" })}
+                  className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-xs font-medium text-rose-600 hover:bg-rose-50 transition-colors"
+                >
+                  <LogOut className="h-3.5 w-3.5 text-rose-500" />
+                  <span>Log Out</span>
+                </button>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </header>
