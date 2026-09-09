@@ -93,7 +93,16 @@ export function Sidebar() {
     >
       {/* Brand Header - fixed, never scrolls */}
       <div className="h-16 shrink-0 bg-white border-b border-slate-200 px-5 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-2.5 group">
+        <Link
+          href="/"
+          onClick={(e) => {
+            if (collapsed) {
+              e.preventDefault();
+              setCollapsed(false);
+            }
+          }}
+          className="flex items-center gap-2.5 group"
+        >
           <Image
             src="/logo.png"
             alt="CMP CRM"
