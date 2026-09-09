@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
 import Link from "next/link";
 import {
   AreaChart,
@@ -411,6 +412,8 @@ const FunnelGraphic = () => {
 
 // Main Dashboard Component
 export default function Dashboard() {
+  const { data: session } = useSession();
+  const firstName = session?.user?.name?.split(" ")[0] ?? "User";
   const [mounted, setMounted] = useState(false);
   const [tasks, setTasks] = useState(todayTasks);
 
@@ -431,7 +434,7 @@ export default function Dashboard() {
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
             <div>
               <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-                Good Morning, Ahmed!{" "}
+                Good Morning, {firstName}!{" "}
                 <span className="text-2xl animate-wave">👋</span>
               </h2>
               <p className="text-xs text-slate-500 mt-1">
