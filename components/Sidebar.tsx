@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
@@ -86,12 +87,16 @@ export function Sidebar() {
       {/* Brand Header - fixed, never scrolls */}
       <div className="h-16 shrink-0 bg-white border-b border-slate-200 px-5 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2.5 group">
-          <div className="bg-gradient-to-tr from-blue-600 to-indigo-600 text-white rounded-xl flex items-center justify-center font-bold text-xl h-9 w-9 shadow-sm shadow-blue-500/20 group-hover:scale-105 transition-transform">
-            N
-          </div>
+          <Image
+            src="/logo.png"
+            alt="CMP CRM"
+            width={36}
+            height={36}
+            className="rounded-xl shadow-sm group-hover:scale-105 transition-transform"
+          />
           <div>
             <h1 className="text-lg font-bold tracking-tight text-slate-900 leading-none">
-              NexaCRM
+              CMP CRM
             </h1>
             <p className="text-[10px] text-slate-400 mt-1 font-medium tracking-wide">
               Sell. Deliver. Grow.

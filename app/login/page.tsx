@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import {
@@ -66,12 +67,16 @@ export default function LoginPage() {
       {/* Top Header */}
       <header className="relative z-10 max-w-7xl mx-auto w-full px-6 sm:px-10 py-6 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2.5 group">
-          <div className="bg-blue-600 text-white rounded-xl flex items-center justify-center font-bold text-xl h-9 w-9 shadow-sm shadow-blue-500/25 group-hover:scale-105 transition-transform">
-            N
-          </div>
+          <Image
+            src="/logo.png"
+            alt="CMP CRM"
+            width={36}
+            height={36}
+            className="rounded-xl shadow-sm group-hover:scale-105 transition-transform"
+          />
           <div>
             <h1 className="text-lg font-bold tracking-tight text-slate-900 leading-none">
-              NexaCRM
+              CMP CRM
             </h1>
             <p className="text-[10px] text-slate-400 mt-0.5 font-medium tracking-wide">
               Sell. Deliver. Grow.
@@ -184,7 +189,7 @@ export default function LoginPage() {
               <div className="relative rounded-2xl overflow-hidden shadow-[0_12px_30px_rgba(0,0,0,0.08)] border border-white/60 bg-white/40 backdrop-blur-xs group">
                 <img
                   src="/login_laptop_desk.jpg"
-                  alt="NexaCRM Dashboard on Laptop"
+                  alt="CMP CRM Dashboard on Laptop"
                   className="w-full h-48 object-cover object-center group-hover:scale-102 transition-transform duration-500"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-white/30 via-transparent to-transparent pointer-events-none" />
@@ -200,7 +205,7 @@ export default function LoginPage() {
                   Welcome Back!
                 </h3>
                 <p className="text-xs text-slate-400 mt-1">
-                  Login to your NexaCRM account
+                  Login to your CMP CRM account
                 </p>
               </div>
 
@@ -346,7 +351,7 @@ export default function LoginPage() {
 
               {/* Bottom Switcher */}
               <div className="text-center mt-6 text-xs text-slate-500">
-                <span>New to NexaCRM? </span>
+                <span>New to CMP CRM? </span>
                 <Link
                   href="/signup"
                   className="font-semibold text-blue-600 hover:text-blue-700 hover:underline"
@@ -362,7 +367,7 @@ export default function LoginPage() {
       {/* Bottom Footer */}
       <footer className="relative z-10 max-w-7xl mx-auto w-full px-6 sm:px-10 py-5 flex items-center justify-end">
         <div className="text-right">
-          <p className="text-xs font-bold text-slate-900 leading-none">NexaCRM</p>
+          <p className="text-xs font-bold text-slate-900 leading-none">CMP CRM</p>
           <p className="text-[10px] text-slate-400 font-medium">Sell. Deliver. Grow.</p>
         </div>
       </footer>

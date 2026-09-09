@@ -882,7 +882,7 @@ export default function ActivitiesPage() {
                     &ldquo;Every interaction is an opportunity to build a stronger relationship.&rdquo;
                   </p>
                   <p className="text-[10px] text-slate-400 mt-1 font-semibold">
-                    — NexaCRM
+                    — CMP CRM
                   </p>
                 </div>
               </div>

@@ -24,7 +24,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "NexaCRM - Sell. Deliver. Grow.",
+  title: "CMP CRM - Sell. Deliver. Grow.",
   description: "Modern CRM & Project Management System",
 };
 

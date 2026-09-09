@@ -1124,7 +1124,7 @@ export default function Dashboard() {
                     &ldquo;A better process leads to a brighter future.&rdquo;
                   </p>
                   <p className="text-[10px] text-slate-500 mt-0.5 font-medium">
-                    — Your CRM, Your Growth Partner
+                    — CMP CRM, Your Growth Partner
                   </p>
                 </div>
               </div>

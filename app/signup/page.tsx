@@ -2,6 +2,7 @@
 
 import React, { useState, useActionState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { signup } from "@/app/actions/auth";
 import { Turnstile } from "@/components/Turnstile";
@@ -52,12 +53,16 @@ export default function SignupPage() {
       {/* Top Header */}
       <header className="relative z-10 max-w-7xl mx-auto w-full px-6 sm:px-10 py-6 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2.5 group">
-          <div className="bg-blue-600 text-white rounded-xl flex items-center justify-center font-bold text-xl h-9 w-9 shadow-sm shadow-blue-500/25 group-hover:scale-105 transition-transform">
-            N
-          </div>
+          <Image
+            src="/logo.png"
+            alt="CMP CRM"
+            width={36}
+            height={36}
+            className="rounded-xl shadow-sm group-hover:scale-105 transition-transform"
+          />
           <div>
             <h1 className="text-lg font-bold tracking-tight text-slate-900 leading-none">
-              NexaCRM
+              CMP CRM
             </h1>
             <p className="text-[10px] text-slate-400 mt-0.5 font-medium tracking-wide">
               Sell. Deliver. Grow.
@@ -93,7 +98,7 @@ export default function SignupPage() {
                 <br />
                 Stronger Business
                 <br />
-                with <span className="text-blue-600">NexaCRM</span>
+                with <span className="text-blue-600">CMP CRM</span>
               </h2>
 
               {/* Subtitle */}
@@ -203,7 +208,7 @@ export default function SignupPage() {
                   Create Your Account
                 </h3>
                 <p className="text-xs text-slate-400 mt-1">
-                  Get started with NexaCRM today
+                  Get started with CMP CRM today
                 </p>
               </div>
 
@@ -436,7 +441,7 @@ export default function SignupPage() {
       {/* Bottom Footer */}
       <footer className="relative z-10 max-w-7xl mx-auto w-full px-6 sm:px-10 py-5 flex items-center justify-end">
         <div className="text-right">
-          <p className="text-xs font-bold text-slate-900 leading-none">NexaCRM</p>
+          <p className="text-xs font-bold text-slate-900 leading-none">CMP CRM</p>
           <p className="text-[10px] text-slate-400 font-medium">Sell. Deliver. Grow.</p>
         </div>
       </footer>
