@@ -82,8 +82,8 @@ export function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="w-60 bg-white border-r border-slate-200 flex flex-col h-screen sticky top-0 custom-scrollbar overflow-y-auto hidden lg:flex shrink-0 z-30">
-      {/* Brand Header - fixed height matching top header exactly */}
+    <aside className="w-60 bg-white border-r border-slate-200 flex flex-col h-screen shrink-0 hidden lg:flex z-30">
+      {/* Brand Header - fixed, never scrolls */}
       <div className="h-16 shrink-0 bg-white border-b border-slate-200 px-5 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2.5 group">
           <div className="bg-gradient-to-tr from-blue-600 to-indigo-600 text-white rounded-xl flex items-center justify-center font-bold text-xl h-9 w-9 shadow-sm shadow-blue-500/20 group-hover:scale-105 transition-transform">
@@ -103,8 +103,8 @@ export function Sidebar() {
         </button>
       </div>
 
-      {/* Navigation Sections */}
-      <div className="flex-1 px-3 py-3 space-y-5">
+      {/* Navigation Sections - only this part scrolls */}
+      <div className="flex-1 px-3 py-3 space-y-5 overflow-y-auto custom-scrollbar">
         {navSections.map((section, si) => (
           <div key={si}>
             {section.title && (
