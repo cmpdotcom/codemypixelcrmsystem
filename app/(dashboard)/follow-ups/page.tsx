@@ -1,31 +1,9 @@
 "use client";
 
 import React, { useState } from "react";
-import Link from "next/link";
 import {
-  LayoutDashboard,
-  Users,
-  Activity,
-  Briefcase,
-  Users2,
-  UserPlus,
-  FolderKanban,
   CheckSquare,
-  Flag,
-  Bug,
-  Rocket,
-  UserCheck,
-  Code,
-  BarChart2,
-  CreditCard,
-  DollarSign,
-  FileText,
-  Settings,
-  Link as LinkIcon,
-  Zap,
   Search,
-  Bell,
-  Grid,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -368,285 +346,9 @@ export default function FollowUpsPage() {
   });
 
   return (
-    <div className="flex h-screen bg-[#f8fafc] text-slate-900 font-sans antialiased overflow-hidden">
-      {/* 1. LEFT SIDEBAR */}
-      <aside className="w-60 bg-white border-r border-slate-100 flex flex-col justify-between shrink-0 select-none">
-        <div>
-          {/* Logo */}
-          <div className="h-16 flex items-center justify-between px-6 border-b border-slate-100">
-            <Link href="/" className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold text-lg shadow-md shadow-blue-500/20">
-                N
-              </div>
-              <div className="leading-tight">
-                <span className="font-extrabold text-base tracking-tight text-slate-900 block">
-                  NexaCRM
-                </span>
-                <span className="text-[10px] text-slate-400 font-medium tracking-normal block">
-                  Sell. Deliver. Grow.
-                </span>
-              </div>
-            </Link>
-            <button className="text-slate-400 hover:text-slate-600 cursor-pointer p-1">
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-          </div>
-
-          {/* Navigation Links */}
-          <div className="px-3 py-4 space-y-6 overflow-y-auto max-h-[calc(100vh-140px)] custom-scrollbar">
-            {/* Dashboard */}
-            <div>
-              <Link
-                href="/"
-                className="flex items-center gap-3 px-3 py-2 text-slate-600 hover:bg-slate-50 hover:text-slate-900 rounded-xl text-sm font-medium transition-colors group"
-              >
-                <LayoutDashboard className="w-4 h-4 text-slate-400 group-hover:text-slate-600" />
-                <span>Dashboard</span>
-              </Link>
-            </div>
-
-            {/* SALES */}
-            <div className="space-y-1">
-              <span className="text-[10px] font-bold text-slate-400 px-3 tracking-wider uppercase">
-                Sales
-              </span>
-              <Link
-                href="/leads"
-                className="flex items-center gap-3 px-3 py-2 text-slate-600 hover:bg-slate-50 hover:text-slate-900 rounded-xl text-sm font-medium transition-colors group"
-              >
-                <Users className="w-4 h-4 text-slate-400 group-hover:text-slate-600" />
-                <span>Leads</span>
-              </Link>
-              <Link
-                href="/activities"
-                className="flex items-center gap-3 px-3 py-2 text-slate-600 hover:bg-slate-50 hover:text-slate-900 rounded-xl text-sm font-medium transition-colors group"
-              >
-                <Activity className="w-4 h-4 text-slate-400 group-hover:text-slate-600" />
-                <span>Activities</span>
-              </Link>
-              <Link
-                href="/deals"
-                className="flex items-center gap-3 px-3 py-2 text-slate-600 hover:bg-slate-50 hover:text-slate-900 rounded-xl text-sm font-medium transition-colors group"
-              >
-                <Briefcase className="w-4 h-4 text-slate-400 group-hover:text-slate-600" />
-                <span>Deals</span>
-              </Link>
-              <Link
-                href="/clients"
-                className="flex items-center gap-3 px-3 py-2 text-slate-600 hover:bg-slate-50 hover:text-slate-900 rounded-xl text-sm font-medium transition-colors group"
-              >
-                <Users2 className="w-4 h-4 text-slate-400 group-hover:text-slate-600" />
-                <span>Clients</span>
-              </Link>
-              {/* Active Follow-ups Link */}
-              <Link
-                href="/follow-ups"
-                className="flex items-center gap-3 px-3 py-2 bg-blue-50/70 text-blue-600 rounded-xl text-sm font-semibold transition-colors border-l-4 border-blue-600 shadow-2xs"
-              >
-                <UserPlus className="w-4 h-4 text-blue-600" />
-                <span>Follow-ups</span>
-              </Link>
-            </div>
-
-            {/* DELIVERY */}
-            <div className="space-y-1">
-              <span className="text-[10px] font-bold text-slate-400 px-3 tracking-wider uppercase">
-                Delivery
-              </span>
-              <Link
-                href="#"
-                className="flex items-center gap-3 px-3 py-2 text-slate-600 hover:bg-slate-50 hover:text-slate-900 rounded-xl text-sm font-medium transition-colors group"
-              >
-                <FolderKanban className="w-4 h-4 text-slate-400 group-hover:text-slate-600" />
-                <span>Projects</span>
-              </Link>
-              <Link
-                href="#"
-                className="flex items-center gap-3 px-3 py-2 text-slate-600 hover:bg-slate-50 hover:text-slate-900 rounded-xl text-sm font-medium transition-colors group"
-              >
-                <CheckSquare className="w-4 h-4 text-slate-400 group-hover:text-slate-600" />
-                <span>Tasks</span>
-              </Link>
-              <Link
-                href="#"
-                className="flex items-center gap-3 px-3 py-2 text-slate-600 hover:bg-slate-50 hover:text-slate-900 rounded-xl text-sm font-medium transition-colors group"
-              >
-                <Flag className="w-4 h-4 text-slate-400 group-hover:text-slate-600" />
-                <span>Milestones</span>
-              </Link>
-              <Link
-                href="#"
-                className="flex items-center gap-3 px-3 py-2 text-slate-600 hover:bg-slate-50 hover:text-slate-900 rounded-xl text-sm font-medium transition-colors group"
-              >
-                <Bug className="w-4 h-4 text-slate-400 group-hover:text-slate-600" />
-                <span>Bugs / QA</span>
-              </Link>
-              <Link
-                href="#"
-                className="flex items-center gap-3 px-3 py-2 text-slate-600 hover:bg-slate-50 hover:text-slate-900 rounded-xl text-sm font-medium transition-colors group"
-              >
-                <Rocket className="w-4 h-4 text-slate-400 group-hover:text-slate-600" />
-                <span>Deployments</span>
-              </Link>
-            </div>
-
-            {/* TEAM */}
-            <div className="space-y-1">
-              <span className="text-[10px] font-bold text-slate-400 px-3 tracking-wider uppercase">
-                Team
-              </span>
-              <Link
-                href="#"
-                className="flex items-center gap-3 px-3 py-2 text-slate-600 hover:bg-slate-50 hover:text-slate-900 rounded-xl text-sm font-medium transition-colors group"
-              >
-                <UserCheck className="w-4 h-4 text-slate-400 group-hover:text-slate-600" />
-                <span>Setters</span>
-              </Link>
-              <Link
-                href="#"
-                className="flex items-center gap-3 px-3 py-2 text-slate-600 hover:bg-slate-50 hover:text-slate-900 rounded-xl text-sm font-medium transition-colors group"
-              >
-                <Users2 className="w-4 h-4 text-slate-400 group-hover:text-slate-600" />
-                <span>Closers</span>
-              </Link>
-              <Link
-                href="#"
-                className="flex items-center gap-3 px-3 py-2 text-slate-600 hover:bg-slate-50 hover:text-slate-900 rounded-xl text-sm font-medium transition-colors group"
-              >
-                <Code className="w-4 h-4 text-slate-400 group-hover:text-slate-600" />
-                <span>Developers</span>
-              </Link>
-              <Link
-                href="#"
-                className="flex items-center gap-3 px-3 py-2 text-slate-600 hover:bg-slate-50 hover:text-slate-900 rounded-xl text-sm font-medium transition-colors group"
-              >
-                <BarChart2 className="w-4 h-4 text-slate-400 group-hover:text-slate-600" />
-                <span>Performance</span>
-              </Link>
-            </div>
-
-            {/* FINANCE */}
-            <div className="space-y-1">
-              <span className="text-[10px] font-bold text-slate-400 px-3 tracking-wider uppercase">
-                Finance
-              </span>
-              <Link
-                href="#"
-                className="flex items-center gap-3 px-3 py-2 text-slate-600 hover:bg-slate-50 hover:text-slate-900 rounded-xl text-sm font-medium transition-colors group"
-              >
-                <CreditCard className="w-4 h-4 text-slate-400 group-hover:text-slate-600" />
-                <span>Payments</span>
-              </Link>
-              <Link
-                href="#"
-                className="flex items-center gap-3 px-3 py-2 text-slate-600 hover:bg-slate-50 hover:text-slate-900 rounded-xl text-sm font-medium transition-colors group"
-              >
-                <DollarSign className="w-4 h-4 text-slate-400 group-hover:text-slate-600" />
-                <span>Commissions</span>
-              </Link>
-              <Link
-                href="#"
-                className="flex items-center gap-3 px-3 py-2 text-slate-600 hover:bg-slate-50 hover:text-slate-900 rounded-xl text-sm font-medium transition-colors group"
-              >
-                <FileText className="w-4 h-4 text-slate-400 group-hover:text-slate-600" />
-                <span>Reports</span>
-              </Link>
-            </div>
-
-            {/* SYSTEM */}
-            <div className="space-y-1">
-              <span className="text-[10px] font-bold text-slate-400 px-3 tracking-wider uppercase">
-                System
-              </span>
-              <Link
-                href="#"
-                className="flex items-center gap-3 px-3 py-2 text-slate-600 hover:bg-slate-50 hover:text-slate-900 rounded-xl text-sm font-medium transition-colors group"
-              >
-                <Users className="w-4 h-4 text-slate-400 group-hover:text-slate-600" />
-                <span>Users</span>
-              </Link>
-              <Link
-                href="#"
-                className="flex items-center gap-3 px-3 py-2 text-slate-600 hover:bg-slate-50 hover:text-slate-900 rounded-xl text-sm font-medium transition-colors group"
-              >
-                <Settings className="w-4 h-4 text-slate-400 group-hover:text-slate-600" />
-                <span>Settings</span>
-              </Link>
-              <Link
-                href="#"
-                className="flex items-center gap-3 px-3 py-2 text-slate-600 hover:bg-slate-50 hover:text-slate-900 rounded-xl text-sm font-medium transition-colors group"
-              >
-                <LinkIcon className="w-4 h-4 text-slate-400 group-hover:text-slate-600" />
-                <span>Integrations</span>
-              </Link>
-            </div>
-          </div>
-        </div>
-
-        {/* Upgrade Card */}
-        <div className="p-3">
-          <div className="bg-gradient-to-br from-slate-50 to-blue-50/40 border border-slate-100 rounded-xl p-3 flex items-start gap-2.5">
-            <div className="p-1.5 bg-blue-600 text-white rounded-lg shadow-sm">
-              <Zap className="w-3.5 h-3.5 fill-current" />
-            </div>
-            <div>
-              <p className="text-xs font-bold text-slate-900">Upgrade to Pro</p>
-              <p className="text-[10px] text-slate-400 mt-0.5">
-                Get more features and grow faster.
-              </p>
-            </div>
-          </div>
-        </div>
-      </aside>
-
-      {/* 2. MAIN SCROLLABLE AREA */}
-      <main className="flex-1 flex flex-col min-w-0 overflow-y-auto">
-        {/* Top Header */}
-        <header className="h-16 bg-white border-b border-slate-100 flex items-center justify-between px-6 shrink-0 sticky top-0 z-20">
-          {/* Search Bar */}
-          <div className="w-96 relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-              <Search className="h-4 w-4" />
-            </div>
-            <input
-              type="text"
-              placeholder="Search leads, clients, deals, follow-ups..."
-              className="block w-full pl-9 pr-12 py-1.5 bg-slate-50 border border-slate-200/80 rounded-xl text-xs placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
-            />
-            <div className="absolute inset-y-0 right-0 pr-2.5 flex items-center pointer-events-none">
-              <kbd className="border border-slate-200 text-slate-400 text-[10px] font-semibold px-1.5 py-0.5 rounded bg-white shadow-2xs">
-                ⌘ K
-              </kbd>
-            </div>
-          </div>
-
-          {/* User Controls */}
-          <div className="flex items-center gap-3">
-            <button className="relative p-2 text-slate-500 hover:text-slate-700 bg-white rounded-full border border-slate-200/60 shadow-xs hover:shadow transition-all cursor-pointer">
-              <Bell className="h-4 w-4" />
-              <span className="absolute top-1.5 right-1.5 block h-2 w-2 rounded-full bg-rose-500 ring-2 ring-white" />
-            </button>
-
-            <button className="p-2 text-slate-500 hover:text-slate-700 bg-white rounded-full border border-slate-200/60 shadow-xs hover:shadow transition-all cursor-pointer">
-              <Grid className="h-4 w-4" />
-            </button>
-
-            <div className="flex items-center gap-2.5 pl-2 cursor-pointer">
-              <img
-                className="h-9 w-9 rounded-full border border-white shadow-xs object-cover"
-                src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80"
-                alt="Ahmed Raza"
-              />
-              <div className="hidden sm:block text-left leading-tight">
-                <p className="text-xs font-bold text-slate-900">Ahmed Raza</p>
-                <p className="text-[10px] text-slate-400 font-medium">Sales Manager</p>
-              </div>
-            </div>
-          </div>
-        </header>
-
-        {/* Content Body */}
-        <div className="p-4 sm:p-5 xl:p-6 max-w-[1780px] mx-auto w-full pb-12">
+    <>
+      {/* Content Body */}
+      <div className="p-4 sm:p-5 xl:p-6 max-w-[1780px] mx-auto w-full pb-12">
           {/* Main 2-Column Split Workspace */}
           <div className="flex flex-col xl:flex-row gap-5 items-start">
             {/* Left Column (flex-1 min-w-0): Header, KPIs, Tabs, Filters, Table */}
@@ -1338,8 +1040,7 @@ export default function FollowUpsPage() {
               </div>
             </div>
           </div>
-        </div>
-      </main>
+      </div>
 
       {/* Global Custom Scrollbar Styling */}
       <style
@@ -1362,6 +1063,6 @@ export default function FollowUpsPage() {
         `,
         }}
       />
-    </div>
+    </>
   );
 }
