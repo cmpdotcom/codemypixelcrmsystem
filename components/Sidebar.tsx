@@ -126,10 +126,10 @@ export function Sidebar() {
                   <Link
                     key={i}
                     href={item.href}
-                    className={`flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-colors group ${
+                    className={`flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-colors group border-l-[3px] ${
                       isActive
-                        ? "bg-blue-50 text-blue-600 shadow-sm shadow-blue-500/5"
-                        : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                        ? "bg-blue-50 text-blue-600 border-blue-600 shadow-sm shadow-blue-500/5"
+                        : "text-slate-600 hover:bg-slate-50 hover:text-slate-900 border-transparent"
                     }`}
                   >
                     <Icon
