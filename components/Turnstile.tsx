@@ -13,6 +13,7 @@ declare global {
           "expired-callback"?: () => void;
           "error-callback"?: () => void;
           theme?: "light" | "dark" | "auto";
+          appearance?: "always" | "execute" | "interaction-only";
         },
       ) => string;
       reset: (widgetId: string) => void;
@@ -32,6 +33,12 @@ export function Turnstile({ onVerify, onExpire, className }: TurnstileProps) {
   const widgetIdRef = useRef<string | null>(null);
   const id = useId();
 
+  // Store callbacks in refs so the effect doesn't re-run when they change.
+  const onVerifyRef = useRef(onVerify);
+  const onExpireRef = useRef(onExpire);
+  onVerifyRef.current = onVerify;
+  onExpireRef.current = onExpire;
+
   useEffect(() => {
     const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
     if (!siteKey) return;
@@ -41,9 +48,10 @@ export function Turnstile({ onVerify, onExpire, className }: TurnstileProps) {
         return;
       widgetIdRef.current = window.turnstile.render(containerRef.current, {
         sitekey: siteKey,
-        callback: onVerify,
-        "expired-callback": onExpire,
+        callback: (token: string) => onVerifyRef.current(token),
+        "expired-callback": () => onExpireRef.current?.(),
         theme: "light",
+        appearance: "always",
       });
     };
 
@@ -65,7 +73,7 @@ export function Turnstile({ onVerify, onExpire, className }: TurnstileProps) {
         widgetIdRef.current = null;
       }
     };
-  }, [onVerify, onExpire]);
+  }, []);
 
   return <div ref={containerRef} id={id} className={className} />;
 }
