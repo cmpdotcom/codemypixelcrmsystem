@@ -11,7 +11,7 @@ export function Header() {
   const userEmail = session?.user?.email ?? "admin@nexacrm.com";
 
   return (
-    <header className="sticky top-0 z-20 bg-[#f4f7fc]/80 backdrop-blur-xl px-8 py-3.5 flex items-center justify-between">
+    <header className="sticky top-0 z-20 h-16 bg-white border-b border-slate-100 px-8 flex items-center justify-between">
       {/* Search Input */}
       <div className="flex-1 max-w-md relative">
         <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
@@ -43,7 +43,7 @@ export function Header() {
         <div className="relative">
           <button
             onClick={() => setMenuOpen(!menuOpen)}
-            className="flex items-center gap-2.5 pl-2 cursor-pointer rounded-lg hover:bg-white/60 transition-colors py-1 pr-2"
+            className="flex items-center gap-2.5 pl-2 pr-2 py-1 cursor-pointer rounded-lg hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-100"
           >
             <img
               className="h-9 w-9 rounded-full border border-white shadow-sm object-cover"
