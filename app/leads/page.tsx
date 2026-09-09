@@ -592,7 +592,7 @@ export default function LeadsPage() {
               </Link>
 
               <Link
-                href="#"
+                href="/follow-ups"
                 className="flex items-center gap-3 px-3 py-2 text-slate-600 hover:bg-slate-50 hover:text-slate-900 rounded-xl text-sm font-medium transition-colors group"
               >
                 <UserPlus className="w-4 h-4 text-slate-400 group-hover:text-slate-600" />

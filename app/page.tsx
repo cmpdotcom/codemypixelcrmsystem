@@ -420,7 +420,7 @@ const Sidebar = () => {
               { icon: Activity, label: "Activities", href: "/activities" },
               { icon: Briefcase, label: "Deals", href: "/deals" },
               { icon: Users2, label: "Clients", href: "/clients" },
-              { icon: UserPlus, label: "Follow-ups", href: "#" },
+              { icon: UserPlus, label: "Follow-ups", href: "/follow-ups" },
             ].map((item, i) => {
               const Icon = item.icon;
               return (
