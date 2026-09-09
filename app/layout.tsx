@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Roboto, Geist_Mono } from "next/font/google";
 import { ReduxProvider } from "@/lib/store";
+import { NextAuthProvider } from "@/components/NextAuthProvider";
 import "./globals.css";
 
 const inter = Inter({
@@ -38,7 +39,9 @@ export default function RootLayout({
       className={`${inter.variable} ${roboto.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col font-sans">
-        <ReduxProvider>{children}</ReduxProvider>
+        <ReduxProvider>
+          <NextAuthProvider>{children}</NextAuthProvider>
+        </ReduxProvider>
       </body>
     </html>
   );

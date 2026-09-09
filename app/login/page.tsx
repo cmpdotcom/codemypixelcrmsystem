@@ -2,10 +2,8 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth } from "@/lib/firebase";
+import { signIn } from "next-auth/react";
 import {
   Mail,
   Lock,
@@ -33,12 +31,20 @@ export default function LoginPage() {
     setError(null);
     setLoading(true);
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      const res = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+      });
+      if (res?.error) {
+        setError("Invalid email or password.");
+        setLoading(false);
+        return;
+      }
       router.push("/");
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message.replace("Firebase: ", "") : "Login failed",
-      );
+      router.refresh();
+    } catch {
+      setError("Login failed. Please try again.");
       setLoading(false);
     }
   };

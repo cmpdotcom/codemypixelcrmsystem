@@ -1,16 +1,14 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useActionState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { createUserWithEmailAndPassword } from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore";
-import { auth, db } from "@/lib/firebase";
+import { signup } from "@/app/actions/auth";
+import { Turnstile } from "@/components/Turnstile";
 import {
   User,
   Mail,
   Lock,
-  Building2,
   Eye,
   EyeOff,
   ArrowUp,
@@ -19,7 +17,6 @@ import {
   BarChart2,
   Rocket,
   ArrowRight,
-  RefreshCw,
 } from "lucide-react";
 
 export default function SignupPage() {
@@ -27,58 +24,16 @@ export default function SignupPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(true);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [turnstileToken, setTurnstileToken] = useState("");
 
-  const [formData, setFormData] = useState({
-    firstName: "",
-    lastName: "",
-    workEmail: "",
-    password: "",
-    confirmPassword: "",
-    companyName: "",
-  });
+  const [state, formAction, isPending] = useActionState(signup, {});
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-
-    if (formData.password !== formData.confirmPassword) {
-      setError("Passwords do not match.");
-      return;
-    }
-    if (formData.password.length < 6) {
-      setError("Password must be at least 6 characters.");
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const cred = await createUserWithEmailAndPassword(
-        auth,
-        formData.workEmail,
-        formData.password,
-      );
-      // Store a user profile document in Firestore.
-      await setDoc(doc(db, "users", cred.user.uid), {
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        email: formData.workEmail,
-        company: formData.companyName,
-        createdAt: new Date().toISOString(),
-      });
+  // Redirect on success
+  React.useEffect(() => {
+    if (state.success) {
       router.push("/");
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message.replace("Firebase: ", "") : "Signup failed",
-      );
-      setLoading(false);
     }
-  };
+  }, [state.success, router]);
 
   return (
     <div className="min-h-screen relative flex flex-col justify-between overflow-x-hidden font-sans selection:bg-blue-100 text-slate-900 bg-[#f4f7fc]">
@@ -252,12 +207,16 @@ export default function SignupPage() {
                 </p>
               </div>
 
-              <form onSubmit={handleSubmit} className="space-y-3.5">
-                {error && (
+              <form action={formAction} className="space-y-3.5">
+                {state.error && (
                   <div className="rounded-xl bg-rose-50 border border-rose-100 px-3.5 py-2.5 text-xs font-medium text-rose-600">
-                    {error}
+                    {state.error}
                   </div>
                 )}
+
+                {/* Hidden Turnstile token */}
+                <input type="hidden" name="turnstileToken" value={turnstileToken} />
+
                 {/* First Name & Last Name */}
                 <div className="grid grid-cols-2 gap-3">
                   <div>
@@ -272,8 +231,6 @@ export default function SignupPage() {
                         type="text"
                         required
                         name="firstName"
-                        value={formData.firstName}
-                        onChange={handleChange}
                         placeholder="John"
                         className="block w-full pl-9 pr-3 py-2.5 bg-white border border-slate-200/90 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all shadow-2xs"
                       />
@@ -292,8 +249,6 @@ export default function SignupPage() {
                         type="text"
                         required
                         name="lastName"
-                        value={formData.lastName}
-                        onChange={handleChange}
                         placeholder="Doe"
                         className="block w-full pl-9 pr-3 py-2.5 bg-white border border-slate-200/90 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all shadow-2xs"
                       />
@@ -313,9 +268,7 @@ export default function SignupPage() {
                     <input
                       type="email"
                       required
-                      name="workEmail"
-                      value={formData.workEmail}
-                      onChange={handleChange}
+                      name="email"
                       placeholder="you@company.com"
                       className="block w-full pl-9 pr-3 py-2.5 bg-white border border-slate-200/90 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all shadow-2xs"
                     />
@@ -335,8 +288,6 @@ export default function SignupPage() {
                       type={showPassword ? "text" : "password"}
                       required
                       name="password"
-                      value={formData.password}
-                      onChange={handleChange}
                       placeholder="Create a password"
                       className="block w-full pl-9 pr-9 py-2.5 bg-white border border-slate-200/90 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all shadow-2xs"
                     />
@@ -367,8 +318,6 @@ export default function SignupPage() {
                       type={showConfirmPassword ? "text" : "password"}
                       required
                       name="confirmPassword"
-                      value={formData.confirmPassword}
-                      onChange={handleChange}
                       placeholder="Confirm your password"
                       className="block w-full pl-9 pr-9 py-2.5 bg-white border border-slate-200/90 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all shadow-2xs"
                     />
@@ -386,25 +335,12 @@ export default function SignupPage() {
                   </div>
                 </div>
 
-                {/* Company Name */}
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Company Name
-                  </label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                      <Building2 className="w-3.5 h-3.5" />
-                    </div>
-                    <input
-                      type="text"
-                      required
-                      name="companyName"
-                      value={formData.companyName}
-                      onChange={handleChange}
-                      placeholder="Your company name"
-                      className="block w-full pl-9 pr-3 py-2.5 bg-white border border-slate-200/90 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all shadow-2xs"
-                    />
-                  </div>
+                {/* Cloudflare Turnstile Captcha */}
+                <div className="pt-1">
+                  <Turnstile
+                    onVerify={setTurnstileToken}
+                    onExpire={() => setTurnstileToken("")}
+                  />
                 </div>
 
                 {/* Terms Agreement */}
@@ -432,10 +368,10 @@ export default function SignupPage() {
                 {/* Submit Button */}
                 <button
                   type="submit"
-                  disabled={!agreedToTerms || loading}
+                  disabled={!agreedToTerms || isPending || !turnstileToken}
                   className="w-full mt-2 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 disabled:opacity-50 text-white text-xs font-semibold py-3 px-4 rounded-xl transition-all shadow-md shadow-blue-600/25 flex items-center justify-center gap-1.5 cursor-pointer"
                 >
-                  <span>{loading ? "Creating account…" : "Create Account"}</span>
+                  <span>{isPending ? "Creating account…" : "Create Account"}</span>
                   <ArrowRight className="w-3.5 h-3.5" />
                 </button>
               </form>
