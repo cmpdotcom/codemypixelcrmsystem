@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Link from "next/link";
 import {
   AreaChart,
   Area,
@@ -399,13 +400,13 @@ const Sidebar = () => {
       <div className="flex-1 px-3 py-3 space-y-5">
         {/* Main Dashboard Link */}
         <div>
-          <a
-            href="#"
+          <Link
+            href="/"
             className="flex items-center gap-3 px-3 py-2 bg-blue-50 text-blue-600 rounded-xl font-semibold text-sm relative border-l-4 border-blue-600 shadow-sm shadow-blue-500/5 transition-all"
           >
             <LayoutDashboard className="w-4 h-4 text-blue-600" />
             Dashboard
-          </a>
+          </Link>
         </div>
 
         {/* Sales Section */}
@@ -415,22 +416,22 @@ const Sidebar = () => {
           </h3>
           <div className="space-y-0.5">
             {[
-              { icon: Users, label: "Leads" },
-              { icon: Activity, label: "Activities" },
-              { icon: Briefcase, label: "Deals" },
-              { icon: Users2, label: "Clients" },
-              { icon: UserPlus, label: "Follow-ups" },
+              { icon: Users, label: "Leads", href: "#" },
+              { icon: Activity, label: "Activities", href: "/activities" },
+              { icon: Briefcase, label: "Deals", href: "#" },
+              { icon: Users2, label: "Clients", href: "#" },
+              { icon: UserPlus, label: "Follow-ups", href: "#" },
             ].map((item, i) => {
               const Icon = item.icon;
               return (
-                <a
+                <Link
                   key={i}
-                  href="#"
+                  href={item.href}
                   className="flex items-center gap-3 px-3 py-2 text-slate-600 hover:bg-slate-50 hover:text-slate-900 rounded-xl text-sm font-medium transition-colors group"
                 >
                   <Icon className="w-4 h-4 text-slate-400 group-hover:text-slate-600" />
                   <span>{item.label}</span>
-                </a>
+                </Link>
               );
             })}
           </div>
