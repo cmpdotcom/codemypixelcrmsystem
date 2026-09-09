@@ -47,9 +47,9 @@ const navSections = [
   {
     title: "Delivery",
     items: [
-      { icon: FolderKanban, label: "Projects", href: "#" },
-      { icon: CheckSquare, label: "Tasks", href: "#" },
-      { icon: Flag, label: "Milestones", href: "#" },
+      { icon: FolderKanban, label: "Projects", href: "/projects" },
+      { icon: CheckSquare, label: "Tasks", href: "/projects/tasks" },
+      { icon: Flag, label: "Milestones", href: "/projects/milestones" },
       { icon: Bug, label: "Bugs / QA", href: "#" },
       { icon: Rocket, label: "Deployments", href: "#" },
     ],
