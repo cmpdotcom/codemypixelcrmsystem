@@ -394,7 +394,7 @@ export default function ActivitiesPage() {
             </h3>
             <div className="space-y-0.5">
               <Link
-                href="#"
+                href="/leads"
                 className="flex items-center gap-3 px-3 py-2 text-slate-600 hover:bg-slate-50 hover:text-slate-900 rounded-xl text-sm font-medium transition-colors group"
               >
                 <Users className="w-4 h-4 text-slate-400 group-hover:text-slate-600" />
@@ -411,7 +411,7 @@ export default function ActivitiesPage() {
               </Link>
 
               <Link
-                href="#"
+                href="/deals"
                 className="flex items-center gap-3 px-3 py-2 text-slate-600 hover:bg-slate-50 hover:text-slate-900 rounded-xl text-sm font-medium transition-colors group"
               >
                 <Briefcase className="w-4 h-4 text-slate-400 group-hover:text-slate-600" />
@@ -419,7 +419,7 @@ export default function ActivitiesPage() {
               </Link>
 
               <Link
-                href="#"
+                href="/clients"
                 className="flex items-center gap-3 px-3 py-2 text-slate-600 hover:bg-slate-50 hover:text-slate-900 rounded-xl text-sm font-medium transition-colors group"
               >
                 <Users2 className="w-4 h-4 text-slate-400 group-hover:text-slate-600" />

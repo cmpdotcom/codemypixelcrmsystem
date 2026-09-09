@@ -416,10 +416,10 @@ const Sidebar = () => {
           </h3>
           <div className="space-y-0.5">
             {[
-              { icon: Users, label: "Leads", href: "#" },
+              { icon: Users, label: "Leads", href: "/leads" },
               { icon: Activity, label: "Activities", href: "/activities" },
-              { icon: Briefcase, label: "Deals", href: "#" },
-              { icon: Users2, label: "Clients", href: "#" },
+              { icon: Briefcase, label: "Deals", href: "/deals" },
+              { icon: Users2, label: "Clients", href: "/clients" },
               { icon: UserPlus, label: "Follow-ups", href: "#" },
             ].map((item, i) => {
               const Icon = item.icon;
