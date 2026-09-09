@@ -11,7 +11,7 @@ export function Header() {
   const userEmail = session?.user?.email ?? "admin@nexacrm.com";
 
   return (
-    <header className="sticky top-0 z-20 h-16 bg-white border-b border-slate-200 px-8 flex items-center justify-between">
+    <header className="h-16 shrink-0 bg-white border-b border-slate-200 px-8 flex items-center justify-between">
       {/* Search Input */}
       <div className="flex-1 max-w-md relative">
         <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
