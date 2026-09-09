@@ -74,7 +74,7 @@ export default function MilestonesPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="p-4 sm:p-5 xl:p-6 max-w-[1780px] mx-auto w-full pb-12 space-y-6">
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-xl font-bold text-slate-900">Milestones</h1>

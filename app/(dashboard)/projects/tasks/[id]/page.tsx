@@ -170,7 +170,7 @@ export default function TaskDetailPage() {
   const [activeTab, setActiveTab] = useState<Tab>("Overview");
 
   return (
-    <div className="space-y-6">
+    <div className="p-4 sm:p-5 xl:p-6 max-w-[1780px] mx-auto w-full pb-12 space-y-6">
       {/* Back Navigation */}
       <Link
         href="/projects/tasks"
