@@ -50,7 +50,7 @@ const navSections = [
       { icon: FolderKanban, label: "Projects", href: "/projects" },
       { icon: CheckSquare, label: "Tasks", href: "/projects/tasks" },
       { icon: Flag, label: "Milestones", href: "/projects/milestones" },
-      { icon: Bug, label: "Bugs / QA", href: "#" },
+      { icon: Bug, label: "Bugs / QA", href: "/qa" },
       { icon: Rocket, label: "Deployments", href: "#" },
     ],
   },
