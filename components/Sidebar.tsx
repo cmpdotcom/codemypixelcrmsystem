@@ -82,9 +82,9 @@ export function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="w-60 bg-white/95 backdrop-blur-xl border-r border-slate-100 flex flex-col h-screen sticky top-0 custom-scrollbar overflow-y-auto hidden lg:flex shrink-0 transition-all duration-300 z-30">
-      {/* Brand Header with collapse button */}
-      <div className="p-5 pb-3 flex items-center justify-between">
+    <aside className="w-60 bg-white border-r border-slate-200 flex flex-col h-screen sticky top-0 custom-scrollbar overflow-y-auto hidden lg:flex shrink-0 z-30">
+      {/* Brand Header - sticky and separated */}
+      <div className="sticky top-0 z-10 bg-white border-b border-slate-200 p-5 pb-3 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2.5 group">
           <div className="bg-gradient-to-tr from-blue-600 to-indigo-600 text-white rounded-xl flex items-center justify-center font-bold text-xl h-9 w-9 shadow-sm shadow-blue-500/20 group-hover:scale-105 transition-transform">
             N
