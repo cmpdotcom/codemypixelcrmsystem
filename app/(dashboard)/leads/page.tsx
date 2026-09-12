@@ -492,7 +492,7 @@ export default function LeadsPage() {
             </div>
 
             {/* Leads Table */}
-            <div className="overflow-x-auto pt-2">
+            <div className="overflow-x-auto pt-2 custom-scrollbar">
               {loading ? (
                 <div className="flex items-center justify-center py-20">
                   <Loader2 className="w-6 h-6 text-blue-500 animate-spin" />
@@ -511,10 +511,10 @@ export default function LeadsPage() {
                   </button>
                 </div>
               ) : (
-                <table className="w-full text-xs text-left">
+                <table className="w-full min-w-[820px] text-xs text-left table-fixed">
                   <thead className="text-[11px] text-slate-400 font-semibold border-b border-slate-100 bg-slate-50/50">
                     <tr>
-                      <th className="py-3 px-3 w-8">
+                      <th className="py-3 px-3 w-10">
                         <input
                           type="checkbox"
                           checked={selectAll}
@@ -522,15 +522,15 @@ export default function LeadsPage() {
                           className="w-3.5 h-3.5 text-blue-600 border-slate-300 rounded focus:ring-blue-500 cursor-pointer"
                         />
                       </th>
-                      <th className="py-3 px-2 font-medium">#</th>
-                      <th className="py-3 px-3 font-medium">Name / Company</th>
-                      <th className="py-3 px-3 font-medium">Contact</th>
-                      <th className="py-3 px-3 font-medium">Source</th>
-                      <th className="py-3 px-3 font-medium">Service</th>
-                      <th className="py-3 px-3 font-medium">Status</th>
-                      <th className="py-3 px-3 font-medium">Setter</th>
-                      <th className="py-3 px-3 font-medium">Created</th>
-                      <th className="py-3 px-2 font-medium text-center">Actions</th>
+                      <th className="py-3 px-2 w-16 font-medium">#</th>
+                      <th className="py-3 px-3 w-44 font-medium">Name / Company</th>
+                      <th className="py-3 px-3 w-40 font-medium">Contact</th>
+                      <th className="py-3 px-3 w-24 font-medium">Source</th>
+                      <th className="py-3 px-3 w-24 font-medium">Service</th>
+                      <th className="py-3 px-3 w-28 font-medium">Status</th>
+                      <th className="py-3 px-3 w-28 font-medium">Setter</th>
+                      <th className="py-3 px-3 w-24 font-medium">Created</th>
+                      <th className="py-3 px-2 w-20 font-medium text-center">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50">
@@ -555,30 +555,32 @@ export default function LeadsPage() {
                               className="w-3.5 h-3.5 text-blue-600 border-slate-300 rounded focus:ring-blue-500 cursor-pointer"
                             />
                           </td>
-                          <td className="py-3 px-2 font-medium text-slate-500">{leadId}</td>
+                          <td className="py-3 px-2 font-medium text-slate-500 whitespace-nowrap">{leadId}</td>
                           <td className="py-3 px-3">
                             <div className="flex items-center gap-2.5">
                               <div className={`w-7 h-7 rounded-full flex items-center justify-center font-bold text-[10px] shrink-0 ${getAvatarBg(lead.name)}`}>
                                 {getInitials(lead.name)}
                               </div>
-                              <div>
-                                <p className="font-bold text-slate-900 leading-tight">{lead.name}</p>
-                                <p className="text-[10px] text-slate-400 mt-0.5">{lead.company}</p>
+                              <div className="min-w-0">
+                                <p className="font-bold text-slate-900 leading-tight truncate">{lead.name}</p>
+                                <p className="text-[10px] text-slate-400 mt-0.5 truncate">{lead.company}</p>
                               </div>
                             </div>
                           </td>
                           <td className="py-3 px-3">
-                            <div>
-                              <p className="text-slate-700 font-medium">{lead.email}</p>
-                              <p className="text-[10px] text-slate-400">{lead.phone || "—"}</p>
+                            <div className="min-w-0">
+                              <p className="text-slate-700 font-medium truncate">{lead.email}</p>
+                              <p className="text-[10px] text-slate-400 truncate">{lead.phone || "—"}</p>
                             </div>
                           </td>
                           <td className="py-3 px-3">
-                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${sourceStyles[lead.source] || sourceStyles["Website"]}`}>
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold whitespace-nowrap ${sourceStyles[lead.source] || sourceStyles["Website"]}`}>
                               {lead.source}
                             </span>
                           </td>
-                          <td className="py-3 px-3 text-slate-700 font-medium">{lead.service || "—"}</td>
+                          <td className="py-3 px-3 text-slate-700 font-medium">
+                            <span className="truncate block">{lead.service || "—"}</span>
+                          </td>
                           <td className="py-3 px-3">
                             {/* Inline-editable status */}
                             {inlineEdit?.id === lead.id && inlineEdit.field === "status" ? (
@@ -594,7 +596,7 @@ export default function LeadsPage() {
                             ) : (
                               <span
                                 onClick={(e) => { e.stopPropagation(); setInlineEdit({ id: lead.id, field: "status", value: lead.status }); }}
-                                className={`px-2 py-0.5 rounded text-[10px] font-bold cursor-pointer hover:opacity-80 ${statusStyles[lead.status] || statusStyles["New"]}`}
+                                className={`px-2 py-0.5 rounded text-[10px] font-bold cursor-pointer hover:opacity-80 whitespace-nowrap ${statusStyles[lead.status] || statusStyles["New"]}`}
                                 title="Click to edit status"
                               >
                                 {lead.status}
@@ -603,15 +605,15 @@ export default function LeadsPage() {
                           </td>
                           <td className="py-3 px-3">
                             {lead.setter ? (
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-2 min-w-0">
                                 {lead.setterImg ? (
-                                  <img src={lead.setterImg} alt={lead.setter} className="w-5 h-5 rounded-full object-cover border border-slate-200" />
+                                  <img src={lead.setterImg} alt={lead.setter} className="w-5 h-5 rounded-full object-cover border border-slate-200 shrink-0" />
                                 ) : (
-                                  <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold ${getAvatarBg(lead.setter)}`}>
+                                  <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0 ${getAvatarBg(lead.setter)}`}>
                                     {getInitials(lead.setter)}
                                   </div>
                                 )}
-                                <span className="font-medium text-slate-800">{lead.setter}</span>
+                                <span className="font-medium text-slate-800 truncate">{lead.setter}</span>
                               </div>
                             ) : <span className="text-slate-400">—</span>}
                           </td>
@@ -703,11 +705,11 @@ export default function LeadsPage() {
           <div
             className={`shrink-0 overflow-hidden transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] ${
               selectedLead
-                ? "xl:w-[380px] opacity-100"
+                ? "xl:w-[340px] opacity-100"
                 : "xl:w-0 opacity-0"
             }`}
           >
-            <div className="w-[380px] bg-white rounded-2xl border border-slate-100/90 shadow-[0_1px_3px_rgba(0,0,0,0.02),0_6px_16px_rgba(0,0,0,0.02)] p-5 space-y-4">
+            <div className="w-[340px] bg-white rounded-2xl border border-slate-100/90 shadow-[0_1px_3px_rgba(0,0,0,0.02),0_6px_16px_rgba(0,0,0,0.02)] p-5 space-y-4">
               {selectedLead && (
                 <>
                   {/* Header: ID, Status, Close */}
