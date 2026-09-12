@@ -29,6 +29,11 @@ import {
   Check,
   Loader2,
   AlertCircle,
+  Paperclip,
+  Send,
+  Clock,
+  Video,
+  File as FileIcon,
 } from "lucide-react";
 
 function LinkedinIcon({ className = "w-3.5 h-3.5" }: { className?: string }) {
@@ -121,6 +126,27 @@ interface Lead {
   updatedAt: Date;
 }
 
+interface LeadActivity {
+  id: string;
+  leadId: string;
+  type: string;
+  title: string;
+  description: string | null;
+  performedBy: string | null;
+  createdAt: string;
+}
+
+interface LeadFile {
+  id: string;
+  leadId: string;
+  fileName: string;
+  fileSize: number;
+  fileType: string | null;
+  fileUrl: string;
+  uploadedBy: string | null;
+  createdAt: string;
+}
+
 interface LeadStats {
   total: number;
   new: number;
@@ -165,6 +191,95 @@ export default function LeadsPage() {
 
   // Inline edit state
   const [inlineEdit, setInlineEdit] = useState<{ id: string; field: string; value: string } | null>(null);
+
+  // Activities state
+  const [activities, setActivities] = useState<LeadActivity[]>([]);
+  const [activityForm, setActivityForm] = useState({ type: "Note", title: "", description: "" });
+  const [activityLoading, setActivityLoading] = useState(false);
+
+  // Files state
+  const [files, setFiles] = useState<LeadFile[]>([]);
+  const [fileUrl, setFileUrl] = useState("");
+  const [fileName, setFileName] = useState("");
+  const [fileLoading, setFileLoading] = useState(false);
+
+  const fetchActivities = useCallback(async (leadId: string) => {
+    try {
+      const res = await fetch(`/api/leads/${leadId}/activities`);
+      if (res.ok) setActivities(await res.json());
+    } catch { /* ignore */ }
+  }, []);
+
+  const fetchFiles = useCallback(async (leadId: string) => {
+    try {
+      const res = await fetch(`/api/leads/${leadId}/files`);
+      if (res.ok) setFiles(await res.json());
+    } catch { /* ignore */ }
+  }, []);
+
+  // Fetch activities and files when selected lead changes
+  useEffect(() => {
+    if (selectedLead) {
+      fetchActivities(selectedLead.id);
+      fetchFiles(selectedLead.id);
+    } else {
+      setActivities([]);
+      setFiles([]);
+    }
+  }, [selectedLead, fetchActivities, fetchFiles]);
+
+  const addActivity = async () => {
+    if (!selectedLead || !activityForm.title.trim()) return;
+    setActivityLoading(true);
+    try {
+      const res = await fetch(`/api/leads/${selectedLead.id}/activities`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(activityForm),
+      });
+      if (res.ok) {
+        const newActivity = await res.json();
+        setActivities((prev) => [newActivity, ...prev]);
+        setActivityForm({ type: "Note", title: "", description: "" });
+      }
+    } catch { /* ignore */ }
+    setActivityLoading(false);
+  };
+
+  const deleteActivity = async (activityId: string) => {
+    if (!selectedLead) return;
+    try {
+      await fetch(`/api/leads/${selectedLead.id}/activities?activityId=${activityId}`, { method: "DELETE" });
+      setActivities((prev) => prev.filter((a) => a.id !== activityId));
+    } catch { /* ignore */ }
+  };
+
+  const addFile = async () => {
+    if (!selectedLead || !fileUrl.trim() || !fileName.trim()) return;
+    setFileLoading(true);
+    try {
+      const res = await fetch(`/api/leads/${selectedLead.id}/files`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fileName, fileUrl, fileSize: 0, fileType: "link" }),
+      });
+      if (res.ok) {
+        const newFile = await res.json();
+        setFiles((prev) => [newFile, ...prev]);
+        setFileUrl("");
+        setFileName("");
+      }
+    } catch { /* ignore */ }
+    setFileLoading(false);
+  };
+
+  const deleteFile = async (fileId: string) => {
+    if (!selectedLead) return;
+    try {
+      await fetch(`/api/leads/${selectedLead.id}/files?fileId=${fileId}`, { method: "DELETE" });
+      setFiles((prev) => prev.filter((f) => f.id !== fileId));
+    } catch { /* ignore */ }
+  };
 
   const fetchLeads = useCallback(async () => {
     setLoading(true);
@@ -747,7 +862,7 @@ export default function LeadsPage() {
                 ))}
               </div>
 
-              {/* Lead Profile Banner */}
+              {/* Lead Profile Banner - always visible */}
               <div className="flex items-start justify-between pt-1">
                 <div className="flex items-center gap-3">
                   <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-sm shrink-0 shadow-xs ${getAvatarBg(selectedLead.name)}`}>
@@ -766,12 +881,12 @@ export default function LeadsPage() {
                 </button>
               </div>
 
-              {/* Contact Icons Row */}
+              {/* Contact Icons Row - always visible */}
               <div className="space-y-2 py-1 text-xs">
                 <div className="flex items-center justify-between text-slate-600">
                   <div className="flex items-center gap-2">
                     <Mail className="w-3.5 h-3.5 text-slate-400" />
-                    <span className="font-medium text-slate-800">{selectedLead.email}</span>
+                    <span className="font-medium text-slate-800 truncate">{selectedLead.email}</span>
                   </div>
                 </div>
                 <div className="flex items-center justify-between text-slate-600">
@@ -783,75 +898,172 @@ export default function LeadsPage() {
                 <div className="flex items-center justify-between text-slate-600">
                   <div className="flex items-center gap-2">
                     <MapPin className="w-3.5 h-3.5 text-slate-400" />
-                    <span className="font-medium text-slate-800">{selectedLead.location || "—"}</span>
+                    <span className="font-medium text-slate-800 truncate">{selectedLead.location || "—"}</span>
                   </div>
                 </div>
                 {selectedLead.linkedin && (
                   <div className="flex items-center justify-between text-slate-600">
                     <div className="flex items-center gap-2">
                       <LinkedinIcon className="w-3.5 h-3.5 text-blue-600" />
-                      <span className="font-medium text-blue-600 hover:underline cursor-pointer">{selectedLead.linkedin}</span>
+                      <span className="font-medium text-blue-600 hover:underline cursor-pointer truncate">{selectedLead.linkedin}</span>
                     </div>
                   </div>
                 )}
               </div>
 
-              {/* Detailed Key-Value Specs */}
-              <div className="space-y-2 pt-2 border-t border-slate-100 text-xs">
-                <div className="flex justify-between py-1 border-b border-slate-50">
-                  <span className="text-slate-400">Source</span>
-                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${sourceStyles[selectedLead.source] || sourceStyles["Website"]}`}>
-                    {selectedLead.source}
-                  </span>
-                </div>
-                <div className="flex justify-between py-1 border-b border-slate-50">
-                  <span className="text-slate-400">Service Interested</span>
-                  <span className="font-semibold text-slate-800">{selectedLead.service || "—"}</span>
-                </div>
-                <div className="flex justify-between py-1 border-b border-slate-50">
-                  <span className="text-slate-400">Budget</span>
-                  <span className="font-semibold text-slate-800">{selectedLead.budget || "—"}</span>
-                </div>
-                <div className="flex justify-between py-1 border-b border-slate-50">
-                  <span className="text-slate-400">Timeline</span>
-                  <span className="font-semibold text-slate-800">{selectedLead.timeline || "—"}</span>
-                </div>
-                <div className="flex justify-between py-1 border-b border-slate-50">
-                  <span className="text-slate-400">Company Size</span>
-                  <span className="font-semibold text-slate-800">{selectedLead.companySize || "—"}</span>
-                </div>
-                <div className="flex justify-between py-1 border-b border-slate-50">
-                  <span className="text-slate-400">Industry</span>
-                  <span className="font-semibold text-slate-800">{selectedLead.industry || "—"}</span>
-                </div>
-                <div className="flex justify-between py-1 border-b border-slate-50">
-                  <span className="text-slate-400">Assigned Setter</span>
-                  <div className="flex items-center gap-1.5 font-semibold text-slate-800">
-                    {selectedLead.setterImg ? (
-                      <img src={selectedLead.setterImg} alt={selectedLead.setter || ""} className="w-4 h-4 rounded-full object-cover" />
-                    ) : (
-                      selectedLead.setter && <div className={`w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold ${getAvatarBg(selectedLead.setter)}`}>{getInitials(selectedLead.setter)}</div>
-                    )}
-                    <span>{selectedLead.setter || "—"}</span>
+              {/* ============ OVERVIEW TAB ============ */}
+              {detailsTab === "Overview" && (
+                <div className="space-y-2 pt-2 border-t border-slate-100 text-xs">
+                  <div className="flex justify-between py-1 border-b border-slate-50">
+                    <span className="text-slate-400">Source</span>
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${sourceStyles[selectedLead.source] || sourceStyles["Website"]}`}>
+                      {selectedLead.source}
+                    </span>
+                  </div>
+                  <div className="flex justify-between py-1 border-b border-slate-50">
+                    <span className="text-slate-400">Service</span>
+                    <span className="font-semibold text-slate-800">{selectedLead.service || "—"}</span>
+                  </div>
+                  <div className="flex justify-between py-1 border-b border-slate-50">
+                    <span className="text-slate-400">Budget</span>
+                    <span className="font-semibold text-slate-800">{selectedLead.budget || "—"}</span>
+                  </div>
+                  <div className="flex justify-between py-1 border-b border-slate-50">
+                    <span className="text-slate-400">Timeline</span>
+                    <span className="font-semibold text-slate-800">{selectedLead.timeline || "—"}</span>
+                  </div>
+                  <div className="flex justify-between py-1 border-b border-slate-50">
+                    <span className="text-slate-400">Company Size</span>
+                    <span className="font-semibold text-slate-800">{selectedLead.companySize || "—"}</span>
+                  </div>
+                  <div className="flex justify-between py-1 border-b border-slate-50">
+                    <span className="text-slate-400">Industry</span>
+                    <span className="font-semibold text-slate-800">{selectedLead.industry || "—"}</span>
+                  </div>
+                  <div className="flex justify-between py-1 border-b border-slate-50">
+                    <span className="text-slate-400">Setter</span>
+                    <div className="flex items-center gap-1.5 font-semibold text-slate-800">
+                      {selectedLead.setterImg ? (
+                        <img src={selectedLead.setterImg} alt={selectedLead.setter || ""} className="w-4 h-4 rounded-full object-cover" />
+                      ) : (
+                        selectedLead.setter && <div className={`w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold ${getAvatarBg(selectedLead.setter)}`}>{getInitials(selectedLead.setter)}</div>
+                      )}
+                      <span>{selectedLead.setter || "—"}</span>
+                    </div>
+                  </div>
+                  <div className="flex justify-between py-1 border-b border-slate-50">
+                    <span className="text-slate-400">Created</span>
+                    <span className="text-slate-600 font-medium">{formatDateTime(selectedLead.createdAt)}</span>
+                  </div>
+                  <div className="flex justify-between py-1 border-b border-slate-50">
+                    <span className="text-slate-400">Last Contact</span>
+                    <span className="text-slate-600 font-medium">{formatDateTime(selectedLead.lastContact)}</span>
+                  </div>
+                  <div className="flex justify-between py-1 items-center">
+                    <span className="text-slate-400">Next Follow-up</span>
+                    <span className="bg-amber-50 text-amber-700 border border-amber-200/70 px-2 py-0.5 rounded text-[11px] font-bold">
+                      {formatDate(selectedLead.nextFollowUp)}
+                    </span>
                   </div>
                 </div>
-                <div className="flex justify-between py-1 border-b border-slate-50">
-                  <span className="text-slate-400">Created Date</span>
-                  <span className="text-slate-600 font-medium">{formatDateTime(selectedLead.createdAt)}</span>
-                </div>
-                <div className="flex justify-between py-1 border-b border-slate-50">
-                  <span className="text-slate-400">Last Contact</span>
-                  <span className="text-slate-600 font-medium">{formatDateTime(selectedLead.lastContact)}</span>
-                </div>
-                <div className="flex justify-between py-1 items-center">
-                  <span className="text-slate-400">Next Follow-up</span>
-                  <span className="bg-amber-50 text-amber-700 border border-amber-200/70 px-2 py-0.5 rounded text-[11px] font-bold">
-                    {formatDate(selectedLead.nextFollowUp)}
-                  </span>
-                </div>
-              </div>
+              )}
 
-              {/* Notes Tab */}
+              {/* ============ ACTIVITIES TAB ============ */}
+              {detailsTab === "Activities" && (
+                <div className="pt-2 border-t border-slate-100 space-y-3">
+                  {/* Add Activity Form */}
+                  <div className="bg-slate-50 rounded-xl p-3 space-y-2">
+                    <div className="flex gap-2">
+                      <select
+                        value={activityForm.type}
+                        onChange={(e) => setActivityForm({ ...activityForm, type: e.target.value })}
+                        className="text-[11px] font-semibold border border-slate-200 rounded-lg px-2 py-1.5 bg-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                      >
+                        <option value="Call">📞 Call</option>
+                        <option value="Email">✉️ Email</option>
+                        <option value="Meeting">📅 Meeting</option>
+                        <option value="WhatsApp">💬 WhatsApp</option>
+                        <option value="Note">📝 Note</option>
+                        <option value="Other">📌 Other</option>
+                      </select>
+                      <input
+                        type="text"
+                        value={activityForm.title}
+                        onChange={(e) => setActivityForm({ ...activityForm, title: e.target.value })}
+                        placeholder="Activity title..."
+                        className="flex-1 text-xs border border-slate-200 rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
+                        onKeyDown={(e) => e.key === "Enter" && addActivity()}
+                      />
+                    </div>
+                    <input
+                      type="text"
+                      value={activityForm.description}
+                      onChange={(e) => setActivityForm({ ...activityForm, description: e.target.value })}
+                      placeholder="Description (optional)..."
+                      className="w-full text-xs border border-slate-200 rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
+                    />
+                    <button
+                      onClick={addActivity}
+                      disabled={!activityForm.title.trim() || activityLoading}
+                      className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-semibold py-1.5 rounded-lg flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
+                    >
+                      {activityLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
+                      Add Activity
+                    </button>
+                  </div>
+
+                  {/* Activity Timeline */}
+                  {activities.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-8 text-center">
+                      <Clock className="w-8 h-8 text-slate-300 mb-2" />
+                      <p className="text-xs font-semibold text-slate-500">No activities yet</p>
+                      <p className="text-[10px] text-slate-400 mt-0.5">Add your first interaction above.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {activities.map((act) => {
+                        const iconMap: Record<string, { icon: typeof Phone; bg: string }> = {
+                          Call: { icon: Phone, bg: "bg-emerald-50 text-emerald-500" },
+                          Email: { icon: Mail, bg: "bg-blue-50 text-blue-500" },
+                          Meeting: { icon: Calendar, bg: "bg-purple-50 text-purple-500" },
+                          WhatsApp: { icon: MessageCircle, bg: "bg-green-50 text-green-500" },
+                          Note: { icon: FileText, bg: "bg-amber-50 text-amber-500" },
+                          Other: { icon: MoreHorizontal, bg: "bg-slate-100 text-slate-500" },
+                        };
+                        const config = iconMap[act.type] || iconMap["Other"];
+                        const Icon = config.icon;
+                        return (
+                          <div key={act.id} className="flex items-start gap-2.5 group">
+                            <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${config.bg}`}>
+                              <Icon className="w-3.5 h-3.5" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between gap-1">
+                                <p className="text-xs font-semibold text-slate-800 truncate">{act.title}</p>
+                                <button
+                                  onClick={() => deleteActivity(act.id)}
+                                  className="text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer shrink-0"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </button>
+                              </div>
+                              {act.description && (
+                                <p className="text-[11px] text-slate-500 mt-0.5 leading-snug">{act.description}</p>
+                              )}
+                              <div className="flex items-center gap-2 mt-1">
+                                <span className="text-[10px] text-slate-400">{formatDateTime(act.createdAt)}</span>
+                                {act.performedBy && <span className="text-[10px] text-slate-400">• {act.performedBy}</span>}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* ============ NOTES TAB ============ */}
               {detailsTab === "Notes" && (
                 <div className="pt-3 border-t border-slate-100">
                   <h4 className="text-xs font-bold text-slate-900 mb-2">Notes</h4>
@@ -859,13 +1071,87 @@ export default function LeadsPage() {
                     defaultValue={selectedLead.notes || ""}
                     onBlur={(e) => updateLead(selectedLead.id, { notes: e.target.value })}
                     placeholder="Add notes about this lead..."
-                    className="w-full text-xs border border-slate-200 rounded-xl p-3 min-h-[100px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 resize-none"
+                    className="w-full text-xs border border-slate-200 rounded-xl p-3 min-h-[120px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 resize-none"
                   />
-                  <p className="text-[10px] text-slate-400 mt-1">Notes save automatically when you click away.</p>
+                  <p className="text-[10px] text-slate-400 mt-1 flex items-center gap-1">
+                    <Check className="w-3 h-3 text-emerald-500" /> Notes save automatically when you click away.
+                  </p>
                 </div>
               )}
 
-              {/* Delete button */}
+              {/* ============ FILES TAB ============ */}
+              {detailsTab === "Files" && (
+                <div className="pt-2 border-t border-slate-100 space-y-3">
+                  {/* Add File Form */}
+                  <div className="bg-slate-50 rounded-xl p-3 space-y-2">
+                    <input
+                      type="text"
+                      value={fileName}
+                      onChange={(e) => setFileName(e.target.value)}
+                      placeholder="File name (e.g. proposal.pdf)..."
+                      className="w-full text-xs border border-slate-200 rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
+                    />
+                    <input
+                      type="text"
+                      value={fileUrl}
+                      onChange={(e) => setFileUrl(e.target.value)}
+                      placeholder="File URL (https://...)..."
+                      className="w-full text-xs border border-slate-200 rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
+                    />
+                    <button
+                      onClick={addFile}
+                      disabled={!fileName.trim() || !fileUrl.trim() || fileLoading}
+                      className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-semibold py-1.5 rounded-lg flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
+                    >
+                      {fileLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Paperclip className="w-3 h-3" />}
+                      Attach File
+                    </button>
+                  </div>
+
+                  {/* File List */}
+                  {files.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-8 text-center">
+                      <Paperclip className="w-8 h-8 text-slate-300 mb-2" />
+                      <p className="text-xs font-semibold text-slate-500">No files attached</p>
+                      <p className="text-[10px] text-slate-400 mt-0.5">Attach a file by adding its name and URL above.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {files.map((file) => (
+                        <div key={file.id} className="flex items-center gap-2.5 bg-slate-50 rounded-xl p-2.5 group">
+                          <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-500 flex items-center justify-center shrink-0">
+                            <FileIcon className="w-4 h-4" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-semibold text-slate-800 truncate">{file.fileName}</p>
+                            <p className="text-[10px] text-slate-400">{formatDateTime(file.createdAt)}</p>
+                          </div>
+                          <div className="flex items-center gap-1 shrink-0">
+                            <a
+                              href={file.fileUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="p-1 rounded-lg hover:bg-blue-50 text-slate-400 hover:text-blue-600 cursor-pointer"
+                              title="Open"
+                            >
+                              <Download className="w-3.5 h-3.5" />
+                            </a>
+                            <button
+                              onClick={() => deleteFile(file.id)}
+                              className="p-1 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-600 cursor-pointer"
+                              title="Delete"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Delete button - always visible */}
               <div className="pt-2 border-t border-slate-100">
                 <button
                   onClick={() => handleDeleteLead(selectedLead.id)}
