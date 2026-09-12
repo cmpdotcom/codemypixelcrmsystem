@@ -491,7 +491,7 @@ export default function ActivitiesPage() {
             )}
           </div>
 
-          {/* Right Column: Quick Log + Quote */}
+          {/* Right Column: Quick Log + Calendar + Today + Quote */}
           <div className="xl:col-span-4 space-y-5">
             {/* Quick Log Activity Grid */}
             <div className="bg-white rounded-2xl border border-slate-100/90 shadow-[0_1px_3px_rgba(0,0,0,0.02),0_6px_16px_rgba(0,0,0,0.02)] p-5">
@@ -515,6 +515,12 @@ export default function ActivitiesPage() {
                 })}
               </div>
             </div>
+
+            {/* Mini Calendar Card */}
+            <MiniCalendar activities={activities} />
+
+            {/* Today's Activities Card */}
+            <TodayActivitiesCard activities={activities} />
 
             {/* Today Summary Card */}
             <div className="bg-white rounded-2xl border border-slate-100/90 shadow-[0_1px_3px_rgba(0,0,0,0.02),0_6px_16px_rgba(0,0,0,0.02)] p-5">
@@ -592,6 +598,159 @@ export default function ActivitiesPage() {
         `,
       }} />
     </>
+  );
+}
+
+// --- Mini Calendar Component ---
+
+function MiniCalendar({ activities }: { activities: Activity[] }) {
+  const [viewDate, setViewDate] = useState(new Date());
+  const today = new Date();
+
+  const year = viewDate.getFullYear();
+  const month = viewDate.getMonth();
+  const monthName = viewDate.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const prevMonthDays = new Date(year, month, 0).getDate();
+
+  // Build calendar days array
+  const days: { day: number; current: boolean; date: Date }[] = [];
+  for (let i = firstDay - 1; i >= 0; i--) {
+    days.push({ day: prevMonthDays - i, current: false, date: new Date(year, month - 1, prevMonthDays - i) });
+  }
+  for (let d = 1; d <= daysInMonth; d++) {
+    days.push({ day: d, current: true, date: new Date(year, month, d) });
+  }
+  const remaining = 42 - days.length;
+  for (let d = 1; d <= remaining; d++) {
+    days.push({ day: d, current: false, date: new Date(year, month + 1, d) });
+  }
+
+  // Count activities per day
+  const getActivityCount = (date: Date) => {
+    return activities.filter(a => new Date(a.createdAt).toDateString() === date.toDateString()).length;
+  };
+  const getMeetingCount = (date: Date) => {
+    return activities.filter(a => a.type === "Meeting" && new Date(a.createdAt).toDateString() === date.toDateString()).length;
+  };
+
+  const isToday = (date: Date) => date.toDateString() === today.toDateString();
+
+  return (
+    <div className="bg-white rounded-2xl border border-slate-100/90 shadow-[0_1px_3px_rgba(0,0,0,0.02),0_6px_16px_rgba(0,0,0,0.02)] p-5">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-sm font-bold text-slate-900">{monthName}</h3>
+        <div className="flex items-center gap-1">
+          <button onClick={() => setViewDate(new Date(year, month - 1, 1))} className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer">
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+          <button onClick={() => setViewDate(new Date())} className="text-[10px] font-semibold text-blue-600 hover:text-blue-700 px-2 py-1 rounded-lg hover:bg-blue-50 cursor-pointer transition-colors">
+            Today
+          </button>
+          <button onClick={() => setViewDate(new Date(year, month + 1, 1))} className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer">
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+
+      {/* Day Header */}
+      <div className="grid grid-cols-7 text-center text-[10px] font-semibold text-slate-400 mb-2">
+        {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => <span key={d}>{d}</span>)}
+      </div>
+
+      {/* Days Grid */}
+      <div className="grid grid-cols-7 gap-y-1 text-center text-xs font-medium text-slate-700">
+        {days.map((d, i) => {
+          const actCount = getActivityCount(d.date);
+          const meetCount = getMeetingCount(d.date);
+          return (
+            <span
+              key={i}
+              className={`py-1 relative ${!d.current ? "text-slate-300" : ""} ${isToday(d.date) ? "" : ""}`}
+            >
+              {isToday(d.date) ? (
+                <span className="w-6 h-6 rounded-full bg-blue-600 text-white font-bold inline-flex items-center justify-center shadow-xs">
+                  {d.day}
+                </span>
+              ) : (
+                d.day
+              )}
+              {actCount > 0 && d.current && (
+                <span className="w-1 h-1 rounded-full bg-blue-500 absolute bottom-0.5 left-1/2 -translate-x-1/2" />
+              )}
+              {meetCount > 0 && d.current && (
+                <span className="w-1 h-1 rounded-full bg-emerald-500 absolute bottom-0.5 left-[40%]" />
+              )}
+            </span>
+          );
+        })}
+      </div>
+
+      {/* Calendar Legend */}
+      <div className="flex items-center justify-between text-[10px] text-slate-500 pt-4 mt-3 border-t border-slate-100">
+        <div className="flex items-center gap-1.5">
+          <span className="w-2 h-2 rounded-full bg-blue-500" />
+          <span>Activities</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="w-2 h-2 rounded-full bg-emerald-500" />
+          <span>Meetings</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="w-2 h-2 rounded-full bg-blue-600" />
+          <span>Today</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// --- Today's Activities Card Component ---
+
+function TodayActivitiesCard({ activities }: { activities: Activity[] }) {
+  const todayActivities = activities.filter(a => new Date(a.createdAt).toDateString() === new Date().toDateString());
+
+  return (
+    <div className="bg-white rounded-2xl border border-slate-100/90 shadow-[0_1px_3px_rgba(0,0,0,0.02),0_6px_16px_rgba(0,0,0,0.02)] p-5">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-sm font-bold text-slate-900">Today's Activities</h3>
+        <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">{todayActivities.length}</span>
+      </div>
+
+      {todayActivities.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-6 text-center">
+          <CalendarDays className="w-7 h-7 text-slate-300 mb-2" />
+          <p className="text-xs font-semibold text-slate-500">No activities today</p>
+          <p className="text-[10px] text-slate-400 mt-0.5">Log a new activity to get started.</p>
+        </div>
+      ) : (
+        <div className="space-y-3 max-h-[280px] overflow-y-auto custom-scrollbar">
+          {todayActivities.map((act) => {
+            const config = iconConfig[act.type] || iconConfig["Other"];
+            const Icon = config.icon;
+            return (
+              <div key={act.id} className="flex items-center gap-2.5 p-1.5 -mx-1.5 rounded-xl hover:bg-slate-50 transition-colors">
+                <span className="text-[10px] text-slate-400 font-medium shrink-0 w-14">
+                  {formatTime(act.createdAt)}
+                </span>
+                <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${config.bg} ${config.color}`}>
+                  <Icon className="w-3.5 h-3.5" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold text-slate-800 truncate">{act.title}</p>
+                  <p className="text-[10px] text-slate-400 truncate">{act.company || act.contact || act.type}</p>
+                </div>
+                <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold shrink-0 ${statusStyles[act.status] || statusStyles["Completed"]}`}>
+                  {act.status}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
   );
 }
 
