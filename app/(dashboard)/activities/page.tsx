@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import {
   CheckSquare,
   ChevronDown,
@@ -118,6 +119,7 @@ function getAvatarBg(name: string) {
 // --- Activities Page Component ---
 
 export default function ActivitiesPage() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState("All Activities");
   const [search, setSearch] = useState("");
   const [activities, setActivities] = useState<Activity[]>([]);
@@ -410,10 +412,21 @@ export default function ActivitiesPage() {
                           </td>
                           <td className="py-3 px-3">
                             <div className="min-w-0">
-                              <p className="font-semibold text-slate-800 flex items-center gap-1 truncate">
-                                <Building2 className="w-3 h-3 text-blue-500 shrink-0" />
-                                <span className="truncate">{row.company || "—"}</span>
-                              </p>
+                              {row.leadId ? (
+                                <button
+                                  onClick={() => router.push(`/leads?lead=${row.leadId}`)}
+                                  className="font-semibold text-slate-800 flex items-center gap-1 truncate hover:text-blue-600 hover:underline cursor-pointer transition-colors"
+                                  title="Open lead"
+                                >
+                                  <Building2 className="w-3 h-3 text-blue-500 shrink-0" />
+                                  <span className="truncate">{row.company || "—"}</span>
+                                </button>
+                              ) : (
+                                <p className="font-semibold text-slate-800 flex items-center gap-1 truncate">
+                                  <Building2 className="w-3 h-3 text-blue-500 shrink-0" />
+                                  <span className="truncate">{row.company || "—"}</span>
+                                </p>
+                              )}
                               <p className="text-[10px] text-slate-400 truncate">{row.contact || ""}</p>
                             </div>
                           </td>

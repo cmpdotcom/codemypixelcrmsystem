@@ -8,6 +8,7 @@ export async function GET(request: NextRequest) {
   const type = searchParams.get("type") || ""; // "" = all, or Call/Email/WhatsApp/Meeting/Note/Task/SMS/Other
   const status = searchParams.get("status") || "";
   const performedBy = searchParams.get("performedBy") || "";
+  const leadId = searchParams.get("leadId") || "";
   const page = parseInt(searchParams.get("page") || "1", 10);
   const pageSize = parseInt(searchParams.get("pageSize") || "10", 10);
   const statsOnly = searchParams.get("stats") === "true";
@@ -30,6 +31,7 @@ export async function GET(request: NextRequest) {
   if (type) where.type = type;
   if (status) where.status = status;
   if (performedBy) where.performedBy = performedBy;
+  if (leadId) where.leadId = leadId;
   if (todayOnly) {
     const start = new Date();
     start.setHours(0, 0, 0, 0);

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   FileText,
   Link as LinkIcon,
@@ -130,12 +131,19 @@ interface Lead {
 
 interface LeadActivity {
   id: string;
-  leadId: string;
+  activityNumber: number;
   type: string;
+  direction: string | null;
   title: string;
   description: string | null;
+  company: string | null;
+  contact: string | null;
+  leadId: string | null;
   performedBy: string | null;
+  status: string;
+  scheduledAt: string | null;
   createdAt: string;
+  updatedAt: string;
 }
 
 interface LeadFile {
@@ -167,7 +175,15 @@ const STATUSES = ["New", "Contacted", "Qualified", "Meeting", "Proposal", "Not I
 const SERVICES = ["Custom ERP", "Website", "Mobile App", "CRM", "ERP", "Dashboard", "E-commerce", "Other"];
 const SETTERS = ["Ali Khan", "Fatima Noor", "Usman Tariq", "Sara Ahmed"];
 
-export default function LeadsPage() {
+export default function LeadsPageWrapper() {
+  return (
+    <React.Suspense fallback={<div className="p-8 text-sm text-slate-500">Loading...</div>}>
+      <LeadsPage />
+    </React.Suspense>
+  );
+}
+
+function LeadsPage() {
   const [activeTab, setActiveTab] = useState("All Leads");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
@@ -216,8 +232,11 @@ export default function LeadsPage() {
 
   const fetchActivities = useCallback(async (leadId: string) => {
     try {
-      const res = await fetch(`/api/leads/${leadId}/activities`);
-      if (res.ok) setActivities(await res.json());
+      const res = await fetch(`/api/activities?leadId=${leadId}&pageSize=100`);
+      if (res.ok) {
+        const data = await res.json();
+        setActivities(data.activities || []);
+      }
     } catch { /* ignore */ }
   }, []);
 
@@ -243,10 +262,16 @@ export default function LeadsPage() {
     if (!selectedLead || !activityForm.title.trim()) return;
     setActivityLoading(true);
     try {
-      const res = await fetch(`/api/leads/${selectedLead.id}/activities`, {
+      const res = await fetch(`/api/activities`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(activityForm),
+        body: JSON.stringify({
+          ...activityForm,
+          leadId: selectedLead.id,
+          company: selectedLead.company,
+          contact: selectedLead.name,
+          status: "Completed",
+        }),
       });
       if (res.ok) {
         const newActivity = await res.json();
@@ -260,7 +285,7 @@ export default function LeadsPage() {
   const deleteActivity = async (activityId: string) => {
     if (!selectedLead) return;
     try {
-      await fetch(`/api/leads/${selectedLead.id}/activities?activityId=${activityId}`, { method: "DELETE" });
+      await fetch(`/api/activities/${activityId}`, { method: "DELETE" });
       setActivities((prev) => prev.filter((a) => a.id !== activityId));
     } catch { /* ignore */ }
   };
@@ -322,6 +347,25 @@ export default function LeadsPage() {
   useEffect(() => {
     fetchLeads();
   }, [fetchLeads]);
+
+  // Auto-select lead from URL query param (e.g. /leads?lead=xxx)
+  const searchParams = useSearchParams();
+  useEffect(() => {
+    const leadId = searchParams.get("lead");
+    if (leadId && leads.length > 0 && !selectedLead) {
+      const lead = leads.find((l) => l.id === leadId);
+      if (lead) {
+        setSelectedLead(lead);
+        setDetailsTab("Activities");
+      } else {
+        // Lead might be on another page — fetch it directly
+        fetch(`/api/leads/${leadId}`)
+          .then((res) => res.ok ? res.json() : null)
+          .then((data) => { if (data) { setSelectedLead(data); setDetailsTab("Activities"); } })
+          .catch(() => {});
+      }
+    }
+  }, [searchParams, leads, selectedLead]);
 
   // Reset to page 1 when search/tab changes
   useEffect(() => {
@@ -1103,6 +1147,14 @@ export default function LeadsPage() {
                               <div className="flex items-center gap-2 mt-1">
                                 <span className="text-[10px] text-slate-400">{formatDateTime(act.createdAt)}</span>
                                 {act.performedBy && <span className="text-[10px] text-slate-400">• {act.performedBy}</span>}
+                                {act.status && (
+                                  <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
+                                    act.status === "Completed" ? "bg-emerald-50 text-emerald-600" :
+                                    act.status === "Scheduled" ? "bg-sky-50 text-sky-600" :
+                                    act.status === "Pending" ? "bg-amber-50 text-amber-600" :
+                                    "bg-slate-50 text-slate-500"
+                                  }`}>{act.status}</span>
+                                )}
                               </div>
                             </div>
                           </div>
