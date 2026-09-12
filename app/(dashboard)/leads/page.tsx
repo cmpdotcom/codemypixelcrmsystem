@@ -34,6 +34,8 @@ import {
   Clock,
   Video,
   File as FileIcon,
+  Copy,
+  Check as CheckIcon,
 } from "lucide-react";
 
 function LinkedinIcon({ className = "w-3.5 h-3.5" }: { className?: string }) {
@@ -202,6 +204,15 @@ export default function LeadsPage() {
   const [fileUrl, setFileUrl] = useState("");
   const [fileName, setFileName] = useState("");
   const [fileLoading, setFileLoading] = useState(false);
+
+  // Copy-to-clipboard state
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+  const copyToClipboard = (text: string, field: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopiedField(field);
+      setTimeout(() => setCopiedField(null), 1500);
+    }).catch(() => {});
+  };
 
   const fetchActivities = useCallback(async (leadId: string) => {
     try {
@@ -881,32 +892,71 @@ export default function LeadsPage() {
                 </button>
               </div>
 
-              {/* Contact Icons Row - always visible */}
+              {/* Contact Icons Row - always visible, with copy-to-clipboard */}
               <div className="space-y-2 py-1 text-xs">
-                <div className="flex items-center justify-between text-slate-600">
-                  <div className="flex items-center gap-2">
-                    <Mail className="w-3.5 h-3.5 text-slate-400" />
+                {/* Email */}
+                <div className="flex items-center justify-between text-slate-600 group">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Mail className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                     <span className="font-medium text-slate-800 truncate">{selectedLead.email}</span>
                   </div>
+                  <button
+                    onClick={() => copyToClipboard(selectedLead.email, "email")}
+                    className="p-1 rounded-md text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer shrink-0"
+                    title="Copy email"
+                  >
+                    {copiedField === "email" ? <CheckIcon className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
+                  </button>
                 </div>
-                <div className="flex items-center justify-between text-slate-600">
-                  <div className="flex items-center gap-2">
-                    <Phone className="w-3.5 h-3.5 text-slate-400" />
-                    <span className="font-medium text-slate-800">{selectedLead.phone || "—"}</span>
+
+                {/* Phone */}
+                <div className="flex items-center justify-between text-slate-600 group">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Phone className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                    <span className="font-medium text-slate-800 truncate">{selectedLead.phone || "—"}</span>
                   </div>
+                  {selectedLead.phone && (
+                    <button
+                      onClick={() => copyToClipboard(selectedLead.phone!, "phone")}
+                      className="p-1 rounded-md text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer shrink-0"
+                      title="Copy phone"
+                    >
+                      {copiedField === "phone" ? <CheckIcon className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
+                    </button>
+                  )}
                 </div>
-                <div className="flex items-center justify-between text-slate-600">
-                  <div className="flex items-center gap-2">
-                    <MapPin className="w-3.5 h-3.5 text-slate-400" />
+
+                {/* Location */}
+                <div className="flex items-center justify-between text-slate-600 group">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                     <span className="font-medium text-slate-800 truncate">{selectedLead.location || "—"}</span>
                   </div>
+                  {selectedLead.location && (
+                    <button
+                      onClick={() => copyToClipboard(selectedLead.location!, "location")}
+                      className="p-1 rounded-md text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer shrink-0"
+                      title="Copy location"
+                    >
+                      {copiedField === "location" ? <CheckIcon className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
+                    </button>
+                  )}
                 </div>
+
+                {/* LinkedIn */}
                 {selectedLead.linkedin && (
-                  <div className="flex items-center justify-between text-slate-600">
-                    <div className="flex items-center gap-2">
-                      <LinkedinIcon className="w-3.5 h-3.5 text-blue-600" />
+                  <div className="flex items-center justify-between text-slate-600 group">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <LinkedinIcon className="w-3.5 h-3.5 text-blue-600 shrink-0" />
                       <span className="font-medium text-blue-600 hover:underline cursor-pointer truncate">{selectedLead.linkedin}</span>
                     </div>
+                    <button
+                      onClick={() => copyToClipboard(selectedLead.linkedin!, "linkedin")}
+                      className="p-1 rounded-md text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer shrink-0"
+                      title="Copy LinkedIn"
+                    >
+                      {copiedField === "linkedin" ? <CheckIcon className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
+                    </button>
                   </div>
                 )}
               </div>
@@ -1262,27 +1312,27 @@ function LeadModal({
 
   const field = (name: string, label: string, type = "text", placeholder = "") => (
     <div>
-      <label className="text-[11px] font-semibold text-slate-600 mb-1 block">{label}</label>
+      <label className="text-[11px] font-semibold text-slate-600 mb-1.5 block">{label}</label>
       <input
         type={type}
         value={formData[name]}
         onChange={(e) => setFormData({ ...formData, [name]: e.target.value })}
         placeholder={placeholder}
-        className={`w-full text-xs border rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all ${
-          errors[name] ? "border-red-300 bg-red-50/30" : "border-slate-200 bg-white"
+        className={`w-full text-xs border rounded-xl px-3 py-2.5 bg-slate-50/50 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 focus:bg-white transition-all ${
+          errors[name] ? "border-red-300 bg-red-50/30" : "border-slate-200"
         }`}
       />
-      {errors[name] && <p className="text-[10px] text-red-500 mt-0.5">{errors[name]}</p>}
+      {errors[name] && <p className="text-[10px] text-red-500 mt-1 flex items-center gap-1"><AlertCircle className="w-2.5 h-2.5" />{errors[name]}</p>}
     </div>
   );
 
   const selectField = (name: string, label: string, options: string[]) => (
     <div>
-      <label className="text-[11px] font-semibold text-slate-600 mb-1 block">{label}</label>
+      <label className="text-[11px] font-semibold text-slate-600 mb-1.5 block">{label}</label>
       <select
         value={formData[name]}
         onChange={(e) => setFormData({ ...formData, [name]: e.target.value })}
-        className="w-full text-xs border border-slate-200 bg-white rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all cursor-pointer"
+        className="w-full text-xs border border-slate-200 bg-slate-50/50 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 focus:bg-white transition-all cursor-pointer"
       >
         <option value="">Select {label}...</option>
         {options.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
@@ -1291,88 +1341,126 @@ function LeadModal({
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200" onClick={onClose}>
       <div
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+        className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[92vh] overflow-hidden flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Modal Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 sticky top-0 bg-white z-10">
-          <div>
-            <h3 className="text-base font-extrabold text-slate-900">
-              {mode === "add" ? "Add New Lead" : "Edit Lead"}
-            </h3>
-            <p className="text-xs text-slate-500 mt-0.5">
-              {mode === "add" ? "Create a new lead in your CRM." : `Editing LD-${String(lead?.leadNumber).padStart(5, "0")}`}
-            </p>
+        {/* Modal Header with gradient accent */}
+        <div className="relative px-6 py-5 border-b border-slate-100 bg-gradient-to-br from-slate-50 to-white">
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 rounded-t-3xl" />
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shadow-sm ${mode === "add" ? "bg-blue-50 text-blue-600" : "bg-indigo-50 text-indigo-600"}`}>
+                {mode === "add" ? <Plus className="w-5 h-5" /> : <Edit3 className="w-5 h-5" />}
+              </div>
+              <div>
+                <h3 className="text-base font-extrabold text-slate-900 leading-tight">
+                  {mode === "add" ? "Add New Lead" : "Edit Lead"}
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  {mode === "add" ? "Fill in the details to create a new lead." : `Editing LD-${String(lead?.leadNumber).padStart(5, "0")}`}
+                </p>
+              </div>
+            </div>
+            <button onClick={onClose} className="p-2 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-600 cursor-pointer transition-colors">
+              <X className="w-5 h-5" />
+            </button>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 cursor-pointer">
-            <X className="w-5 h-5" />
-          </button>
         </div>
 
         {/* Modal Body */}
-        <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
+        <form onSubmit={handleSubmit} className="px-6 py-5 space-y-5 overflow-y-auto custom-scrollbar flex-1">
           {errors.form && (
-            <div className="bg-red-50 border border-red-200 text-red-700 text-xs font-medium px-3 py-2 rounded-lg">
+            <div className="bg-red-50 border border-red-200 text-red-700 text-xs font-medium px-3 py-2.5 rounded-xl flex items-center gap-2">
+              <AlertCircle className="w-3.5 h-3.5 shrink-0" />
               {errors.form}
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-4">
-            {field("name", "Name *", "text", "John Carter")}
-            {field("company", "Company *", "text", "ABC Technologies")}
+          {/* Section: Contact Information */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <div className="w-1 h-4 bg-blue-500 rounded-full" />
+              <h4 className="text-[11px] font-bold text-slate-700 uppercase tracking-wide">Contact Information</h4>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              {field("name", "Full Name *", "text", "John Carter")}
+              {field("company", "Company *", "text", "ABC Technologies")}
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              {field("email", "Email *", "email", "john@abc.com")}
+              {field("phone", "Phone", "tel", "+1 415 823 4567")}
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              {field("location", "Location", "text", "San Francisco, USA")}
+              {field("linkedin", "LinkedIn", "text", "linkedin.com/in/johncarter")}
+            </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            {field("email", "Email *", "email", "john@abc.com")}
-            {field("phone", "Phone", "tel", "+1 415 823 4567")}
+          {/* Section: Lead Details */}
+          <div className="space-y-3 pt-2 border-t border-slate-100">
+            <div className="flex items-center gap-2 pt-2">
+              <div className="w-1 h-4 bg-indigo-500 rounded-full" />
+              <h4 className="text-[11px] font-bold text-slate-700 uppercase tracking-wide">Lead Details</h4>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              {selectField("source", "Source", SOURCES)}
+              {selectField("service", "Service", SERVICES)}
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              {selectField("status", "Status", STATUSES)}
+              {selectField("setter", "Assigned Setter", SETTERS)}
+            </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            {field("location", "Location", "text", "San Francisco, USA")}
-            {field("linkedin", "LinkedIn", "text", "linkedin.com/in/johncarter")}
+          {/* Section: Project Requirements */}
+          <div className="space-y-3 pt-2 border-t border-slate-100">
+            <div className="flex items-center gap-2 pt-2">
+              <div className="w-1 h-4 bg-purple-500 rounded-full" />
+              <h4 className="text-[11px] font-bold text-slate-700 uppercase tracking-wide">Project Requirements</h4>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              {field("budget", "Budget", "text", "$20,000 – $50,000")}
+              {field("timeline", "Timeline", "text", "1 – 3 months")}
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              {field("companySize", "Company Size", "text", "50–200 employees")}
+              {field("industry", "Industry", "text", "Manufacturing")}
+            </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            {selectField("source", "Source", SOURCES)}
-            {selectField("service", "Service", SERVICES)}
+          {/* Section: Follow-up */}
+          <div className="space-y-3 pt-2 border-t border-slate-100">
+            <div className="flex items-center gap-2 pt-2">
+              <div className="w-1 h-4 bg-amber-500 rounded-full" />
+              <h4 className="text-[11px] font-bold text-slate-700 uppercase tracking-wide">Follow-up</h4>
+            </div>
+            {field("nextFollowUp", "Next Follow-up Date", "date")}
           </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            {selectField("status", "Status", STATUSES)}
-            {selectField("setter", "Setter", SETTERS)}
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            {field("budget", "Budget", "text", "$20,000 – $50,000")}
-            {field("timeline", "Timeline", "text", "1 – 3 months")}
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            {field("companySize", "Company Size", "text", "50–200 employees")}
-            {field("industry", "Industry", "text", "Manufacturing")}
-          </div>
-
-          {field("nextFollowUp", "Next Follow-up Date", "date")}
 
           {/* Modal Footer */}
-          <div className="flex items-center justify-end gap-2 pt-4 border-t border-slate-100">
-            <button
-              type="button"
-              onClick={onClose}
-              className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold px-4 py-2.5 rounded-xl cursor-pointer"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={saving}
-              className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-semibold px-4 py-2.5 rounded-xl flex items-center gap-1.5 cursor-pointer"
-            >
-              {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
-              {mode === "add" ? "Create Lead" : "Save Changes"}
-            </button>
+          <div className="flex items-center justify-between gap-2 pt-4 border-t border-slate-100 sticky bottom-0 bg-white -mx-6 px-6 -mb-5 pb-5">
+            <p className="text-[10px] text-slate-400">
+              <span className="text-red-500">*</span> Required fields
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={onClose}
+                className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold px-5 py-2.5 rounded-xl cursor-pointer transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={saving}
+                className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 text-white text-xs font-semibold px-5 py-2.5 rounded-xl flex items-center gap-1.5 cursor-pointer transition-all shadow-md shadow-blue-500/20"
+              >
+                {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
+                {mode === "add" ? "Create Lead" : "Save Changes"}
+              </button>
+            </div>
           </div>
         </form>
       </div>
