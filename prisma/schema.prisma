@@ -54,3 +54,32 @@ model VerificationToken {
 
   @@unique([identifier, token])
 }
+
+model Lead {
+  id          String    @id @default(cuid())
+  leadNumber  Int       @unique @default(autoincrement())
+  name        String
+  company     String
+  email       String
+  phone       String?
+  location    String?
+  linkedin    String?
+  source      String    @default("Website")
+  service     String?
+  status      String    @default("New")
+  setter      String?
+  setterImg   String?
+  budget      String?
+  timeline    String?
+  companySize String?
+  industry    String?
+  lastContact DateTime?
+  nextFollowUp DateTime?
+  notes       String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([status])
+  @@index([source])
+  @@index([setter])
+}
