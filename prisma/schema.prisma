@@ -80,6 +80,7 @@ model Lead {
   updatedAt   DateTime  @updatedAt
   activities  LeadActivity[]
   files       LeadFile[]
+  crmActivities Activity[]
 
   @@index([status])
   @@index([source])
@@ -111,4 +112,27 @@ model LeadFile {
   lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
 
   @@index([leadId])
+}
+
+model Activity {
+  id          String   @id @default(cuid())
+  activityNumber Int  @unique @default(autoincrement())
+  type        String   @default("Note")  // Call, Email, WhatsApp, Meeting, Note, Task, SMS, Other
+  direction   String?  // Outbound, Inbound, Sent, Received, Internal, Online, In Person
+  title       String
+  description String?
+  company     String?
+  contact     String?
+  leadId      String?
+  performedBy String?
+  status      String   @default("Completed") // Completed, Scheduled, Pending, Cancelled
+  scheduledAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  lead        Lead?    @relation(fields: [leadId], references: [id], onDelete: SetNull)
+
+  @@index([type])
+  @@index([status])
+  @@index([performedBy])
+  @@index([createdAt])
 }
