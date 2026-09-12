@@ -433,10 +433,12 @@ export default function LeadsPage() {
           </div>
         )}
 
-        {/* Main 2-Column Workspace Layout */}
-        <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
-          {/* Left/Center Leads Table Container (8 cols) */}
-          <div className="xl:col-span-8 bg-white rounded-2xl border border-slate-100/90 shadow-[0_1px_3px_rgba(0,0,0,0.02),0_6px_16px_rgba(0,0,0,0.02)] p-5 space-y-4">
+        {/* Main 2-Column Workspace Layout - right panel only renders when a lead is selected */}
+        <div className={`grid grid-cols-1 xl:grid-cols-12 gap-6 items-start transition-all duration-300`}>
+          {/* Left/Center Leads Table Container - full width when no lead selected, 8 cols when lead selected */}
+          <div className={`bg-white rounded-2xl border border-slate-100/90 shadow-[0_1px_3px_rgba(0,0,0,0.02),0_6px_16px_rgba(0,0,0,0.02)] p-5 space-y-4 transition-all duration-300 ${
+            selectedLead ? "xl:col-span-8" : "xl:col-span-12"
+          }`}>
             {/* Category Status Tabs */}
             <div className="flex items-center justify-between border-b border-slate-100 pb-3 overflow-x-auto custom-scrollbar">
               <div className="flex items-center gap-1 pb-1 sm:pb-0">
@@ -699,197 +701,173 @@ export default function LeadsPage() {
             </div>
           </div>
 
-          {/* Right Column: Active Lead Details Panel (4 cols) */}
-          <div className="xl:col-span-4 bg-white rounded-2xl border border-slate-100/90 shadow-[0_1px_3px_rgba(0,0,0,0.02),0_6px_16px_rgba(0,0,0,0.02)] relative overflow-hidden min-h-[500px]">
-            {/* Detail Panel - slides in from right when a lead is selected */}
-            <div
-              className={`absolute inset-0 p-5 space-y-4 overflow-y-auto custom-scrollbar transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] ${
-                selectedLead
-                  ? "translate-x-0 opacity-100"
-                  : "translate-x-full opacity-0 pointer-events-none"
-              }`}
-            >
-              {selectedLead && (
-                <>
-                  {/* Header: ID, Status, Close */}
-                  <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+          {/* Right Column: Active Lead Details Panel - only renders when a lead is selected */}
+          {selectedLead && (
+            <div className="xl:col-span-4 bg-white rounded-2xl border border-slate-100/90 shadow-[0_1px_3px_rgba(0,0,0,0.02),0_6px_16px_rgba(0,0,0,0.02)] p-5 space-y-4 animate-slide-in-right">
+              {/* Header: ID, Status, Close */}
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setSelectedLead(null)}
+                    className="text-slate-400 hover:text-slate-600 p-1 rounded-md hover:bg-slate-50 transition-colors"
+                    title="Close"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                  <span className="text-xs font-bold text-slate-900">
+                    LD-{String(selectedLead.leadNumber).padStart(5, "0")}
+                  </span>
+                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${statusStyles[selectedLead.status] || statusStyles["New"]}`}>
+                    {selectedLead.status}
+                  </span>
+                </div>
+              </div>
+
+              {/* Panel Tabs */}
+              <div className="flex items-center gap-4 text-xs font-semibold text-slate-500 border-b border-slate-100">
+                {["Overview", "Activities", "Notes", "Files"].map((tab) => (
+                  <button
+                    key={tab}
+                    onClick={() => setDetailsTab(tab)}
+                    className={`pb-2 transition-colors relative cursor-pointer ${
+                      detailsTab === tab ? "text-blue-600 font-bold" : "hover:text-slate-900"
+                    }`}
+                  >
+                    {tab}
+                    {detailsTab === tab && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 rounded-full" />}
+                  </button>
+                ))}
+              </div>
+
+              {/* Lead Profile Banner */}
+              <div className="flex items-start justify-between pt-1">
+                <div className="flex items-center gap-3">
+                  <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-sm shrink-0 shadow-xs ${getAvatarBg(selectedLead.name)}`}>
+                    {getInitials(selectedLead.name)}
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-extrabold text-slate-900 leading-snug">{selectedLead.name}</h3>
+                    <p className="text-xs text-slate-500 mt-0.5">{selectedLead.company}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => { setEditingLead(selectedLead); setShowEditModal(true); }}
+                  className="bg-white border border-slate-200/80 hover:bg-slate-50 text-slate-700 text-xs font-semibold px-2.5 py-1 rounded-lg shadow-2xs flex items-center gap-1 transition-colors cursor-pointer"
+                >
+                  <Edit3 className="w-3 h-3" /> Edit
+                </button>
+              </div>
+
+              {/* Contact Icons Row */}
+              <div className="space-y-2 py-1 text-xs">
+                <div className="flex items-center justify-between text-slate-600">
+                  <div className="flex items-center gap-2">
+                    <Mail className="w-3.5 h-3.5 text-slate-400" />
+                    <span className="font-medium text-slate-800">{selectedLead.email}</span>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between text-slate-600">
+                  <div className="flex items-center gap-2">
+                    <Phone className="w-3.5 h-3.5 text-slate-400" />
+                    <span className="font-medium text-slate-800">{selectedLead.phone || "—"}</span>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between text-slate-600">
+                  <div className="flex items-center gap-2">
+                    <MapPin className="w-3.5 h-3.5 text-slate-400" />
+                    <span className="font-medium text-slate-800">{selectedLead.location || "—"}</span>
+                  </div>
+                </div>
+                {selectedLead.linkedin && (
+                  <div className="flex items-center justify-between text-slate-600">
                     <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => setSelectedLead(null)}
-                        className="text-slate-400 hover:text-slate-600 p-1 rounded-md hover:bg-slate-50 transition-colors"
-                        title="Close"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                      <span className="text-xs font-bold text-slate-900">
-                        LD-{String(selectedLead.leadNumber).padStart(5, "0")}
-                      </span>
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${statusStyles[selectedLead.status] || statusStyles["New"]}`}>
-                        {selectedLead.status}
-                      </span>
+                      <LinkedinIcon className="w-3.5 h-3.5 text-blue-600" />
+                      <span className="font-medium text-blue-600 hover:underline cursor-pointer">{selectedLead.linkedin}</span>
                     </div>
                   </div>
+                )}
+              </div>
 
-                  {/* Panel Tabs */}
-                  <div className="flex items-center gap-4 text-xs font-semibold text-slate-500 border-b border-slate-100">
-                    {["Overview", "Activities", "Notes", "Files"].map((tab) => (
-                      <button
-                        key={tab}
-                        onClick={() => setDetailsTab(tab)}
-                        className={`pb-2 transition-colors relative cursor-pointer ${
-                          detailsTab === tab ? "text-blue-600 font-bold" : "hover:text-slate-900"
-                        }`}
-                      >
-                        {tab}
-                        {detailsTab === tab && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 rounded-full" />}
-                      </button>
-                    ))}
-                  </div>
-
-                  {/* Lead Profile Banner */}
-                  <div className="flex items-start justify-between pt-1">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-sm shrink-0 shadow-xs ${getAvatarBg(selectedLead.name)}`}>
-                        {getInitials(selectedLead.name)}
-                      </div>
-                      <div>
-                        <h3 className="text-sm font-extrabold text-slate-900 leading-snug">{selectedLead.name}</h3>
-                        <p className="text-xs text-slate-500 mt-0.5">{selectedLead.company}</p>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => { setEditingLead(selectedLead); setShowEditModal(true); }}
-                      className="bg-white border border-slate-200/80 hover:bg-slate-50 text-slate-700 text-xs font-semibold px-2.5 py-1 rounded-lg shadow-2xs flex items-center gap-1 transition-colors cursor-pointer"
-                    >
-                      <Edit3 className="w-3 h-3" /> Edit
-                    </button>
-                  </div>
-
-                  {/* Contact Icons Row */}
-                  <div className="space-y-2 py-1 text-xs">
-                    <div className="flex items-center justify-between text-slate-600">
-                      <div className="flex items-center gap-2">
-                        <Mail className="w-3.5 h-3.5 text-slate-400" />
-                        <span className="font-medium text-slate-800">{selectedLead.email}</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between text-slate-600">
-                      <div className="flex items-center gap-2">
-                        <Phone className="w-3.5 h-3.5 text-slate-400" />
-                        <span className="font-medium text-slate-800">{selectedLead.phone || "—"}</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between text-slate-600">
-                      <div className="flex items-center gap-2">
-                        <MapPin className="w-3.5 h-3.5 text-slate-400" />
-                        <span className="font-medium text-slate-800">{selectedLead.location || "—"}</span>
-                      </div>
-                    </div>
-                    {selectedLead.linkedin && (
-                      <div className="flex items-center justify-between text-slate-600">
-                        <div className="flex items-center gap-2">
-                          <LinkedinIcon className="w-3.5 h-3.5 text-blue-600" />
-                          <span className="font-medium text-blue-600 hover:underline cursor-pointer">{selectedLead.linkedin}</span>
-                        </div>
-                      </div>
+              {/* Detailed Key-Value Specs */}
+              <div className="space-y-2 pt-2 border-t border-slate-100 text-xs">
+                <div className="flex justify-between py-1 border-b border-slate-50">
+                  <span className="text-slate-400">Source</span>
+                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${sourceStyles[selectedLead.source] || sourceStyles["Website"]}`}>
+                    {selectedLead.source}
+                  </span>
+                </div>
+                <div className="flex justify-between py-1 border-b border-slate-50">
+                  <span className="text-slate-400">Service Interested</span>
+                  <span className="font-semibold text-slate-800">{selectedLead.service || "—"}</span>
+                </div>
+                <div className="flex justify-between py-1 border-b border-slate-50">
+                  <span className="text-slate-400">Budget</span>
+                  <span className="font-semibold text-slate-800">{selectedLead.budget || "—"}</span>
+                </div>
+                <div className="flex justify-between py-1 border-b border-slate-50">
+                  <span className="text-slate-400">Timeline</span>
+                  <span className="font-semibold text-slate-800">{selectedLead.timeline || "—"}</span>
+                </div>
+                <div className="flex justify-between py-1 border-b border-slate-50">
+                  <span className="text-slate-400">Company Size</span>
+                  <span className="font-semibold text-slate-800">{selectedLead.companySize || "—"}</span>
+                </div>
+                <div className="flex justify-between py-1 border-b border-slate-50">
+                  <span className="text-slate-400">Industry</span>
+                  <span className="font-semibold text-slate-800">{selectedLead.industry || "—"}</span>
+                </div>
+                <div className="flex justify-between py-1 border-b border-slate-50">
+                  <span className="text-slate-400">Assigned Setter</span>
+                  <div className="flex items-center gap-1.5 font-semibold text-slate-800">
+                    {selectedLead.setterImg ? (
+                      <img src={selectedLead.setterImg} alt={selectedLead.setter || ""} className="w-4 h-4 rounded-full object-cover" />
+                    ) : (
+                      selectedLead.setter && <div className={`w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold ${getAvatarBg(selectedLead.setter)}`}>{getInitials(selectedLead.setter)}</div>
                     )}
+                    <span>{selectedLead.setter || "—"}</span>
                   </div>
+                </div>
+                <div className="flex justify-between py-1 border-b border-slate-50">
+                  <span className="text-slate-400">Created Date</span>
+                  <span className="text-slate-600 font-medium">{formatDateTime(selectedLead.createdAt)}</span>
+                </div>
+                <div className="flex justify-between py-1 border-b border-slate-50">
+                  <span className="text-slate-400">Last Contact</span>
+                  <span className="text-slate-600 font-medium">{formatDateTime(selectedLead.lastContact)}</span>
+                </div>
+                <div className="flex justify-between py-1 items-center">
+                  <span className="text-slate-400">Next Follow-up</span>
+                  <span className="bg-amber-50 text-amber-700 border border-amber-200/70 px-2 py-0.5 rounded text-[11px] font-bold">
+                    {formatDate(selectedLead.nextFollowUp)}
+                  </span>
+                </div>
+              </div>
 
-                  {/* Detailed Key-Value Specs */}
-                  <div className="space-y-2 pt-2 border-t border-slate-100 text-xs">
-                    <div className="flex justify-between py-1 border-b border-slate-50">
-                      <span className="text-slate-400">Source</span>
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${sourceStyles[selectedLead.source] || sourceStyles["Website"]}`}>
-                        {selectedLead.source}
-                      </span>
-                    </div>
-                    <div className="flex justify-between py-1 border-b border-slate-50">
-                      <span className="text-slate-400">Service Interested</span>
-                      <span className="font-semibold text-slate-800">{selectedLead.service || "—"}</span>
-                    </div>
-                    <div className="flex justify-between py-1 border-b border-slate-50">
-                      <span className="text-slate-400">Budget</span>
-                      <span className="font-semibold text-slate-800">{selectedLead.budget || "—"}</span>
-                    </div>
-                    <div className="flex justify-between py-1 border-b border-slate-50">
-                      <span className="text-slate-400">Timeline</span>
-                      <span className="font-semibold text-slate-800">{selectedLead.timeline || "—"}</span>
-                    </div>
-                    <div className="flex justify-between py-1 border-b border-slate-50">
-                      <span className="text-slate-400">Company Size</span>
-                      <span className="font-semibold text-slate-800">{selectedLead.companySize || "—"}</span>
-                    </div>
-                    <div className="flex justify-between py-1 border-b border-slate-50">
-                      <span className="text-slate-400">Industry</span>
-                      <span className="font-semibold text-slate-800">{selectedLead.industry || "—"}</span>
-                    </div>
-                    <div className="flex justify-between py-1 border-b border-slate-50">
-                      <span className="text-slate-400">Assigned Setter</span>
-                      <div className="flex items-center gap-1.5 font-semibold text-slate-800">
-                        {selectedLead.setterImg ? (
-                          <img src={selectedLead.setterImg} alt={selectedLead.setter || ""} className="w-4 h-4 rounded-full object-cover" />
-                        ) : (
-                          selectedLead.setter && <div className={`w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold ${getAvatarBg(selectedLead.setter)}`}>{getInitials(selectedLead.setter)}</div>
-                        )}
-                        <span>{selectedLead.setter || "—"}</span>
-                      </div>
-                    </div>
-                    <div className="flex justify-between py-1 border-b border-slate-50">
-                      <span className="text-slate-400">Created Date</span>
-                      <span className="text-slate-600 font-medium">{formatDateTime(selectedLead.createdAt)}</span>
-                    </div>
-                    <div className="flex justify-between py-1 border-b border-slate-50">
-                      <span className="text-slate-400">Last Contact</span>
-                      <span className="text-slate-600 font-medium">{formatDateTime(selectedLead.lastContact)}</span>
-                    </div>
-                    <div className="flex justify-between py-1 items-center">
-                      <span className="text-slate-400">Next Follow-up</span>
-                      <span className="bg-amber-50 text-amber-700 border border-amber-200/70 px-2 py-0.5 rounded text-[11px] font-bold">
-                        {formatDate(selectedLead.nextFollowUp)}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Notes Tab */}
-                  {detailsTab === "Notes" && (
-                    <div className="pt-3 border-t border-slate-100">
-                      <h4 className="text-xs font-bold text-slate-900 mb-2">Notes</h4>
-                      <textarea
-                        defaultValue={selectedLead.notes || ""}
-                        onBlur={(e) => updateLead(selectedLead.id, { notes: e.target.value })}
-                        placeholder="Add notes about this lead..."
-                        className="w-full text-xs border border-slate-200 rounded-xl p-3 min-h-[100px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 resize-none"
-                      />
-                      <p className="text-[10px] text-slate-400 mt-1">Notes save automatically when you click away.</p>
-                    </div>
-                  )}
-
-                  {/* Delete button */}
-                  <div className="pt-2 border-t border-slate-100">
-                    <button
-                      onClick={() => handleDeleteLead(selectedLead.id)}
-                      className="w-full bg-red-50 hover:bg-red-100 text-red-600 text-xs font-semibold py-2.5 px-4 rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" /> Delete Lead
-                    </button>
-                  </div>
-                </>
+              {/* Notes Tab */}
+              {detailsTab === "Notes" && (
+                <div className="pt-3 border-t border-slate-100">
+                  <h4 className="text-xs font-bold text-slate-900 mb-2">Notes</h4>
+                  <textarea
+                    defaultValue={selectedLead.notes || ""}
+                    onBlur={(e) => updateLead(selectedLead.id, { notes: e.target.value })}
+                    placeholder="Add notes about this lead..."
+                    className="w-full text-xs border border-slate-200 rounded-xl p-3 min-h-[100px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 resize-none"
+                  />
+                  <p className="text-[10px] text-slate-400 mt-1">Notes save automatically when you click away.</p>
+                </div>
               )}
-            </div>
 
-            {/* Empty state - slides away to left when a lead is selected */}
-            <div
-              className={`absolute inset-0 p-5 flex flex-col items-center justify-center text-center transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] ${
-                selectedLead
-                  ? "-translate-x-full opacity-0 pointer-events-none"
-                  : "translate-x-0 opacity-100"
-              }`}
-            >
-              <Target className="w-10 h-10 text-slate-300 mb-3" />
-              <p className="text-sm font-semibold text-slate-600">Select a lead</p>
-              <p className="text-xs text-slate-400 mt-1 max-w-[200px]">Click a lead from the table to see the details panel slide in.</p>
+              {/* Delete button */}
+              <div className="pt-2 border-t border-slate-100">
+                <button
+                  onClick={() => handleDeleteLead(selectedLead.id)}
+                  className="w-full bg-red-50 hover:bg-red-100 text-red-600 text-xs font-semibold py-2.5 px-4 rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                >
+                  <Trash2 className="w-3.5 h-3.5" /> Delete Lead
+                </button>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
 
@@ -921,13 +899,20 @@ export default function LeadsPage() {
         />
       )}
 
-      {/* Custom Scrollbars */}
+      {/* Custom Scrollbars + Animations */}
       <style dangerouslySetInnerHTML={{
         __html: `
           .custom-scrollbar::-webkit-scrollbar { width: 5px; height: 5px; }
           .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
           .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
           .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+          @keyframes slide-in-right {
+            from { opacity: 0; transform: translateX(24px); }
+            to { opacity: 1; transform: translateX(0); }
+          }
+          .animate-slide-in-right {
+            animation: slide-in-right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          }
         `,
       }} />
     </>
