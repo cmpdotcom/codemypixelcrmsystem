@@ -433,12 +433,10 @@ export default function LeadsPage() {
           </div>
         )}
 
-        {/* Main 2-Column Workspace Layout - right panel only renders when a lead is selected */}
-        <div className={`grid grid-cols-1 xl:grid-cols-12 gap-6 items-start transition-all duration-300`}>
-          {/* Left/Center Leads Table Container - full width when no lead selected, 8 cols when lead selected */}
-          <div className={`bg-white rounded-2xl border border-slate-100/90 shadow-[0_1px_3px_rgba(0,0,0,0.02),0_6px_16px_rgba(0,0,0,0.02)] p-5 space-y-4 transition-all duration-300 ${
-            selectedLead ? "xl:col-span-8" : "xl:col-span-12"
-          }`}>
+        {/* Main 2-Column Workspace Layout - flex with animated right panel width */}
+        <div className="flex flex-col xl:flex-row gap-6 items-start">
+          {/* Left/Center Leads Table Container - flex-1 grows to fill, shrinks when right panel opens */}
+          <div className="flex-1 min-w-0 bg-white rounded-2xl border border-slate-100/90 shadow-[0_1px_3px_rgba(0,0,0,0.02),0_6px_16px_rgba(0,0,0,0.02)] p-5 space-y-4 transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]">
             {/* Category Status Tabs */}
             <div className="flex items-center justify-between border-b border-slate-100 pb-3 overflow-x-auto custom-scrollbar">
               <div className="flex items-center gap-1 pb-1 sm:pb-0">
@@ -701,27 +699,35 @@ export default function LeadsPage() {
             </div>
           </div>
 
-          {/* Right Column: Active Lead Details Panel - only renders when a lead is selected */}
-          {selectedLead && (
-            <div className="xl:col-span-4 bg-white rounded-2xl border border-slate-100/90 shadow-[0_1px_3px_rgba(0,0,0,0.02),0_6px_16px_rgba(0,0,0,0.02)] p-5 space-y-4 animate-slide-in-right">
-              {/* Header: ID, Status, Close */}
-              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setSelectedLead(null)}
-                    className="text-slate-400 hover:text-slate-600 p-1 rounded-md hover:bg-slate-50 transition-colors"
-                    title="Close"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                  <span className="text-xs font-bold text-slate-900">
-                    LD-{String(selectedLead.leadNumber).padStart(5, "0")}
-                  </span>
-                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${statusStyles[selectedLead.status] || statusStyles["New"]}`}>
-                    {selectedLead.status}
-                  </span>
-                </div>
-              </div>
+          {/* Right Column: Detail Panel - always in DOM, width + opacity animates */}
+          <div
+            className={`shrink-0 overflow-hidden transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] ${
+              selectedLead
+                ? "xl:w-[380px] opacity-100"
+                : "xl:w-0 opacity-0"
+            }`}
+          >
+            <div className="w-[380px] bg-white rounded-2xl border border-slate-100/90 shadow-[0_1px_3px_rgba(0,0,0,0.02),0_6px_16px_rgba(0,0,0,0.02)] p-5 space-y-4">
+              {selectedLead && (
+                <>
+                  {/* Header: ID, Status, Close */}
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setSelectedLead(null)}
+                        className="text-slate-400 hover:text-slate-600 p-1 rounded-md hover:bg-slate-50 transition-colors"
+                        title="Close"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                      <span className="text-xs font-bold text-slate-900">
+                        LD-{String(selectedLead.leadNumber).padStart(5, "0")}
+                      </span>
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${statusStyles[selectedLead.status] || statusStyles["New"]}`}>
+                        {selectedLead.status}
+                      </span>
+                    </div>
+                  </div>
 
               {/* Panel Tabs */}
               <div className="flex items-center gap-4 text-xs font-semibold text-slate-500 border-b border-slate-100">
@@ -866,8 +872,10 @@ export default function LeadsPage() {
                   <Trash2 className="w-3.5 h-3.5" /> Delete Lead
                 </button>
               </div>
+                </>
+              )}
             </div>
-          )}
+          </div>
         </div>
       </div>
 
@@ -899,20 +907,13 @@ export default function LeadsPage() {
         />
       )}
 
-      {/* Custom Scrollbars + Animations */}
+      {/* Custom Scrollbars */}
       <style dangerouslySetInnerHTML={{
         __html: `
           .custom-scrollbar::-webkit-scrollbar { width: 5px; height: 5px; }
           .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
           .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
           .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-          @keyframes slide-in-right {
-            from { opacity: 0; transform: translateX(24px); }
-            to { opacity: 1; transform: translateX(0); }
-          }
-          .animate-slide-in-right {
-            animation: slide-in-right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-          }
         `,
       }} />
     </>
