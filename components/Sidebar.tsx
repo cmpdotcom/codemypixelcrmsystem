@@ -57,7 +57,7 @@ const navSections = [
   {
     title: "Team",
     items: [
-      { icon: UserPlus, label: "Setters", href: "#" },
+      { icon: UserPlus, label: "Setters", href: "/team/setters" },
       { icon: UserCheck, label: "Closers", href: "#" },
       { icon: Code, label: "Developers", href: "#" },
       { icon: BarChart2, label: "Performance", href: "#" },
