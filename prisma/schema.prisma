@@ -114,6 +114,13 @@ model LeadFile {
   @@index([leadId])
 }
 
+model Setting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
 model Activity {
   id          String   @id @default(cuid())
   activityNumber Int  @unique @default(autoincrement())

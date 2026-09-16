@@ -46,18 +46,25 @@ export function FormField({
 
 export function Input({
   placeholder,
+  value,
   defaultValue,
+  onChange,
   type = "text",
 }: {
   placeholder?: string;
+  value?: string;
   defaultValue?: string;
+  onChange?: (v: string) => void;
   type?: string;
 }) {
+  const controlled = value !== undefined;
   return (
     <input
       type={type}
       placeholder={placeholder}
-      defaultValue={defaultValue}
+      {...(controlled
+        ? { value, onChange: (e) => onChange?.(e.target.value) }
+        : { defaultValue })}
       className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all"
     />
   );
@@ -65,14 +72,21 @@ export function Input({
 
 export function Select({
   options,
+  value,
   defaultValue,
+  onChange,
 }: {
   options: string[];
+  value?: string;
   defaultValue?: string;
+  onChange?: (v: string) => void;
 }) {
+  const controlled = value !== undefined;
   return (
     <select
-      defaultValue={defaultValue}
+      {...(controlled
+        ? { value, onChange: (e) => onChange?.(e.target.value) }
+        : { defaultValue })}
       className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all"
     >
       {options.map((opt) => (
@@ -87,12 +101,17 @@ export function Select({
 export function Toggle({
   label,
   description,
+  checked,
   defaultOn,
+  onChange,
 }: {
   label: string;
   description?: string;
+  checked?: boolean;
   defaultOn?: boolean;
+  onChange?: (v: boolean) => void;
 }) {
+  const on = checked !== undefined ? checked : !!defaultOn;
   return (
     <div className="flex items-center justify-between py-3 border-b border-slate-100 last:border-0">
       <div>
@@ -102,14 +121,16 @@ export function Toggle({
         )}
       </div>
       <button
-        className={`relative w-10 h-5.5 rounded-full transition-colors shrink-0 ${
-          defaultOn ? "bg-blue-600" : "bg-slate-200"
+        type="button"
+        onClick={() => onChange?.(!on)}
+        className={`relative w-10 rounded-full transition-colors shrink-0 cursor-pointer ${
+          on ? "bg-blue-600" : "bg-slate-200"
         }`}
         style={{ height: "22px", width: "40px" }}
       >
         <span
           className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-transform ${
-            defaultOn ? "translate-x-5" : "translate-x-0.5"
+            on ? "translate-x-5" : "translate-x-0.5"
           }`}
         />
       </button>
@@ -117,14 +138,40 @@ export function Toggle({
   );
 }
 
-export function SaveBar() {
+export function SaveBar({
+  saving,
+  saved,
+  onSave,
+  onCancel,
+}: {
+  saving?: boolean;
+  saved?: boolean;
+  onSave?: () => void;
+  onCancel?: () => void;
+}) {
   return (
-    <div className="flex justify-end gap-3 mt-6">
-      <button className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-900 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
+    <div className="flex items-center justify-end gap-3 mt-6">
+      {saved && (
+        <span className="text-xs font-semibold text-emerald-600 flex items-center gap-1">
+          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+          Saved!
+        </span>
+      )}
+      <button
+        onClick={onCancel}
+        className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-900 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer"
+      >
         Cancel
       </button>
-      <button className="px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm shadow-blue-500/20 transition-colors">
-        Save Changes
+      <button
+        onClick={onSave}
+        disabled={saving}
+        className="px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 rounded-lg shadow-sm shadow-blue-500/20 transition-colors cursor-pointer flex items-center gap-1.5"
+      >
+        {saving && (
+          <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+        )}
+        {saving ? "Saving..." : "Save Changes"}
       </button>
     </div>
   );
