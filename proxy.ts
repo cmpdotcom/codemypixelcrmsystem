@@ -9,8 +9,8 @@ export default auth((req) => {
   const publicRoutes = ["/login", "/signup"];
   const isPublicRoute = publicRoutes.includes(pathname);
 
-  // API auth routes should always pass through
-  if (pathname.startsWith("/api/auth")) {
+  // API auth and uploadthing routes should always pass through
+  if (pathname.startsWith("/api/auth") || pathname.startsWith("/api/uploadthing")) {
     return NextResponse.next();
   }
 
