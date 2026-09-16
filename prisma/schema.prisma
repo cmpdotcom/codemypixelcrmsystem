@@ -302,6 +302,7 @@ model Project {
   client       Client?   @relation(fields: [clientId], references: [id], onDelete: SetNull)
   tasks        Task[]
   milestones   Milestone[]
+  bugs         Bug[]
 
   @@index([status])
   @@index([health])
@@ -359,4 +360,34 @@ model Milestone {
   @@index([status])
   @@index([deadline])
   @@index([projectId])
+}
+
+model Bug {
+  id             String    @id @default(cuid())
+  bugNumber      Int       @unique @default(autoincrement())
+  title          String
+  description    String?
+  projectName    String
+  module         String?   @default("General")
+  severity       String    @default("Medium") // Critical, High, Medium, Low
+  priority       String    @default("Medium") // Urgent, High, Medium, Low
+  status         String    @default("New")    // New, Assigned, In Progress, Fixed, Verified, Closed, Reopened
+  environment    String?   @default("Production") // Production, Staging, QA
+  reportedBy     String?   @default("QA Team")
+  assigneeName   String?
+  assigneeRole   String?   @default("Developer")
+  stepsToReproduce String?
+  expectedResult String?
+  actualResult   String?
+  resolvedAt     DateTime?
+  projectId      String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  project        Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
+  @@index([status])
+  @@index([severity])
+  @@index([priority])
+  @@index([projectId])
+  @@index([createdAt])
 }
