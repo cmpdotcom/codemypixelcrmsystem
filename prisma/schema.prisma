@@ -301,6 +301,7 @@ model Project {
   updatedAt    DateTime  @updatedAt
   client       Client?   @relation(fields: [clientId], references: [id], onDelete: SetNull)
   tasks        Task[]
+  milestones   Milestone[]
 
   @@index([status])
   @@index([health])
@@ -334,5 +335,28 @@ model Task {
   @@index([priority])
   @@index([assignee])
   @@index([dueDate])
+  @@index([projectId])
+}
+
+model Milestone {
+  id             String    @id @default(cuid())
+  mstNumber      Int       @unique @default(autoincrement())
+  name           String
+  description    String?
+  projectName    String
+  status         String    @default("Not Started") // Completed, In Progress, Not Started
+  progress       Int       @default(0) // 0-100
+  deadline       DateTime
+  taskCount      Int       @default(0)
+  taskTotal      Int       @default(10)
+  owner          String    @default("Aarav Sharma")
+  ownerInitials  String    @default("AS")
+  projectId      String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  project        Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
+  @@index([status])
+  @@index([deadline])
   @@index([projectId])
 }
