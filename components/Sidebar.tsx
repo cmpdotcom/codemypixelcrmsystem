@@ -51,7 +51,7 @@ const navSections = [
       { icon: CheckSquare, label: "Tasks", href: "/projects/tasks" },
       { icon: Flag, label: "Milestones", href: "/projects/milestones" },
       { icon: Bug, label: "Bugs / QA", href: "/qa" },
-      { icon: Rocket, label: "Deployments", href: "#" },
+      { icon: Rocket, label: "Deployments", href: "/deployments" },
     ],
   },
   {

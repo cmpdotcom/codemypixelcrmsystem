@@ -303,6 +303,7 @@ model Project {
   tasks        Task[]
   milestones   Milestone[]
   bugs         Bug[]
+  deployments  Deployment[]
 
   @@index([status])
   @@index([health])
@@ -388,6 +389,32 @@ model Bug {
   @@index([status])
   @@index([severity])
   @@index([priority])
+  @@index([projectId])
+  @@index([createdAt])
+}
+
+model Deployment {
+  id           String    @id @default(cuid())
+  depNumber    Int       @unique @default(autoincrement())
+  projectName  String
+  environment  String    @default("Production") // Production, Staging, QA
+  version      String    @default("v1.0.0")
+  commitHash   String?
+  commitMsg    String?
+  branch       String?   @default("main")
+  status       String    @default("Successful") // Successful, In Progress, Failed, Rolled Back
+  deployedBy   String    @default("Ali Khan")
+  duration     String?   @default("2m 34s")
+  releaseNotes String?
+  url          String?
+  rollbackFrom String?
+  projectId    String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  project      Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
+  @@index([environment])
+  @@index([status])
   @@index([projectId])
   @@index([createdAt])
 }
