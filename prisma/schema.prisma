@@ -118,6 +118,7 @@ model Lead {
   activities  LeadActivity[]
   files       LeadFile[]
   crmActivities Activity[]
+  deals       Deal[]
 
   @@index([status])
   @@index([source])
@@ -178,5 +179,34 @@ model Activity {
   @@index([type])
   @@index([status])
   @@index([performedBy])
+  @@index([createdAt])
+}
+
+model Deal {
+  id               String    @id @default(cuid())
+  dealNumber       Int       @unique @default(autoincrement())
+  title            String
+  company          String
+  contact          String?
+  service          String?
+  value            Float     @default(0)
+  stage            String    @default("qualified") // qualified, discovery, proposal, negotiation, contract, won, lost
+  pipeline         String    @default("Software Sales")
+  probability      Int       @default(20)
+  priority         String    @default("Medium") // Low, Medium, High, Urgent
+  closer           String?
+  closerImg        String?
+  leadId           String?
+  expectedCloseDate DateTime?
+  closedAt         DateTime?
+  lostReason       String?
+  notes            String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  lead             Lead?     @relation(fields: [leadId], references: [id], onDelete: SetNull)
+
+  @@index([stage])
+  @@index([pipeline])
+  @@index([closer])
   @@index([createdAt])
 }
