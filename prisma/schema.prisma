@@ -300,9 +300,39 @@ model Project {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
   client       Client?   @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  tasks        Task[]
 
   @@index([status])
   @@index([health])
   @@index([deadline])
   @@index([clientId])
+}
+
+model Task {
+  id             String    @id @default(cuid())
+  taskNumber     Int       @unique @default(autoincrement())
+  name           String
+  description    String?
+  projectName    String
+  module         String?   @default("Core")
+  assignee       String?   @default("Unassigned")
+  priority       String    @default("Medium") // Urgent, High, Medium, Low
+  status         String    @default("Todo") // Backlog, Todo, In Progress, Code Review, QA, Revision, Done, Blocked
+  progress       Int       @default(0) // 0-100
+  dueDate        DateTime
+  startDate      DateTime? @default(now())
+  estimatedHours Float     @default(8)
+  loggedHours    Float     @default(0)
+  tags           String[]
+  blocked        Boolean   @default(false)
+  projectId      String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  project        Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
+  @@index([status])
+  @@index([priority])
+  @@index([assignee])
+  @@index([dueDate])
+  @@index([projectId])
 }
