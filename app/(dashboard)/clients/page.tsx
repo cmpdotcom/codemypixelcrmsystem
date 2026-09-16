@@ -1,1122 +1,831 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import {
-  Users,
   Users2,
-  Flag,
-  BarChart2,
-  CreditCard,
-  DollarSign,
-  FileText,
+  Handshake,
+  Gem,
+  Clock,
   Search,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
-  ChevronsLeft,
-  ChevronsRight,
   Phone,
   Mail,
   Calendar,
-  MessageCircle,
   Plus,
   Download,
-  MoreHorizontal,
-  Check,
   Building2,
-  Filter,
-  Columns,
   MapPin,
-  Clock,
-  ArrowUp,
-  ArrowDown,
-  ArrowUpRight,
-  Handshake,
-  Gem,
-  AlertCircle,
   Globe,
-  MessageSquare,
-  Box,
-  Layers,
-  FileSpreadsheet,
-  CheckCircle2,
+  Trash2,
+  Edit2,
+  Loader2,
+  X,
+  AlertCircle,
+  Copy,
+  Check,
 } from "lucide-react";
 
-// --- KPI Stats Data ---
-const kpiStats = [
-  {
-    title: "Total Clients",
-    value: "284",
-    change: "↑ 12%",
-    isPositive: true,
-    subtext: "vs last month",
-    icon: Users2,
-    iconColor: "text-blue-600",
-    iconBg: "bg-blue-50",
-  },
-  {
-    title: "Active Clients",
-    value: "186",
-    change: "↑ 18%",
-    isPositive: true,
-    subtext: "With ongoing projects",
-    icon: Handshake,
-    iconColor: "text-amber-500",
-    iconBg: "bg-amber-50",
-  },
-  {
-    title: "Total Revenue",
-    value: "$1,250,000",
-    change: "↑ 24%",
-    isPositive: true,
-    subtext: "From all clients",
-    icon: Gem,
-    iconColor: "text-emerald-600",
-    iconBg: "bg-emerald-50",
-  },
-  {
-    title: "Pending Payments",
-    value: "$320,000",
-    change: "↓ 8%",
-    isPositive: false,
-    subtext: "Across 42 clients",
-    icon: Clock,
-    iconColor: "text-rose-500",
-    iconBg: "bg-rose-50",
-  },
+interface ClientItem {
+  id: string;
+  clientNumber: number;
+  company: string;
+  tagline: string | null;
+  location: string | null;
+  address: string | null;
+  website: string | null;
+  email: string;
+  phone: string | null;
+  industry: string | null;
+  companySize: string | null;
+  status: string;
+  contactName: string | null;
+  contactRole: string | null;
+  contactEmail: string | null;
+  contactPhone: string | null;
+  revenue: number;
+  outstanding: number;
+  projectsCount: number;
+  clientSince: string;
+  lastActivity: string | null;
+  notes: string | null;
+}
+
+interface KPIStats {
+  totalClients: number;
+  activeClients: number;
+  totalRevenue: string;
+  pendingPayments: string;
+}
+
+const STATUS_STYLES: Record<string, string> = {
+  Active: "bg-emerald-50 text-emerald-600 border border-emerald-100",
+  Inactive: "bg-rose-50 text-rose-500 border border-rose-100",
+  Prospect: "bg-blue-50 text-blue-600 border border-blue-100",
+  VIP: "bg-purple-50 text-purple-600 border border-purple-100",
+  "At Risk": "bg-amber-50 text-amber-600 border border-amber-100",
+  Churned: "bg-red-50 text-red-600 border border-red-100",
+};
+
+const avatarColors = [
+  "bg-blue-100 text-blue-700",
+  "bg-sky-100 text-sky-700",
+  "bg-emerald-100 text-emerald-700",
+  "bg-purple-100 text-purple-700",
+  "bg-amber-100 text-amber-700",
+  "bg-rose-100 text-rose-700",
 ];
 
-// --- Clients Mock Data ---
-const initialClients = [
-  {
-    id: 1,
-    company: "ABC Technologies",
-    tagline: "Technology Solutions for a Better Tomorrow",
-    location: "San Francisco, USA",
-    address: "123 Market Street, San Francisco, CA 94105, USA",
-    website: "www.abctechnologies.com",
-    email: "info@abctechnologies.com",
-    phone: "+1 415 823 4567",
-    initials: "ABC",
-    avatarBg: "bg-blue-100 text-blue-700",
-    industry: "Technology",
-    industryStyle: "bg-blue-50 text-blue-600 border border-blue-100",
-    companySize: "50–200 employees",
-    clientSince: "Jan 15, 2024",
-    contactName: "John Carter",
-    contactRole: "CEO",
-    contactEmail: "john@abctechnologies.com",
-    contactImg: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80",
-    projectsCount: 3,
-    openDeals: 2,
-    outstanding: "$25K",
-    revenue: "$125,000",
-    status: "Active",
-    statusStyle: "bg-emerald-50 text-emerald-600 border border-emerald-100",
-    lastActivity: "Mar 10, 2025 2:15 PM",
-    recentActivities: [
-      {
-        icon: Video,
-        iconBg: "bg-purple-50 text-purple-600",
-        title: "Meeting with John Carter",
-        desc: "Discussed project roadmap for Phase 2",
-        time: "Mar 10, 2025 2:15 PM",
-      },
-      {
-        icon: FileText,
-        iconBg: "bg-blue-50 text-blue-600",
-        title: "Proposal sent",
-        desc: "Sent revised proposal for additional modules",
-        time: "Mar 9, 2025 11:30 AM",
-      },
-      {
-        icon: CheckCircle2,
-        iconBg: "bg-emerald-50 text-emerald-600",
-        title: "Payment received",
-        desc: "$25,000 received via bank transfer",
-        time: "Mar 5, 2025 4:20 PM",
-      },
-      {
-        icon: Flag,
-        iconBg: "bg-sky-50 text-sky-600",
-        title: "Project milestone completed",
-        desc: "Phase 1 development completed",
-        time: "Mar 3, 2025 10:15 AM",
-      },
-    ],
-  },
-  {
-    id: 2,
-    company: "Global Tech Ltd.",
-    tagline: "Global Enterprise IT & Cloud Solutions",
-    location: "London, UK",
-    address: "45 Canary Wharf, London, E14 5AB, UK",
-    website: "www.globaltech.co.uk",
-    email: "contact@globaltech.co.uk",
-    phone: "+44 7700 900123",
-    initials: "GT",
-    avatarBg: "bg-sky-100 text-sky-700",
-    industry: "IT Services",
-    industryStyle: "bg-sky-50 text-sky-600 border border-sky-100",
-    companySize: "200–500 employees",
-    clientSince: "Apr 10, 2023",
-    contactName: "Sarah Mitchell",
-    contactRole: "Managing Director",
-    contactImg: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=100&auto=format&fit=crop&q=80",
-    projectsCount: 2,
-    openDeals: 1,
-    outstanding: "$15K",
-    revenue: "$85,000",
-    status: "Active",
-    statusStyle: "bg-emerald-50 text-emerald-600 border border-emerald-100",
-    lastActivity: "Mar 9, 2025 11:30 AM",
-    recentActivities: [
-      {
-        icon: FileText,
-        iconBg: "bg-blue-50 text-blue-600",
-        title: "Quarterly review sent",
-        desc: "Shared Q1 analytics and SLA deliverables",
-        time: "Mar 9, 2025 11:30 AM",
-      },
-    ],
-  },
-  {
-    id: 3,
-    company: "Skyline Media",
-    tagline: "Creative Digital Marketing & Web Studio",
-    location: "Toronto, Canada",
-    address: "88 Bay Street, Toronto, ON M5J 2R8, Canada",
-    website: "www.skylinemedia.ca",
-    email: "hello@skylinemedia.ca",
-    phone: "+1 416 555 0199",
-    initials: "SM",
-    avatarBg: "bg-emerald-100 text-emerald-700",
-    industry: "Marketing",
-    industryStyle: "bg-indigo-50 text-indigo-600 border border-indigo-100",
-    companySize: "20–50 employees",
-    clientSince: "Jun 22, 2024",
-    contactName: "Emma Wilson",
-    contactRole: "Founder",
-    contactImg: "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=100&auto=format&fit=crop&q=80",
-    projectsCount: 1,
-    openDeals: 1,
-    outstanding: "$10K",
-    revenue: "$45,000",
-    status: "Active",
-    statusStyle: "bg-emerald-50 text-emerald-600 border border-emerald-100",
-    lastActivity: "Mar 9, 2025 10:45 AM",
-    recentActivities: [
-      {
-        icon: Phone,
-        iconBg: "bg-emerald-50 text-emerald-600",
-        title: "Strategy Call",
-        desc: "Agreed on launch date for Mobile App redesign",
-        time: "Mar 9, 2025 10:45 AM",
-      },
-    ],
-  },
-  {
-    id: 4,
-    company: "BrightLink Solutions",
-    tagline: "Advanced Industrial Automation & Systems",
-    location: "Berlin, Germany",
-    address: "Friedrichstraße 120, 10117 Berlin, Germany",
-    website: "www.brightlink-solutions.de",
-    email: "info@brightlink-solutions.de",
-    phone: "+49 30 1234 5678",
-    initials: "BC",
-    avatarBg: "bg-rose-100 text-rose-700",
-    industry: "Manufacturing",
-    industryStyle: "bg-amber-50 text-amber-600 border border-amber-100",
-    companySize: "100–300 employees",
-    clientSince: "Feb 05, 2023",
-    contactName: "Michael Brown",
-    contactRole: "Operations Head",
-    contactImg: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80",
-    projectsCount: 4,
-    openDeals: 3,
-    outstanding: "$40K",
-    revenue: "$210,000",
-    status: "Active",
-    statusStyle: "bg-emerald-50 text-emerald-600 border border-emerald-100",
-    lastActivity: "Mar 8, 2025 4:20 PM",
-    recentActivities: [
-      {
-        icon: CheckCircle2,
-        iconBg: "bg-emerald-50 text-emerald-600",
-        title: "Milestone Signed Off",
-        desc: "Factory floor CRM integration approved",
-        time: "Mar 8, 2025 4:20 PM",
-      },
-    ],
-  },
-  {
-    id: 5,
-    company: "NextGen Co.",
-    tagline: "FinTech Platform & Real-Time Trading Software",
-    location: "New York, USA",
-    address: "Wall Street Plaza, New York, NY 10005, USA",
-    website: "www.nextgenco.io",
-    email: "support@nextgenco.io",
-    phone: "+1 212 555 9820",
-    initials: "NP",
-    avatarBg: "bg-slate-900 text-white",
-    industry: "Finance",
-    industryStyle: "bg-purple-50 text-purple-600 border border-purple-100",
-    companySize: "50–150 employees",
-    clientSince: "Aug 14, 2023",
-    contactName: "David Lee",
-    contactRole: "CTO",
-    contactImg: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&auto=format&fit=crop&q=80",
-    projectsCount: 2,
-    openDeals: 1,
-    outstanding: "$18K",
-    revenue: "$90,000",
-    status: "Active",
-    statusStyle: "bg-emerald-50 text-emerald-600 border border-emerald-100",
-    lastActivity: "Mar 8, 2025 1:10 PM",
-    recentActivities: [
-      {
-        icon: Video,
-        iconBg: "bg-purple-50 text-purple-600",
-        title: "API Architecture Meeting",
-        desc: "Finalized webhook specifications with tech lead",
-        time: "Mar 8, 2025 1:10 PM",
-      },
-    ],
-  },
-  {
-    id: 6,
-    company: "Innovate Ltd.",
-    tagline: "Healthcare AI & Clinical Research Tools",
-    location: "Sydney, Australia",
-    address: "200 George St, Sydney NSW 2000, Australia",
-    website: "www.innovateltd.com.au",
-    email: "contact@innovateltd.com.au",
-    phone: "+61 2 9876 5432",
-    initials: "IL",
-    avatarBg: "bg-orange-100 text-orange-700",
-    industry: "Healthcare",
-    industryStyle: "bg-teal-50 text-teal-600 border border-teal-100",
-    companySize: "30–80 employees",
-    clientSince: "Oct 11, 2024",
-    contactName: "Sophia Garcia",
-    contactRole: "CEO",
-    contactImg: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=100&auto=format&fit=crop&q=80",
-    projectsCount: 1,
-    openDeals: 0,
-    outstanding: "$0",
-    revenue: "$38,000",
-    status: "Inactive",
-    statusStyle: "bg-rose-50 text-rose-500 border border-rose-100",
-    lastActivity: "Mar 7, 2025 3:45 PM",
-    recentActivities: [
-      {
-        icon: Mail,
-        iconBg: "bg-blue-50 text-blue-600",
-        title: "Re-engagement email sent",
-        desc: "Sent new product roadmap update",
-        time: "Mar 7, 2025 3:45 PM",
-      },
-    ],
-  },
-  {
-    id: 7,
-    company: "Core Systems",
-    tagline: "Higher Education Portals & LMS Solutions",
-    location: "Dubai, UAE",
-    address: "Dubai Internet City, Building 3, Dubai, UAE",
-    website: "www.coresystems.ae",
-    email: "hello@coresystems.ae",
-    phone: "+971 4 123 4567",
-    initials: "CS",
-    avatarBg: "bg-cyan-100 text-cyan-700",
-    industry: "Education",
-    industryStyle: "bg-sky-50 text-sky-600 border border-sky-100",
-    companySize: "300–800 employees",
-    clientSince: "Nov 01, 2022",
-    contactName: "Daniel Kim",
-    contactRole: "Director",
-    contactImg: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80",
-    projectsCount: 5,
-    openDeals: 2,
-    outstanding: "$65K",
-    revenue: "$320,000",
-    status: "Active",
-    statusStyle: "bg-emerald-50 text-emerald-600 border border-emerald-100",
-    lastActivity: "Mar 7, 2025 12:00 PM",
-    recentActivities: [
-      {
-        icon: CheckCircle2,
-        iconBg: "bg-emerald-50 text-emerald-600",
-        title: "Invoice Cleared",
-        desc: "Received $45,000 for Stage 3 delivery",
-        time: "Mar 7, 2025 12:00 PM",
-      },
-    ],
-  },
-  {
-    id: 8,
-    company: "FutureWorks",
-    tagline: "Commercial Property Asset Management Software",
-    location: "Singapore",
-    address: "1 Raffles Place, #20-01, Singapore 048616",
-    website: "www.futureworks.sg",
-    email: "info@futureworks.sg",
-    phone: "+65 6789 0123",
-    initials: "FW",
-    avatarBg: "bg-purple-100 text-purple-700",
-    industry: "Real Estate",
-    industryStyle: "bg-pink-50 text-pink-600 border border-pink-100",
-    companySize: "80–200 employees",
-    clientSince: "Dec 05, 2023",
-    contactName: "Olivia Martinez",
-    contactRole: "Owner",
-    contactImg: "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=100&auto=format&fit=crop&q=80",
-    projectsCount: 2,
-    openDeals: 1,
-    outstanding: "$12K",
-    revenue: "$75,000",
-    status: "Active",
-    statusStyle: "bg-emerald-50 text-emerald-600 border border-emerald-100",
-    lastActivity: "Mar 6, 2025 5:30 PM",
-    recentActivities: [
-      {
-        icon: Phone,
-        iconBg: "bg-emerald-50 text-emerald-600",
-        title: "Maintenance follow-up",
-        desc: "Confirmed system renewal for 2025",
-        time: "Mar 6, 2025 5:30 PM",
-      },
-    ],
-  },
-  {
-    id: 9,
-    company: "Vector Inc.",
-    tagline: "Global Supply Chain Tracking & Telematics",
-    location: "Tokyo, Japan",
-    address: "Roppongi Hills Mori Tower, Tokyo, Japan",
-    website: "www.vector-inc.jp",
-    email: "support@vector-inc.jp",
-    phone: "+81 3 5555 1234",
-    initials: "VI",
-    avatarBg: "bg-indigo-900 text-white",
-    industry: "Logistics",
-    industryStyle: "bg-indigo-50 text-indigo-600 border border-indigo-100",
-    companySize: "150–400 employees",
-    clientSince: "May 19, 2023",
-    contactName: "James Anderson",
-    contactRole: "CEO",
-    contactImg: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80",
-    projectsCount: 3,
-    openDeals: 1,
-    outstanding: "$20K",
-    revenue: "$110,000",
-    status: "Active",
-    statusStyle: "bg-emerald-50 text-emerald-600 border border-emerald-100",
-    lastActivity: "Mar 6, 2025 10:15 AM",
-    recentActivities: [
-      {
-        icon: FileText,
-        iconBg: "bg-blue-50 text-blue-600",
-        title: "Contract renewal sent",
-        desc: "Submitted annual enterprise support plan",
-        time: "Mar 6, 2025 10:15 AM",
-      },
-    ],
-  },
-  {
-    id: 10,
-    company: "Prime Digital",
-    tagline: "Omnichannel Retail & Headless Commerce",
-    location: "Paris, France",
-    address: "15 Rue de la Paix, 75002 Paris, France",
-    website: "www.primedigital.fr",
-    email: "bonjour@primedigital.fr",
-    phone: "+33 1 42 68 55 00",
-    initials: "PD",
-    avatarBg: "bg-rose-500 text-white",
-    industry: "E-commerce",
-    industryStyle: "bg-sky-50 text-sky-600 border border-sky-100",
-    companySize: "40–90 employees",
-    clientSince: "Jan 10, 2025",
-    contactName: "Isabella Thomas",
-    contactRole: "Founder",
-    contactImg: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=100&auto=format&fit=crop&q=80",
-    projectsCount: 1,
-    openDeals: 1,
-    outstanding: "$15K",
-    revenue: "$50,000",
-    status: "Prospect",
-    statusStyle: "bg-blue-50 text-blue-600 border border-blue-100",
-    lastActivity: "Mar 5, 2025 4:10 PM",
-    recentActivities: [
-      {
-        icon: Video,
-        iconBg: "bg-purple-50 text-purple-600",
-        title: "Discovery Workshop",
-        desc: "Demonstrated headless commerce connectors",
-        time: "Mar 5, 2025 4:10 PM",
-      },
-    ],
-  },
-];
-
-function Video({ className = "w-4 h-4" }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-    </svg>
-  );
+function getInitials(name: string) {
+  return name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .slice(0, 3)
+    .toUpperCase();
 }
 
 export default function ClientsPage() {
+  const [clients, setClients] = useState<ClientItem[]>([]);
+  const [selectedClient, setSelectedClient] = useState<ClientItem | null>(null);
+  const [kpi, setKpi] = useState<KPIStats>({
+    totalClients: 0,
+    activeClients: 0,
+    totalRevenue: "$0",
+    pendingPayments: "$0",
+  });
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedClient, setSelectedClient] = useState(initialClients[0]);
-  const [selectedRows, setSelectedRows] = useState<number[]>([1]);
-  const [selectAll, setSelectAll] = useState(false);
-  const [activeTab, setActiveTab] = useState("Overview");
+  const [industryFilter, setIndustryFilter] = useState("All Industries");
+  const [statusFilter, setStatusFilter] = useState("All Statuses");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
 
-  const toggleSelectRow = (id: number, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setSelectedRows((prev) =>
-      prev.includes(id) ? prev.filter((r) => r !== id) : [...prev, id]
-    );
+  // Add / Edit Modal
+  const [showModal, setShowModal] = useState(false);
+  const [modalMode, setModalMode] = useState<"create" | "edit">("create");
+  const [clientForm, setClientForm] = useState({
+    id: "",
+    company: "",
+    tagline: "",
+    email: "",
+    phone: "",
+    website: "",
+    location: "USA",
+    address: "",
+    industry: "Technology",
+    companySize: "50–200 employees",
+    status: "Active",
+    contactName: "",
+    contactRole: "CEO",
+    revenue: "50000",
+    outstanding: "10000",
+    projectsCount: "1",
+  });
+  const [submitting, setSubmitting] = useState(false);
+
+  const fetchClients = useCallback(async () => {
+    try {
+      const params = new URLSearchParams();
+      params.set("page", String(page));
+      params.set("pageSize", String(pageSize));
+      if (searchQuery) params.set("search", searchQuery);
+      if (industryFilter !== "All Industries") params.set("industry", industryFilter);
+      if (statusFilter !== "All Statuses") params.set("status", statusFilter);
+
+      const res = await fetch(`/api/clients?${params.toString()}`);
+      if (!res.ok) throw new Error("Failed to load clients");
+      const data = await res.json();
+      setClients(data.clients || []);
+      setTotalPages(data.totalPages || 1);
+      setTotalCount(data.totalCount || 0);
+      if (data.kpi) setKpi(data.kpi);
+
+      if (data.clients && data.clients.length > 0) {
+        setSelectedClient((prev) => {
+          if (prev) {
+            const found = data.clients.find((c: ClientItem) => c.id === prev.id);
+            return found || data.clients[0];
+          }
+          return data.clients[0];
+        });
+      } else {
+        setSelectedClient(null);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Load failed");
+    } finally {
+      setLoading(false);
+    }
+  }, [page, pageSize, searchQuery, industryFilter, statusFilter]);
+
+  useEffect(() => {
+    fetchClients();
+  }, [fetchClients]);
+
+  const copyToClipboard = (text: string, field: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopiedField(field);
+      setTimeout(() => setCopiedField(null), 1500);
+    }).catch(() => {});
   };
 
-  const toggleSelectAll = () => {
-    if (selectAll) {
-      setSelectedRows([]);
-      setSelectAll(false);
-    } else {
-      setSelectedRows(initialClients.map((c) => c.id));
-      setSelectAll(true);
+  const handleDeleteClient = async (id: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    if (!confirm("Are you sure you want to permanently delete this client?")) return;
+    try {
+      const res = await fetch(`/api/clients/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete client");
+      await fetchClients();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Delete failed");
     }
   };
 
-  const filteredClients = initialClients.filter((c) => {
+  const handleOpenCreate = () => {
+    setModalMode("create");
+    setClientForm({
+      id: "",
+      company: "",
+      tagline: "",
+      email: "",
+      phone: "",
+      website: "",
+      location: "San Francisco, USA",
+      address: "",
+      industry: "Technology",
+      companySize: "50–200 employees",
+      status: "Active",
+      contactName: "",
+      contactRole: "CEO",
+      revenue: "50000",
+      outstanding: "10000",
+      projectsCount: "1",
+    });
+    setShowModal(true);
+  };
+
+  const handleOpenEdit = (c: ClientItem) => {
+    setModalMode("edit");
+    setClientForm({
+      id: c.id,
+      company: c.company,
+      tagline: c.tagline || "",
+      email: c.email,
+      phone: c.phone || "",
+      website: c.website || "",
+      location: c.location || "USA",
+      address: c.address || "",
+      industry: c.industry || "Technology",
+      companySize: c.companySize || "50–200 employees",
+      status: c.status,
+      contactName: c.contactName || "",
+      contactRole: c.contactRole || "CEO",
+      revenue: String(c.revenue),
+      outstanding: String(c.outstanding),
+      projectsCount: String(c.projectsCount),
+    });
+    setShowModal(true);
+  };
+
+  const handleModalSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!clientForm.company.trim() || !clientForm.email.trim()) return;
+    setSubmitting(true);
+    setError(null);
+    try {
+      if (modalMode === "create") {
+        const res = await fetch("/api/clients", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(clientForm),
+        });
+        if (!res.ok) throw new Error("Failed to create client");
+      } else {
+        const res = await fetch(`/api/clients/${clientForm.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(clientForm),
+        });
+        if (!res.ok) throw new Error("Failed to update client");
+      }
+      setShowModal(false);
+      await fetchClients();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Save failed");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (loading) {
     return (
-      c.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.contactName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.industry.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.location.toLowerCase().includes(searchQuery.toLowerCase())
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="w-6 h-6 text-blue-500 animate-spin" />
+        <span className="ml-2 text-sm text-slate-500 font-medium">Loading clients...</span>
+      </div>
     );
-  });
+  }
 
   return (
-    <>
-      {/* Content Body */}
-        <div className="p-4 sm:p-5 xl:p-6 max-w-[1780px] mx-auto w-full pb-12">
-          {/* Main 2-Column Split Workspace */}
-          <div className="flex flex-col xl:flex-row gap-5 items-start">
-            {/* Left Column: Title, 4 KPIs, Filters, Table (Takes rest of width) */}
-            <div className="flex-1 min-w-0 space-y-4">
-              {/* Top Title Bar & Action Buttons */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                  <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">
-                    Clients
-                  </h2>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    Manage your clients, build stronger relationships, and grow your business.
-                  </p>
-                </div>
+    <div className="p-4 sm:p-5 xl:p-6 max-w-[1780px] mx-auto w-full pb-12 space-y-4">
+      {/* Top Title Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">Clients</h2>
+          <p className="text-xs text-slate-500 mt-0.5">
+            Manage your accounts, build strong client relationships, and track portfolio revenues
+          </p>
+        </div>
 
-                <div className="flex items-center gap-2">
-                  <button className="bg-white hover:bg-slate-50 border border-slate-200/80 text-slate-700 text-xs font-semibold py-2 px-3 rounded-xl shadow-2xs flex items-center gap-1.5 transition-all cursor-pointer">
-                    <Download className="w-3.5 h-3.5 text-slate-500" />
-                    <span>Import Clients</span>
-                  </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleOpenCreate}
+            className="bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs font-semibold py-2 px-3.5 rounded-xl shadow-md shadow-blue-500/25 flex items-center gap-1.5 transition-all cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Add Client</span>
+          </button>
+        </div>
+      </div>
 
-                  <button className="bg-white hover:bg-slate-50 border border-slate-200/80 text-slate-700 text-xs font-semibold py-2 px-3 rounded-xl shadow-2xs flex items-center gap-1.5 transition-all cursor-pointer">
-                    <FileSpreadsheet className="w-3.5 h-3.5 text-slate-500" />
-                    <span>Export</span>
-                    <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
-                  </button>
-
-                  <button className="bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs font-semibold py-2 px-3.5 rounded-xl shadow-md shadow-blue-500/25 flex items-center gap-1.5 transition-all cursor-pointer">
-                    <Plus className="w-4 h-4" />
-                    <span>Add Client</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Row of 4 KPI Metric Cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3.5">
-            {kpiStats.map((kpi, idx) => {
-              const Icon = kpi.icon;
-              return (
-                <div
-                  key={idx}
-                  className="bg-white p-4 rounded-2xl border border-slate-100/90 shadow-[0_1px_3px_rgba(0,0,0,0.02),0_6px_16px_rgba(0,0,0,0.02)] hover:shadow-md transition-all flex items-center gap-3.5"
-                >
-                  <div
-                    className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 ${kpi.iconBg} ${kpi.iconColor}`}
-                  >
-                    <Icon className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <p className="text-[11px] font-medium text-slate-500 leading-tight">
-                      {kpi.title}
-                    </p>
-                    <h3 className="text-xl font-extrabold text-slate-900 mt-0.5">
-                      {kpi.value}
-                    </h3>
-                    <div className="flex items-center gap-1 text-[10px] mt-0.5">
-                      <span
-                        className={`font-bold flex items-center ${
-                          kpi.isPositive ? "text-emerald-600" : "text-rose-600"
-                        }`}
-                      >
-                        {kpi.change}
-                      </span>
-                      <span className="text-slate-400">{kpi.subtext}</span>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 text-xs font-medium px-4 py-3 rounded-xl flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 text-red-500" />
+            <span>{error}</span>
           </div>
+          <button onClick={() => setError(null)} className="text-red-400 hover:text-red-600 font-bold">×</button>
+        </div>
+      )}
 
-          {/* Search & Filter Dropdowns Bar */}
-          <div className="bg-white rounded-2xl border border-slate-100/90 shadow-[0_1px_3px_rgba(0,0,0,0.02),0_6px_16px_rgba(0,0,0,0.02)] p-3 flex flex-wrap items-center justify-between gap-3">
+      {/* Row of 4 KPI Metric Cards (Calculated directly from Database) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3.5">
+        <div className="bg-white p-4 rounded-2xl border border-slate-100/90 shadow-sm flex items-center gap-3.5">
+          <div className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 bg-blue-50 text-blue-600">
+            <Users2 className="w-5 h-5" />
+          </div>
+          <div>
+            <p className="text-[11px] font-medium text-slate-500">Total Clients</p>
+            <h3 className="text-xl font-extrabold text-slate-900 mt-0.5">{kpi.totalClients}</h3>
+            <p className="text-[10px] text-slate-400">Database accounts</p>
+          </div>
+        </div>
+
+        <div className="bg-white p-4 rounded-2xl border border-slate-100/90 shadow-sm flex items-center gap-3.5">
+          <div className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 bg-amber-50 text-amber-500">
+            <Handshake className="w-5 h-5" />
+          </div>
+          <div>
+            <p className="text-[11px] font-medium text-slate-500">Active Clients</p>
+            <h3 className="text-xl font-extrabold text-slate-900 mt-0.5">{kpi.activeClients}</h3>
+            <p className="text-[10px] text-amber-600 font-semibold">With ongoing engagement</p>
+          </div>
+        </div>
+
+        <div className="bg-white p-4 rounded-2xl border border-slate-100/90 shadow-sm flex items-center gap-3.5">
+          <div className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 bg-emerald-50 text-emerald-600">
+            <Gem className="w-5 h-5" />
+          </div>
+          <div>
+            <p className="text-[11px] font-medium text-slate-500">Total Revenue</p>
+            <h3 className="text-xl font-extrabold text-slate-900 mt-0.5">{kpi.totalRevenue}</h3>
+            <p className="text-[10px] text-emerald-600 font-semibold">From all clients</p>
+          </div>
+        </div>
+
+        <div className="bg-white p-4 rounded-2xl border border-slate-100/90 shadow-sm flex items-center gap-3.5">
+          <div className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 bg-rose-50 text-rose-500">
+            <Clock className="w-5 h-5" />
+          </div>
+          <div>
+            <p className="text-[11px] font-medium text-slate-500">Pending Receivables</p>
+            <h3 className="text-xl font-extrabold text-slate-900 mt-0.5">{kpi.pendingPayments}</h3>
+            <p className="text-[10px] text-rose-500 font-semibold">Outstanding invoices</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Main 2-Column Split Workspace */}
+      <div className="flex flex-col xl:flex-row gap-5 items-start">
+        {/* Left: Search + Table */}
+        <div className="flex-1 min-w-0 space-y-4 w-full">
+          {/* Search & Filter Bar */}
+          <div className="bg-white rounded-2xl border border-slate-100/90 shadow-sm p-3 flex flex-wrap items-center justify-between gap-3">
             <div className="flex-1 min-w-[260px] relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                <Search className="w-3.5 h-3.5" />
-              </div>
+              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search clients by name, email, industry, or contact..."
+                onChange={(e) => { setSearchQuery(e.target.value); setPage(1); }}
+                placeholder="Search clients by company, email, contact..."
                 className="block w-full pl-9 pr-4 py-1.5 bg-slate-50/70 border border-slate-200/80 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all"
               />
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
-              <div className="relative">
-                <button className="bg-white border border-slate-200/80 hover:bg-slate-50 text-slate-700 text-xs font-medium px-3 py-1.5 rounded-xl shadow-2xs flex items-center gap-2 cursor-pointer">
-                  <span>All Industries</span>
-                  <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
-                </button>
-              </div>
-
-              <div className="relative">
-                <button className="bg-white border border-slate-200/80 hover:bg-slate-50 text-slate-700 text-xs font-medium px-3 py-1.5 rounded-xl shadow-2xs flex items-center gap-2 cursor-pointer">
-                  <span>All Countries</span>
-                  <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
-                </button>
-              </div>
-
-              <div className="relative">
-                <button className="bg-white border border-slate-200/80 hover:bg-slate-50 text-slate-700 text-xs font-medium px-3 py-1.5 rounded-xl shadow-2xs flex items-center gap-2 cursor-pointer">
-                  <span>All Statuses</span>
-                  <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
-                </button>
-              </div>
-
-              <button className="bg-white border border-slate-200/80 hover:bg-slate-50 text-slate-700 text-xs font-semibold px-3 py-1.5 rounded-xl shadow-2xs flex items-center gap-1.5 transition-colors cursor-pointer">
-                <Filter className="w-3.5 h-3.5 text-slate-400" />
-                <span>Filters</span>
-                <span className="bg-blue-600 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-bold">
-                  2
-                </span>
-              </button>
-
-              <button
-                onClick={() => setSearchQuery("")}
-                className="text-xs font-semibold text-slate-500 hover:text-slate-800 px-3 py-1.5 rounded-xl hover:bg-slate-100/70 transition-colors cursor-pointer"
+              <select
+                value={industryFilter}
+                onChange={(e) => { setIndustryFilter(e.target.value); setPage(1); }}
+                className="px-3 py-1.5 text-xs bg-white border border-slate-200 rounded-xl cursor-pointer"
               >
-                Reset
-              </button>
+                <option value="All Industries">All Industries</option>
+                <option value="Technology">Technology</option>
+                <option value="IT Services">IT Services</option>
+                <option value="Marketing">Marketing</option>
+                <option value="Manufacturing">Manufacturing</option>
+                <option value="Finance">Finance</option>
+                <option value="Healthcare">Healthcare</option>
+                <option value="Education">Education</option>
+                <option value="Real Estate">Real Estate</option>
+                <option value="Logistics">Logistics</option>
+                <option value="E-commerce">E-commerce</option>
+              </select>
+
+              <select
+                value={statusFilter}
+                onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
+                className="px-3 py-1.5 text-xs bg-white border border-slate-200 rounded-xl cursor-pointer"
+              >
+                <option value="All Statuses">All Statuses</option>
+                <option value="Active">Active</option>
+                <option value="Inactive">Inactive</option>
+                <option value="Prospect">Prospect</option>
+                <option value="VIP">VIP</option>
+                <option value="At Risk">At Risk</option>
+              </select>
+
+              {(searchQuery || industryFilter !== "All Industries" || statusFilter !== "All Statuses") && (
+                <button
+                  onClick={() => {
+                    setSearchQuery("");
+                    setIndustryFilter("All Industries");
+                    setStatusFilter("All Statuses");
+                    setPage(1);
+                  }}
+                  className="text-xs font-semibold text-slate-500 hover:text-slate-800 px-3 py-1.5 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer"
+                >
+                  Reset
+                </button>
+              )}
             </div>
           </div>
 
-              {/* Clients Table Card */}
-              <div className="bg-white rounded-2xl border border-slate-100/90 shadow-[0_1px_3px_rgba(0,0,0,0.02),0_6px_16px_rgba(0,0,0,0.02)] p-4 sm:p-5 space-y-4">
-              {/* Table */}
-              <div className="overflow-x-auto">
-                <table className="w-full text-xs text-left">
-                  <thead className="text-[11px] text-slate-400 font-semibold border-b border-slate-100 bg-slate-50/50">
+          {/* Table Container */}
+          <div className="bg-white rounded-2xl border border-slate-100/90 shadow-sm p-4 sm:p-5 space-y-4">
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs text-left">
+                <thead className="text-[11px] text-slate-400 font-semibold border-b border-slate-100 bg-slate-50/50">
+                  <tr>
+                    <th className="py-3 px-3 font-medium">#</th>
+                    <th className="py-3 px-3 font-medium">Company / Client</th>
+                    <th className="py-3 px-3 font-medium">Industry</th>
+                    <th className="py-3 px-3 font-medium">Contact Person</th>
+                    <th className="py-3 px-3 font-medium">Revenue</th>
+                    <th className="py-3 px-3 font-medium">Outstanding</th>
+                    <th className="py-3 px-3 font-medium">Status</th>
+                    <th className="py-3 px-2 font-medium text-center">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                  {clients.length === 0 ? (
                     <tr>
-                      <th className="py-3 px-3 w-8">
-                        <input
-                          type="checkbox"
-                          checked={selectAll}
-                          onChange={toggleSelectAll}
-                          className="w-3.5 h-3.5 text-blue-600 border-slate-300 rounded focus:ring-blue-500 cursor-pointer"
-                        />
-                      </th>
-                      <th className="py-3 px-2 font-medium w-8">#</th>
-                      <th className="py-3 px-3 font-medium">Company / Client</th>
-                      <th className="py-3 px-3 font-medium">Industry</th>
-                      <th className="py-3 px-3 font-medium">Contact Person</th>
-                      <th className="py-3 px-2 font-medium text-center">Projects</th>
-                      <th className="py-3 px-3 font-medium">Total Revenue</th>
-                      <th className="py-3 px-3 font-medium">Status</th>
-                      <th className="py-3 px-3 font-medium">Last Activity</th>
-                      <th className="py-3 px-2 font-medium text-center">Actions</th>
+                      <td colSpan={8} className="text-center py-12 text-slate-400">
+                        No clients found matching your search.
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-50">
-                    {filteredClients.map((client) => {
-                      const isSelected = selectedRows.includes(client.id);
-                      const isDetailActive = selectedClient.id === client.id;
-
+                  ) : (
+                    clients.map((client, idx) => {
+                      const isDetailActive = selectedClient?.id === client.id;
                       return (
                         <tr
                           key={client.id}
                           onClick={() => setSelectedClient(client)}
                           className={`hover:bg-slate-50/80 transition-colors cursor-pointer ${
-                            isDetailActive
-                              ? "bg-blue-50/40"
-                              : isSelected
-                              ? "bg-blue-50/20"
-                              : ""
+                            isDetailActive ? "bg-blue-50/40" : ""
                           }`}
                         >
-                          {/* Checkbox */}
-                          <td
-                            className="py-3 px-3"
-                            onClick={(e) => toggleSelectRow(client.id, e)}
-                          >
-                            <input
-                              type="checkbox"
-                              checked={isSelected}
-                              onChange={() => {}}
-                              className="w-3.5 h-3.5 text-blue-600 border-slate-300 rounded focus:ring-blue-500 cursor-pointer"
-                            />
+                          <td className="py-3 px-3 text-slate-400 font-medium">
+                            CL-{String(client.clientNumber).padStart(4, "0")}
                           </td>
-
-                          {/* Row # */}
-                          <td className="py-3 px-2 font-medium text-slate-400">
-                            {client.id}
-                          </td>
-
-                          {/* Company / Client */}
                           <td className="py-3 px-3">
                             <div className="flex items-center gap-2.5">
                               <div
-                                className={`w-7 h-7 rounded-full flex items-center justify-center font-bold text-[10px] shrink-0 ${client.avatarBg}`}
+                                className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-[10px] shrink-0 shadow-2xs ${
+                                  avatarColors[idx % avatarColors.length]
+                                }`}
                               >
-                                {client.initials}
+                                {getInitials(client.company)}
                               </div>
-                              <div>
-                                <p className="font-bold text-slate-900 leading-tight">
-                                  {client.company}
-                                </p>
-                                <p className="text-[10px] text-slate-400 mt-0.5">
-                                  {client.location}
-                                </p>
+                              <div className="min-w-0">
+                                <p className="font-bold text-slate-900 leading-tight truncate">{client.company}</p>
+                                <p className="text-[10px] text-slate-400 truncate">{client.location || "Global"}</p>
                               </div>
                             </div>
                           </td>
-
-                          {/* Industry */}
+                          <td className="py-3 px-3 text-slate-600 font-medium">{client.industry || "General"}</td>
                           <td className="py-3 px-3">
-                            <span
-                              className={`px-2 py-0.5 rounded text-[10px] font-semibold ${client.industryStyle}`}
-                            >
-                              {client.industry}
-                            </span>
+                            <p className="font-semibold text-slate-800">{client.contactName || "—"}</p>
+                            <p className="text-[10px] text-slate-400">{client.contactRole || ""}</p>
                           </td>
-
-                          {/* Contact Person */}
-                          <td className="py-3 px-3">
-                            <div className="flex items-center gap-2">
-                              <img
-                                src={client.contactImg}
-                                alt={client.contactName}
-                                className="w-5 h-5 rounded-full object-cover border border-slate-200"
-                              />
-                              <div>
-                                <p className="font-semibold text-slate-800 leading-tight">
-                                  {client.contactName}
-                                </p>
-                                <p className="text-[10px] text-slate-400">
-                                  {client.contactRole}
-                                </p>
-                              </div>
-                            </div>
-                          </td>
-
-                          {/* Projects Count */}
-                          <td className="py-3 px-2 text-center font-bold text-slate-700">
-                            {client.projectsCount}
-                          </td>
-
-                          {/* Total Revenue */}
                           <td className="py-3 px-3 font-extrabold text-slate-900">
-                            {client.revenue}
+                            ${client.revenue.toLocaleString()}
                           </td>
-
-                          {/* Status */}
+                          <td className="py-3 px-3 font-bold text-rose-600">
+                            ${client.outstanding.toLocaleString()}
+                          </td>
                           <td className="py-3 px-3">
-                            <span
-                              className={`px-2 py-0.5 rounded text-[10px] font-bold ${client.statusStyle}`}
-                            >
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${STATUS_STYLES[client.status] || "bg-slate-50 text-slate-600"}`}>
                               {client.status}
                             </span>
                           </td>
-
-                          {/* Last Activity */}
-                          <td className="py-3 px-3 whitespace-nowrap">
-                            <p className="font-medium text-slate-700 text-xs leading-tight">
-                              {client.lastActivity.split(/(?<=2025)\s+/)[0] || client.lastActivity}
-                            </p>
-                            <p className="text-[10px] text-slate-400 mt-0.5">
-                              {client.lastActivity.split(/(?<=2025)\s+/)[1] || ""}
-                            </p>
-                          </td>
-
-                          {/* Actions */}
-                          <td
-                            className="py-3 px-2 text-center"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <button className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer">
-                              <MoreHorizontal className="w-4 h-4" />
-                            </button>
+                          <td className="py-3 px-2 text-center" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex items-center justify-center gap-1">
+                              <button
+                                onClick={() => handleOpenEdit(client)}
+                                className="p-1 hover:text-blue-600 text-slate-400 rounded cursor-pointer"
+                                title="Edit"
+                              >
+                                <Edit2 className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={(e) => handleDeleteClient(client.id, e)}
+                                className="p-1 hover:text-red-600 text-slate-400 rounded cursor-pointer"
+                                title="Delete"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
 
-              {/* Table Pagination */}
+            {/* Pagination */}
+            {totalCount > 0 && (
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-3 border-t border-slate-100">
                 <p className="text-xs text-slate-500 font-medium">
-                  Showing <span className="font-bold text-slate-800">1</span> to{" "}
-                  <span className="font-bold text-slate-800">10</span> of{" "}
-                  <span className="font-bold text-slate-800">284</span> clients
+                  Showing <span className="font-bold text-slate-800">{(page - 1) * pageSize + 1}</span> to{" "}
+                  <span className="font-bold text-slate-800">{Math.min(page * pageSize, totalCount)}</span> of{" "}
+                  <span className="font-bold text-slate-800">{totalCount}</span> clients
                 </p>
 
                 <div className="flex items-center gap-1">
-                  <button className="p-1.5 rounded-lg border border-slate-200/80 text-slate-400 hover:text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer">
-                    <ChevronsLeft className="w-3.5 h-3.5" />
-                  </button>
-                  <button className="p-1.5 rounded-lg border border-slate-200/80 text-slate-400 hover:text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer">
+                  <button
+                    onClick={() => setPage(Math.max(1, page - 1))}
+                    disabled={page === 1}
+                    className="p-1.5 rounded-lg border border-slate-200/80 text-slate-400 hover:text-slate-600 disabled:opacity-40 cursor-pointer"
+                  >
                     <ChevronLeft className="w-3.5 h-3.5" />
                   </button>
-                  <button className="w-7 h-7 rounded-lg text-xs font-bold bg-blue-600 text-white shadow-xs">
-                    1
-                  </button>
-                  <button className="w-7 h-7 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-100 transition-colors">
-                    2
-                  </button>
-                  <button className="w-7 h-7 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-100 transition-colors">
-                    3
-                  </button>
-                  <button className="w-7 h-7 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-100 transition-colors">
-                    4
-                  </button>
-                  <button className="w-7 h-7 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-100 transition-colors">
-                    5
-                  </button>
-                  <button className="p-1.5 rounded-lg border border-slate-200/80 text-slate-400 hover:text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer">
+                  <span className="text-xs px-2 font-bold text-slate-700">
+                    Page {page} of {totalPages}
+                  </span>
+                  <button
+                    onClick={() => setPage(Math.min(totalPages, page + 1))}
+                    disabled={page === totalPages}
+                    className="p-1.5 rounded-lg border border-slate-200/80 text-slate-400 hover:text-slate-600 disabled:opacity-40 cursor-pointer"
+                  >
                     <ChevronRight className="w-3.5 h-3.5" />
                   </button>
-                  <button className="p-1.5 rounded-lg border border-slate-200/80 text-slate-400 hover:text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer">
-                    <ChevronsRight className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <div className="bg-white border border-slate-200/80 rounded-lg px-2.5 py-1 text-xs font-medium text-slate-700 flex items-center gap-1.5 cursor-pointer shadow-2xs hover:bg-slate-50">
-                    <span>10 / page</span>
-                    <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
-                  </div>
                 </div>
               </div>
-            </div>
-          </div>
-
-            {/* Right Column: Selected Client Detailed Slide Panel */}
-            <div className="w-full xl:w-[380px] 2xl:w-[410px] shrink-0 bg-white rounded-2xl border border-slate-100/90 shadow-[0_1px_3px_rgba(0,0,0,0.02),0_6px_16px_rgba(0,0,0,0.02)] p-5 space-y-4">
-              {/* Header: Avatar, Name, Tagline, Status & Menu */}
-              <div className="flex items-start justify-between border-b border-slate-100 pb-4">
-                <div className="flex items-center gap-3">
-                  <div
-                    className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-sm shrink-0 shadow-xs ${selectedClient.avatarBg}`}
-                  >
-                    {selectedClient.initials}
-                  </div>
-                  <div>
-                    <h3 className="text-base font-extrabold text-slate-900 leading-tight">
-                      {selectedClient.company}
-                    </h3>
-                    <p className="text-[11px] text-slate-400 mt-0.5 leading-snug">
-                      {selectedClient.tagline}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-1.5 shrink-0">
-                  <span
-                    className={`px-2 py-0.5 rounded text-[10px] font-bold ${selectedClient.statusStyle}`}
-                  >
-                    {selectedClient.status}
-                  </span>
-                  <button className="p-1 text-slate-400 hover:text-slate-600 rounded">
-                    <MoreHorizontal className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Panel Tabs */}
-              <div className="flex items-center gap-4 text-xs font-semibold text-slate-500 border-b border-slate-100 overflow-x-auto pb-1">
-                {["Overview", "Contacts", "Deals", "Projects", "Payments", "Files"].map(
-                  (tab) => (
-                    <button
-                      key={tab}
-                      onClick={() => setActiveTab(tab)}
-                      className={`pb-2 whitespace-nowrap transition-colors relative cursor-pointer ${
-                        activeTab === tab
-                          ? "text-blue-600 font-bold"
-                          : "hover:text-slate-900"
-                      }`}
-                    >
-                      {tab}
-                      {activeTab === tab && (
-                        <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 rounded-full" />
-                      )}
-                    </button>
-                  )
-                )}
-              </div>
-
-              {/* 2-Column Info Details */}
-              <div className="grid grid-cols-2 gap-x-4 gap-y-2.5 pt-1 text-xs">
-                {/* Left col */}
-                <div className="space-y-2">
-                  <div>
-                    <span className="text-slate-400 flex items-center gap-1 text-[11px]">
-                      <Globe className="w-3 h-3" /> Website
-                    </span>
-                    <a
-                      href={`https://${selectedClient.website}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="font-medium text-blue-600 hover:underline truncate block mt-0.5"
-                    >
-                      {selectedClient.website}
-                    </a>
-                  </div>
-
-                  <div>
-                    <span className="text-slate-400 flex items-center gap-1 text-[11px]">
-                      <Mail className="w-3 h-3" /> Email
-                    </span>
-                    <p className="font-medium text-slate-800 truncate mt-0.5">
-                      {selectedClient.email}
-                    </p>
-                  </div>
-
-                  <div>
-                    <span className="text-slate-400 flex items-center gap-1 text-[11px]">
-                      <Phone className="w-3 h-3" /> Phone
-                    </span>
-                    <p className="font-medium text-slate-800 mt-0.5">
-                      {selectedClient.phone}
-                    </p>
-                  </div>
-
-                  <div>
-                    <span className="text-slate-400 flex items-center gap-1 text-[11px]">
-                      <MapPin className="w-3 h-3" /> Address
-                    </span>
-                    <p className="font-medium text-slate-700 leading-snug mt-0.5">
-                      {selectedClient.address}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Right col */}
-                <div className="space-y-2">
-                  <div>
-                    <span className="text-slate-400 flex items-center gap-1 text-[11px]">
-                      <Building2 className="w-3 h-3" /> Industry
-                    </span>
-                    <p className="font-semibold text-slate-800 mt-0.5">
-                      {selectedClient.industry}
-                    </p>
-                  </div>
-
-                  <div>
-                    <span className="text-slate-400 flex items-center gap-1 text-[11px]">
-                      <Users className="w-3 h-3" /> Company Size
-                    </span>
-                    <p className="font-semibold text-slate-800 mt-0.5">
-                      {selectedClient.companySize}
-                    </p>
-                  </div>
-
-                  <div>
-                    <span className="text-slate-400 flex items-center gap-1 text-[11px]">
-                      <Calendar className="w-3 h-3" /> Client Since
-                    </span>
-                    <p className="font-semibold text-slate-800 mt-0.5">
-                      {selectedClient.clientSince}
-                    </p>
-                  </div>
-
-                  <div>
-                    <span className="text-slate-400 flex items-center gap-1 text-[11px]">
-                      <DollarSign className="w-3 h-3" /> Total Revenue
-                    </span>
-                    <p className="font-extrabold text-slate-900 mt-0.5">
-                      {selectedClient.revenue}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Quick Stats: 4 Cards */}
-              <div className="pt-2">
-                <h4 className="text-xs font-bold text-slate-900 mb-2">
-                  Quick Stats
-                </h4>
-                <div className="grid grid-cols-4 gap-2">
-                  {/* Projects */}
-                  <div className="bg-slate-50 p-2 rounded-xl text-center border border-slate-100">
-                    <div className="w-6 h-6 mx-auto rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center mb-1">
-                      <Box className="w-3.5 h-3.5" />
-                    </div>
-                    <span className="text-sm font-extrabold text-slate-900 block">
-                      {selectedClient.projectsCount}
-                    </span>
-                    <span className="text-[10px] text-slate-400 block">
-                      Projects
-                    </span>
-                  </div>
-
-                  {/* Open Deals */}
-                  <div className="bg-slate-50 p-2 rounded-xl text-center border border-slate-100">
-                    <div className="w-6 h-6 mx-auto rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center mb-1">
-                      <DollarSign className="w-3.5 h-3.5" />
-                    </div>
-                    <span className="text-sm font-extrabold text-slate-900 block">
-                      {selectedClient.openDeals}
-                    </span>
-                    <span className="text-[10px] text-slate-400 block">
-                      Open Deals
-                    </span>
-                  </div>
-
-                  {/* Total Revenue */}
-                  <div className="bg-slate-50 p-2 rounded-xl text-center border border-slate-100">
-                    <div className="w-6 h-6 mx-auto rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center mb-1">
-                      <BarChart2 className="w-3.5 h-3.5" />
-                    </div>
-                    <span className="text-sm font-extrabold text-slate-900 block">
-                      $125K
-                    </span>
-                    <span className="text-[10px] text-slate-400 block truncate">
-                      Total Revenue
-                    </span>
-                  </div>
-
-                  {/* Outstanding */}
-                  <div className="bg-slate-50 p-2 rounded-xl text-center border border-slate-100">
-                    <div className="w-6 h-6 mx-auto rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center mb-1">
-                      <CreditCard className="w-3.5 h-3.5" />
-                    </div>
-                    <span className="text-sm font-extrabold text-slate-900 block">
-                      {selectedClient.outstanding}
-                    </span>
-                    <span className="text-[10px] text-slate-400 block truncate">
-                      Outstanding
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Recent Activity */}
-              <div className="pt-2 border-t border-slate-100">
-                <div className="flex items-center justify-between mb-2.5">
-                  <h4 className="text-xs font-bold text-slate-900">
-                    Recent Activity
-                  </h4>
-                  <Link
-                    href="/activities"
-                    className="text-xs font-semibold text-blue-600 hover:text-blue-700"
-                  >
-                    View All
-                  </Link>
-                </div>
-
-                <div className="space-y-3">
-                  {selectedClient.recentActivities &&
-                    selectedClient.recentActivities.map((act: any, i: number) => {
-                      const Icon = act.icon;
-                      return (
-                        <div key={i} className="flex items-start gap-2.5">
-                          <div
-                            className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${act.iconBg}`}
-                          >
-                            <Icon className="w-3 h-3" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between gap-1">
-                              <p className="text-xs font-semibold text-slate-800 truncate">
-                                {act.title}
-                              </p>
-                              <span className="text-[10px] text-slate-400 shrink-0">
-                                {act.time}
-                              </span>
-                            </div>
-                            <p className="text-[11px] text-slate-500 mt-0.5 leading-snug">
-                              {act.desc}
-                            </p>
-                          </div>
-                        </div>
-                      );
-                    })}
-                </div>
-              </div>
-
-              {/* Primary Contact Card */}
-              <div className="pt-2 border-t border-slate-100">
-                <h4 className="text-xs font-bold text-slate-900 mb-2">
-                  Primary Contact
-                </h4>
-                <div className="bg-slate-50/70 p-3.5 rounded-xl border border-slate-100">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <img
-                        src={selectedClient.contactImg}
-                        alt={selectedClient.contactName}
-                        className="w-10 h-10 rounded-full object-cover border border-white shadow-xs shrink-0"
-                      />
-                      <div className="truncate">
-                        <p className="text-xs font-bold text-slate-900 leading-tight truncate">
-                          {selectedClient.contactName}
-                        </p>
-                        <p className="text-[11px] text-slate-500 font-medium">
-                          {selectedClient.contactRole}
-                        </p>
-                      </div>
-                    </div>
-
-                    <button className="bg-white hover:bg-blue-50 text-blue-600 border border-blue-200/80 text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-2xs flex items-center gap-1.5 transition-colors shrink-0 cursor-pointer">
-                      <MessageSquare className="w-3.5 h-3.5" />
-                      <span>Message</span>
-                    </button>
-                  </div>
-
-                  <div className="mt-3 pl-12 space-y-1 text-xs text-slate-500 font-medium">
-                    <p className="text-blue-600 hover:underline cursor-pointer">{selectedClient.contactEmail || selectedClient.email}</p>
-                    <p className="text-slate-700">{selectedClient.phone}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
+            )}
           </div>
         </div>
-    </>
+
+        {/* Right Side: Detailed Slide Panel */}
+        {selectedClient && (
+          <div className="w-full xl:w-[380px] shrink-0 bg-white rounded-2xl border border-slate-100/90 shadow-sm p-5 space-y-4">
+            <div className="flex items-start justify-between border-b border-slate-100 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-full flex items-center justify-center font-bold text-sm bg-blue-100 text-blue-700 shadow-2xs">
+                  {getInitials(selectedClient.company)}
+                </div>
+                <div>
+                  <h3 className="text-base font-extrabold text-slate-900 leading-tight">{selectedClient.company}</h3>
+                  <p className="text-[11px] text-slate-400 mt-0.5">{selectedClient.industry}</p>
+                </div>
+              </div>
+              <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${STATUS_STYLES[selectedClient.status] || "bg-slate-50 text-slate-600"}`}>
+                {selectedClient.status}
+              </span>
+            </div>
+
+            {/* Contact details */}
+            <div className="space-y-2.5 text-xs">
+              <div className="flex items-center justify-between text-slate-600">
+                <div className="flex items-center gap-2 truncate">
+                  <Mail className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                  <span className="font-medium text-slate-800 truncate">{selectedClient.email}</span>
+                </div>
+                <button
+                  onClick={() => copyToClipboard(selectedClient.email, "email")}
+                  className="p-1 text-slate-400 hover:text-blue-600 rounded cursor-pointer"
+                >
+                  {copiedField === "email" ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
+                </button>
+              </div>
+
+              {selectedClient.phone && (
+                <div className="flex items-center justify-between text-slate-600">
+                  <div className="flex items-center gap-2 truncate">
+                    <Phone className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                    <span className="font-medium text-slate-800">{selectedClient.phone}</span>
+                  </div>
+                  <button
+                    onClick={() => copyToClipboard(selectedClient.phone!, "phone")}
+                    className="p-1 text-slate-400 hover:text-blue-600 rounded cursor-pointer"
+                  >
+                    {copiedField === "phone" ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
+                  </button>
+                </div>
+              )}
+
+              {selectedClient.website && (
+                <div className="flex items-center gap-2 text-slate-600">
+                  <Globe className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                  <a
+                    href={`https://${selectedClient.website.replace(/^https?:\/\//, "")}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-blue-600 hover:underline truncate"
+                  >
+                    {selectedClient.website}
+                  </a>
+                </div>
+              )}
+
+              {selectedClient.address && (
+                <div className="flex items-center gap-2 text-slate-600">
+                  <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                  <span className="text-slate-700 truncate">{selectedClient.address}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Financial Overview */}
+            <div className="grid grid-cols-2 gap-3 pt-3 border-t border-slate-100">
+              <div className="bg-slate-50 p-3 rounded-xl">
+                <span className="text-[10px] text-slate-400 font-semibold block">Total Revenue</span>
+                <span className="text-base font-extrabold text-slate-900 mt-0.5 block">
+                  ${selectedClient.revenue.toLocaleString()}
+                </span>
+              </div>
+              <div className="bg-slate-50 p-3 rounded-xl">
+                <span className="text-[10px] text-slate-400 font-semibold block">Outstanding</span>
+                <span className="text-base font-extrabold text-rose-600 mt-0.5 block">
+                  ${selectedClient.outstanding.toLocaleString()}
+                </span>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex items-center gap-2 pt-3 border-t border-slate-100">
+              <button
+                onClick={() => handleOpenEdit(selectedClient)}
+                className="flex-1 py-2 bg-blue-50 hover:bg-blue-100 text-blue-600 text-xs font-semibold rounded-xl transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+              >
+                <Edit2 className="w-3.5 h-3.5" />
+                <span>Edit Client</span>
+              </button>
+              <button
+                onClick={() => handleDeleteClient(selectedClient.id)}
+                className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors cursor-pointer"
+                title="Delete Client"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Add / Edit Client Modal */}
+      {showModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs"
+          onClick={() => setShowModal(false)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 space-y-4 max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h3 className="text-sm font-bold text-slate-900">
+                {modalMode === "create" ? "Add New Client" : `Edit: ${clientForm.company}`}
+              </h3>
+              <button
+                onClick={() => setShowModal(false)}
+                className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleModalSubmit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Company Name *</label>
+                <input
+                  type="text"
+                  required
+                  value={clientForm.company}
+                  onChange={(e) => setClientForm({ ...clientForm, company: e.target.value })}
+                  placeholder="e.g. Acme Corporation"
+                  className="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Official Email *</label>
+                  <input
+                    type="email"
+                    required
+                    value={clientForm.email}
+                    onChange={(e) => setClientForm({ ...clientForm, email: e.target.value })}
+                    placeholder="contact@acme.com"
+                    className="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Phone</label>
+                  <input
+                    type="text"
+                    value={clientForm.phone}
+                    onChange={(e) => setClientForm({ ...clientForm, phone: e.target.value })}
+                    placeholder="+1 415 823 4567"
+                    className="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Contact Person</label>
+                  <input
+                    type="text"
+                    value={clientForm.contactName}
+                    onChange={(e) => setClientForm({ ...clientForm, contactName: e.target.value })}
+                    placeholder="e.g. John Carter"
+                    className="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Contact Role</label>
+                  <input
+                    type="text"
+                    value={clientForm.contactRole}
+                    onChange={(e) => setClientForm({ ...clientForm, contactRole: e.target.value })}
+                    placeholder="CEO / Managing Director"
+                    className="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Industry</label>
+                  <select
+                    value={clientForm.industry}
+                    onChange={(e) => setClientForm({ ...clientForm, industry: e.target.value })}
+                    className="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg bg-white"
+                  >
+                    {["Technology", "IT Services", "Marketing", "Manufacturing", "Finance", "Healthcare", "Education", "Real Estate", "Logistics", "E-commerce"].map((ind) => (
+                      <option key={ind} value={ind}>{ind}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Status</label>
+                  <select
+                    value={clientForm.status}
+                    onChange={(e) => setClientForm({ ...clientForm, status: e.target.value })}
+                    className="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg bg-white"
+                  >
+                    {["Active", "Inactive", "Prospect", "VIP", "At Risk"].map((st) => (
+                      <option key={st} value={st}>{st}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Total Revenue ($)</label>
+                  <input
+                    type="number"
+                    value={clientForm.revenue}
+                    onChange={(e) => setClientForm({ ...clientForm, revenue: e.target.value })}
+                    placeholder="50000"
+                    className="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Outstanding ($)</label>
+                  <input
+                    type="number"
+                    value={clientForm.outstanding}
+                    onChange={(e) => setClientForm({ ...clientForm, outstanding: e.target.value })}
+                    placeholder="10000"
+                    className="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Website</label>
+                <input
+                  type="text"
+                  value={clientForm.website}
+                  onChange={(e) => setClientForm({ ...clientForm, website: e.target.value })}
+                  placeholder="www.company.com"
+                  className="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Address</label>
+                <input
+                  type="text"
+                  value={clientForm.address}
+                  onChange={(e) => setClientForm({ ...clientForm, address: e.target.value })}
+                  placeholder="Street address, city, country"
+                  className="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setShowModal(false)}
+                  className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-900 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 rounded-lg shadow-sm shadow-blue-500/20 transition-all flex items-center gap-1.5"
+                >
+                  {submitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                  {modalMode === "create" ? "Create Client" : "Save Changes"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

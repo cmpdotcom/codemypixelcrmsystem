@@ -197,6 +197,7 @@ model Deal {
   closer           String?
   closerImg        String?
   leadId           String?
+  clientId         String?
   expectedCloseDate DateTime?
   closedAt         DateTime?
   lostReason       String?
@@ -204,9 +205,44 @@ model Deal {
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
   lead             Lead?     @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  client           Client?   @relation(fields: [clientId], references: [id], onDelete: SetNull)
 
   @@index([stage])
   @@index([pipeline])
   @@index([closer])
+  @@index([clientId])
+  @@index([createdAt])
+}
+
+model Client {
+  id              String   @id @default(cuid())
+  clientNumber    Int      @unique @default(autoincrement())
+  company         String
+  tagline         String?
+  location        String?
+  address         String?
+  website         String?
+  email           String
+  phone           String?
+  industry        String?  @default("Technology")
+  companySize     String?  @default("50–200 employees")
+  status          String   @default("Active") // Active, Inactive, Prospect, VIP, At Risk, Churned
+  contactName     String?
+  contactRole     String?
+  contactEmail    String?
+  contactPhone    String?
+  contactImg      String?
+  revenue         Float    @default(0)
+  outstanding     Float    @default(0)
+  projectsCount   Int      @default(0)
+  clientSince     DateTime @default(now())
+  lastActivity    DateTime? @default(now())
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  deals           Deal[]
+
+  @@index([status])
+  @@index([industry])
   @@index([createdAt])
 }
