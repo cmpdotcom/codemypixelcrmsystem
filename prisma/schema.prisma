@@ -119,6 +119,7 @@ model Lead {
   files       LeadFile[]
   crmActivities Activity[]
   deals       Deal[]
+  followUps   FollowUp[]
 
   @@index([status])
   @@index([source])
@@ -241,8 +242,39 @@ model Client {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
   deals           Deal[]
+  followUps       FollowUp[]
 
   @@index([status])
   @@index([industry])
   @@index([createdAt])
+}
+
+model FollowUp {
+  id           String    @id @default(cuid())
+  fuNumber     Int       @unique @default(autoincrement())
+  subjectTitle String
+  subjectDesc  String?
+  company      String
+  contact      String?
+  relatedRef   String?   // e.g. "Deal #DL-1082", "Lead #LD-2291"
+  type         String    @default("Call") // Call, Email, Meeting, WhatsApp, SMS
+  assigneeName String?
+  dueDate      DateTime
+  dueTime      String?   @default("11:00 AM")
+  status       String    @default("Upcoming") // Due Today, Upcoming, Overdue, Completed
+  priority     String    @default("Medium") // Low, Medium, High, Urgent
+  completed    Boolean   @default(false)
+  completedAt  DateTime?
+  notes        String?
+  leadId       String?
+  clientId     String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  lead         Lead?     @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  client       Client?   @relation(fields: [clientId], references: [id], onDelete: SetNull)
+
+  @@index([status])
+  @@index([type])
+  @@index([dueDate])
+  @@index([assigneeName])
 }
