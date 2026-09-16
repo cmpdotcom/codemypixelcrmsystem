@@ -15,10 +15,47 @@ model User {
   password      String
   emailVerified DateTime?
   image         String?
+  roleId        String?
+  teamId        String?
+  status        String    @default("Active") // Active, Inactive
+  lastActive    DateTime? @default(now())
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   accounts      Account[]
   sessions      Session[]
+  role          Role?     @relation(fields: [roleId], references: [id], onDelete: SetNull)
+  team          Team?     @relation("TeamMembers", fields: [teamId], references: [id], onDelete: SetNull)
+  ledTeams      Team[]    @relation("TeamLeader")
+
+  @@index([roleId])
+  @@index([teamId])
+  @@index([status])
+}
+
+model Role {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  color       String   @default("blue") // blue, green, amber, purple, rose, slate
+  permissions Json?    // matrix of module: { view, create, edit, del, assign }
+  isDefault   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  users       User[]
+}
+
+model Team {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  department  String   @default("Sales") // Sales, Delivery, Operations, etc.
+  color       String   @default("blue")
+  leaderId    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  leader      User?    @relation("TeamLeader", fields: [leaderId], references: [id], onDelete: SetNull)
+  members     User[]   @relation("TeamMembers")
+
+  @@index([department])
 }
 
 model Account {
