@@ -1,17 +1,18 @@
 "use client";
 
-import { useState } from "react";
-import { Plus, X } from "lucide-react";
+import React, { useState, useEffect, useCallback } from "react";
+import { Plus, X, Trash2, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import { SettingsPageHeader } from "@/components/SettingsPageHeader";
-import {
-  FormCard,
-  FormField,
-  Input,
-  Select,
-  SaveBar,
-} from "@/components/SettingsUI";
+import { FormCard, FormField } from "@/components/SettingsUI";
 
-const colorMap: Record<string, string> = {
+interface TagItem {
+  name: string;
+  color: string;
+  count: number;
+  applicable?: string[];
+}
+
+const COLOR_MAP: Record<string, string> = {
   red: "bg-red-100 text-red-700",
   orange: "bg-orange-100 text-orange-700",
   amber: "bg-amber-100 text-amber-700",
@@ -25,69 +26,158 @@ const colorMap: Record<string, string> = {
   slate: "bg-slate-100 text-slate-700",
 };
 
-const applicableOptions = ["Leads", "Deals", "Clients", "Projects", "Tasks"];
+const COLOR_OPTIONS = [
+  "red",
+  "orange",
+  "amber",
+  "green",
+  "teal",
+  "cyan",
+  "blue",
+  "indigo",
+  "purple",
+  "rose",
+  "slate",
+];
+
+const APPLICABLE_MODULES = ["Leads", "Deals", "Clients", "Projects", "Tasks"];
 
 export default function TagsSettingsPage() {
-  const [tags, setTags] = useState([
-    { name: "Hot Lead", color: "red", count: 24 },
-    { name: "Enterprise", color: "purple", count: 36 },
-    { name: "VIP", color: "amber", count: 25 },
-    { name: "High Budget", color: "green", count: 18 },
-    { name: "Urgent", color: "rose", count: 31 },
-    { name: "International", color: "blue", count: 12 },
-    { name: "Returning Client", color: "teal", count: 9 },
-    { name: "Potential", color: "indigo", count: 21 },
-    { name: "At Risk", color: "orange", count: 7 },
-    { name: "Newsletter", color: "slate", count: 14 },
-    { name: "Cold", color: "cyan", count: 6 },
-    { name: "Referral", color: "green", count: 11 },
-  ]);
-  const [selected, setSelected] = useState<string[]>([...applicableOptions]);
+  const [tags, setTags] = useState<TagItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const removeTag = (name: string) => {
-    setTags(tags.filter((t) => t.name !== name));
+  // New tag state
+  const [newTagName, setNewTagName] = useState("");
+  const [newTagColor, setNewTagColor] = useState("blue");
+  const [selectedModules, setSelectedModules] = useState<string[]>(["Leads", "Deals"]);
+
+  const fetchTags = useCallback(async () => {
+    try {
+      const res = await fetch("/api/settings/tags");
+      if (!res.ok) throw new Error("Failed to load tags");
+      const data = await res.json();
+      setTags(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Load error");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchTags();
+  }, [fetchTags]);
+
+  const saveTagsToDb = async (updated: TagItem[]) => {
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/settings/tags", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updated),
+      });
+      if (!res.ok) throw new Error("Failed to save");
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+      setTags(updated);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Save error");
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const toggleApplicable = (opt: string) => {
-    setSelected((prev) =>
-      prev.includes(opt) ? prev.filter((o) => o !== opt) : [...prev, opt]
+  const removeTag = (name: string) => {
+    const next = tags.filter((t) => t.name !== name);
+    saveTagsToDb(next);
+  };
+
+  const toggleModule = (mod: string) => {
+    setSelectedModules((prev) =>
+      prev.includes(mod) ? prev.filter((m) => m !== mod) : [...prev, mod]
     );
   };
 
-  const usageRows = [
-    { tag: "Hot Lead", color: "red", leads: 24, deals: 12, clients: 5, projects: 0 },
-    { tag: "Enterprise", color: "purple", leads: 8, deals: 15, clients: 10, projects: 3 },
-    { tag: "VIP", color: "amber", leads: 5, deals: 8, clients: 12, projects: 0 },
-    { tag: "Urgent", color: "rose", leads: 15, deals: 6, clients: 2, projects: 8 },
-  ];
+  const handleAddTag = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newTagName.trim()) return;
+
+    if (tags.some((t) => t.name.toLowerCase() === newTagName.trim().toLowerCase())) {
+      setError("Tag with this name already exists");
+      return;
+    }
+
+    const next: TagItem[] = [
+      ...tags,
+      {
+        name: newTagName.trim(),
+        color: newTagColor,
+        count: 0,
+        applicable: selectedModules,
+      },
+    ];
+
+    saveTagsToDb(next);
+    setNewTagName("");
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="w-6 h-6 text-blue-500 animate-spin" />
+        <span className="ml-2 text-sm text-slate-500">Loading tags...</span>
+      </div>
+    );
+  }
 
   return (
     <div>
       <SettingsPageHeader
         title="Tags"
-        description="Manage global tags for leads, deals, clients, and projects"
+        description="Manage organizational tags applied across leads, deals, clients, projects, and tasks"
       />
 
-      <div className="flex justify-end mb-4">
-        <button className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm shadow-blue-500/20 transition-colors">
-          <Plus className="w-3.5 h-3.5" />
-          Add Tag
-        </button>
-      </div>
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 text-xs font-medium px-4 py-3 rounded-xl mb-5 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 text-red-500" />
+            <span>{error}</span>
+          </div>
+          <button onClick={() => setError(null)} className="text-red-400 hover:text-red-600 font-bold">×</button>
+        </div>
+      )}
 
-      <FormCard title="All Tags" description="Tag cloud of all global tags currently in use">
+      {saved && (
+        <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-medium px-4 py-3 rounded-xl mb-5 flex items-center gap-2">
+          <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+          <span>Tags updated in database!</span>
+        </div>
+      )}
+
+      {/* Tag Cloud */}
+      <FormCard
+        title="All Global Tags"
+        description="Click the X to delete any tag from database"
+      >
         <div className="flex flex-wrap gap-2">
           {tags.map((tag) => (
             <span
               key={tag.name}
-              className={`inline-flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 rounded-full text-xs font-semibold ${colorMap[tag.color]}`}
+              className={`inline-flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 rounded-full text-xs font-semibold ${
+                COLOR_MAP[tag.color] || "bg-slate-100 text-slate-700"
+              }`}
             >
-              {tag.name}
+              <span>{tag.name}</span>
               <span className="text-[10px] opacity-70 font-medium">×{tag.count}</span>
               <button
+                type="button"
                 onClick={() => removeTag(tag.name)}
-                className="ml-0.5 w-4 h-4 rounded-full flex items-center justify-center hover:bg-black/10 transition-colors"
-                aria-label={`Remove ${tag.name}`}
+                className="ml-0.5 w-4 h-4 rounded-full flex items-center justify-center hover:bg-black/10 transition-colors cursor-pointer"
+                title={`Delete tag ${tag.name}`}
               >
                 <X className="w-3 h-3" />
               </button>
@@ -96,100 +186,74 @@ export default function TagsSettingsPage() {
         </div>
       </FormCard>
 
-      <FormCard title="Add New Tag" description="Create a new global tag and choose where it applies">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6">
-          <FormField label="Tag Name">
-            <Input placeholder="Enter tag name" />
-          </FormField>
-          <FormField label="Color">
-            <Select
-              options={[
-                "Red",
-                "Orange",
-                "Amber",
-                "Green",
-                "Teal",
-                "Cyan",
-                "Blue",
-                "Indigo",
-                "Purple",
-                "Rose",
-                "Slate",
-              ]}
-              defaultValue="Blue"
-            />
-          </FormField>
-        </div>
-        <FormField label="Applicable to" hint="Select where this tag can be applied">
-          <div className="flex flex-wrap gap-2">
-            {applicableOptions.map((opt) => {
-              const active = selected.includes(opt);
-              return (
-                <button
-                  key={opt}
-                  type="button"
-                  onClick={() => toggleApplicable(opt)}
-                  className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
-                    active
-                      ? "bg-blue-600 text-white"
-                      : "bg-slate-100 text-slate-500 hover:bg-slate-200"
-                  }`}
-                >
-                  {opt}
-                </button>
-              );
-            })}
-          </div>
-        </FormField>
-        <FormField label="Description">
-          <Input placeholder="Optional description" />
-        </FormField>
-      </FormCard>
+      {/* Add Tag */}
+      <FormCard
+        title="Add New Tag"
+        description="Create a custom global tag with target module assignment"
+      >
+        <form onSubmit={handleAddTag} className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField label="Tag Name *">
+              <input
+                type="text"
+                required
+                value={newTagName}
+                onChange={(e) => setNewTagName(e.target.value)}
+                placeholder="e.g. VIP Account"
+                className="w-full px-3.5 py-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
+              />
+            </FormField>
 
-      <FormCard title="Tag Usage" description="Breakdown of how each tag is used across modules">
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs">
-            <thead>
-              <tr className="text-left text-slate-500 border-b border-slate-200">
-                <th className="pb-2 pr-4 font-semibold">Tag</th>
-                <th className="pb-2 px-3 font-semibold text-center">Leads</th>
-                <th className="pb-2 px-3 font-semibold text-center">Deals</th>
-                <th className="pb-2 px-3 font-semibold text-center">Clients</th>
-                <th className="pb-2 px-3 font-semibold text-center">Projects</th>
-                <th className="pb-2 pl-3 font-semibold text-center">Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              {usageRows.map((row) => {
-                const total = row.leads + row.deals + row.clients + row.projects;
+            <FormField label="Color Badge">
+              <select
+                value={newTagColor}
+                onChange={(e) => setNewTagColor(e.target.value)}
+                className="w-full px-3.5 py-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 capitalize focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 cursor-pointer"
+              >
+                {COLOR_OPTIONS.map((c) => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+            </FormField>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+              Applicable CRM Modules
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {APPLICABLE_MODULES.map((mod) => {
+                const isSelected = selectedModules.includes(mod);
                 return (
-                  <tr
-                    key={row.tag}
-                    className="border-b border-slate-100 last:border-0"
+                  <button
+                    key={mod}
+                    type="button"
+                    onClick={() => toggleModule(mod)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors cursor-pointer ${
+                      isSelected
+                        ? "bg-blue-600 text-white"
+                        : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+                    }`}
                   >
-                    <td className="py-2.5 pr-4">
-                      <span
-                        className={`inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold ${colorMap[row.color]}`}
-                      >
-                        {row.tag}
-                      </span>
-                    </td>
-                    <td className="py-2.5 px-3 text-center text-slate-700">{row.leads}</td>
-                    <td className="py-2.5 px-3 text-center text-slate-700">{row.deals}</td>
-                    <td className="py-2.5 px-3 text-center text-slate-700">{row.clients}</td>
-                    <td className="py-2.5 px-3 text-center text-slate-700">{row.projects}</td>
-                    <td className="py-2.5 pl-3 text-center font-semibold text-slate-900">
-                      {total}
-                    </td>
-                  </tr>
+                    {mod}
+                  </button>
                 );
               })}
-            </tbody>
-          </table>
-        </div>
-      </FormCard>
+            </div>
+          </div>
 
-      <SaveBar />
+          <div className="flex justify-end pt-3 border-t border-slate-100">
+            <button
+              type="submit"
+              disabled={saving}
+              className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 rounded-lg shadow-sm shadow-blue-500/20 transition-all cursor-pointer"
+            >
+              {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
+              Create Tag
+            </button>
+          </div>
+        </form>
+      </FormCard>
     </div>
   );
 }
