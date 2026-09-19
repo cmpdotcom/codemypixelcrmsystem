@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -20,12 +20,26 @@ import {
 
 export default function LoginPage() {
   const router = useRouter();
+  const [brandName, setBrandName] = useState("CMP CRM");
+  const [brandLogo, setBrandLogo] = useState("/logo.png");
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Load company branding (login logo + name) from Company Settings
+  useEffect(() => {
+    fetch("/api/settings")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((s) => {
+        if (!s) return;
+        if (s.company_name || s.companyName) setBrandName(s.company_name || s.companyName);
+        setBrandLogo(s.company_loginLogoUrl || s.company_logoUrl || "/logo.png");
+      })
+      .catch(() => {});
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -86,15 +100,16 @@ export default function LoginPage() {
       <header className="relative z-10 max-w-7xl mx-auto w-full px-6 sm:px-10 py-6 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2.5 group">
           <Image
-            src="/logo.png"
-            alt="CMP CRM"
+            src={brandLogo}
+            alt={brandName}
             width={36}
             height={36}
-            className="rounded-xl shadow-sm group-hover:scale-105 transition-transform"
+            unoptimized={brandLogo.startsWith("http")}
+            className="rounded-xl shadow-sm group-hover:scale-105 transition-transform object-contain"
           />
           <div>
             <h1 className="text-lg font-bold tracking-tight text-slate-900 leading-none">
-              CMP CRM
+              {brandName}
             </h1>
             <p className="text-[10px] text-slate-400 mt-0.5 font-medium tracking-wide">
               Sell. Deliver. Grow.
@@ -223,7 +238,7 @@ export default function LoginPage() {
                   Welcome Back!
                 </h3>
                 <p className="text-xs text-slate-400 mt-1">
-                  Login to your CMP CRM account
+                  Login to your {brandName} account
                 </p>
               </div>
 
@@ -369,7 +384,7 @@ export default function LoginPage() {
 
               {/* Bottom Switcher */}
               <div className="text-center mt-6 text-xs text-slate-500">
-                <span>New to CMP CRM? </span>
+                <span>New to {brandName}? </span>
                 <Link
                   href="/signup"
                   className="font-semibold text-blue-600 hover:text-blue-700 hover:underline"
@@ -385,7 +400,7 @@ export default function LoginPage() {
       {/* Bottom Footer */}
       <footer className="relative z-10 max-w-7xl mx-auto w-full px-6 sm:px-10 py-5 flex items-center justify-end">
         <div className="text-right">
-          <p className="text-xs font-bold text-slate-900 leading-none">CMP CRM</p>
+          <p className="text-xs font-bold text-slate-900 leading-none">{brandName}</p>
           <p className="text-[10px] text-slate-400 font-medium">Sell. Deliver. Grow.</p>
         </div>
       </footer>

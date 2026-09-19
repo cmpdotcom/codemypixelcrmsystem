@@ -84,7 +84,7 @@ const navSections = [
 
 export function Sidebar() {
   const pathname = usePathname();
-  const { companyName, logoUrl } = useSettings();
+  const { companyName, logoUrl, primaryHex, primaryBg } = useSettings();
   const [collapsed, setCollapsed] = useState(false);
 
   return (
@@ -111,7 +111,7 @@ export function Sidebar() {
             width={36}
             height={36}
             unoptimized={logoUrl.startsWith("http")}
-            className="rounded-xl shadow-sm group-hover:scale-105 transition-transform shrink-0 object-cover"
+            className="rounded-xl shadow-sm group-hover:scale-105 transition-transform shrink-0 object-contain"
           />
           {!collapsed && (
             <div>
@@ -155,16 +155,22 @@ export function Sidebar() {
                     key={i}
                     href={item.href}
                     title={collapsed ? item.label : undefined}
+                    style={
+                      isActive
+                        ? { backgroundColor: primaryBg, color: primaryHex, borderLeftColor: primaryHex }
+                        : undefined
+                    }
                     className={`flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-colors group border-l-[3px] ${
                       isActive
-                        ? "bg-blue-50 text-blue-600 border-blue-600 shadow-sm shadow-blue-500/5"
+                        ? "shadow-sm"
                         : "text-slate-600 hover:bg-slate-50 hover:text-slate-900 border-transparent"
                     } ${collapsed ? "justify-center" : ""}`}
                   >
                     <Icon
+                      style={isActive ? { color: primaryHex } : undefined}
                       className={`w-4 h-4 shrink-0 ${
                         isActive
-                          ? "text-blue-600"
+                          ? ""
                           : "text-slate-400 group-hover:text-slate-600"
                       }`}
                     />

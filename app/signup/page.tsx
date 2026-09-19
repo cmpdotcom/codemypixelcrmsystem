@@ -22,6 +22,8 @@ import {
 
 export default function SignupPage() {
   const router = useRouter();
+  const [brandName, setBrandName] = useState("CMP CRM");
+  const [brandLogo, setBrandLogo] = useState("/logo.png");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(true);
@@ -35,6 +37,18 @@ export default function SignupPage() {
       router.push("/");
     }
   }, [state.success, router]);
+
+  // Load company branding (login logo + name) from Company Settings
+  React.useEffect(() => {
+    fetch("/api/settings")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((s) => {
+        if (!s) return;
+        if (s.company_name || s.companyName) setBrandName(s.company_name || s.companyName);
+        setBrandLogo(s.company_loginLogoUrl || s.company_logoUrl || "/logo.png");
+      })
+      .catch(() => {});
+  }, []);
 
   return (
     <div className="min-h-screen relative flex flex-col justify-between overflow-x-hidden font-sans selection:bg-blue-100 text-slate-900 bg-[#f4f7fc]">
@@ -54,15 +68,16 @@ export default function SignupPage() {
       <header className="relative z-10 max-w-7xl mx-auto w-full px-6 sm:px-10 py-6 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2.5 group">
           <Image
-            src="/logo.png"
-            alt="CMP CRM"
+            src={brandLogo}
+            alt={brandName}
             width={36}
             height={36}
-            className="rounded-xl shadow-sm group-hover:scale-105 transition-transform"
+            unoptimized={brandLogo.startsWith("http")}
+            className="rounded-xl shadow-sm group-hover:scale-105 transition-transform object-contain"
           />
           <div>
             <h1 className="text-lg font-bold tracking-tight text-slate-900 leading-none">
-              CMP CRM
+              {brandName}
             </h1>
             <p className="text-[10px] text-slate-400 mt-0.5 font-medium tracking-wide">
               Sell. Deliver. Grow.
@@ -98,7 +113,7 @@ export default function SignupPage() {
                 <br />
                 Stronger Business
                 <br />
-                with <span className="text-blue-600">CMP CRM</span>
+                with <span className="text-blue-600">{brandName}</span>
               </h2>
 
               {/* Subtitle */}
@@ -208,7 +223,7 @@ export default function SignupPage() {
                   Create Your Account
                 </h3>
                 <p className="text-xs text-slate-400 mt-1">
-                  Get started with CMP CRM today
+                  Get started with {brandName} today
                 </p>
               </div>
 
@@ -441,7 +456,7 @@ export default function SignupPage() {
       {/* Bottom Footer */}
       <footer className="relative z-10 max-w-7xl mx-auto w-full px-6 sm:px-10 py-5 flex items-center justify-end">
         <div className="text-right">
-          <p className="text-xs font-bold text-slate-900 leading-none">CMP CRM</p>
+          <p className="text-xs font-bold text-slate-900 leading-none">{brandName}</p>
           <p className="text-[10px] text-slate-400 font-medium">Sell. Deliver. Grow.</p>
         </div>
       </footer>

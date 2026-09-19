@@ -26,6 +26,14 @@ interface SettingsContextValue {
   dealView: "kanban" | "list";
   /** Default pagination size */
   pageSize: number;
+  /** Login/auth page logo with fallbacks */
+  loginLogoUrl: string;
+  /** Resolved hex for the configured primary theme color */
+  primaryHex: string;
+  /** Resolved hex for the configured secondary accent color */
+  secondaryHex: string;
+  /** Primary color at ~10% alpha for tinted backgrounds */
+  primaryBg: string;
 }
 
 const SettingsContext = createContext<SettingsContextValue | null>(null);
@@ -36,6 +44,16 @@ const LANDING_ROUTES: Record<string, string> = {
   Deals: "/deals",
   Activities: "/activities",
   Clients: "/clients",
+};
+
+// Same swatch names as Settings → Company color pickers
+const BRAND_COLORS: Record<string, string> = {
+  blue: "#3b82f6",
+  indigo: "#6366f1",
+  purple: "#a855f7",
+  emerald: "#10b981",
+  rose: "#f43f5e",
+  amber: "#f59e0b",
 };
 
 function parseCurrencyCode(currency?: string): string {
@@ -88,6 +106,25 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
 
   const currencyCode = parseCurrencyCode(settings.currency);
   const formatDate = makeDateFormatter(settings.dateFormat);
+  const companyName = settings.company_name || settings.companyName || "CMP CRM";
+  const primaryHex = BRAND_COLORS[settings.company_primaryColor] || BRAND_COLORS.blue;
+  const secondaryHex = BRAND_COLORS[settings.company_secondaryColor] || BRAND_COLORS.indigo;
+
+  // Sync browser chrome: tab title + favicon + theme CSS variables
+  useEffect(() => {
+    if (!loaded) return;
+    document.title = `${companyName} — CRM`;
+    const favicon = settings.company_faviconUrl || "/logo.png";
+    let link = document.querySelector<HTMLLinkElement>("link[rel~='icon']");
+    if (!link) {
+      link = document.createElement("link");
+      link.rel = "icon";
+      document.head.appendChild(link);
+    }
+    link.href = favicon;
+    document.documentElement.style.setProperty("--brand-primary", primaryHex);
+    document.documentElement.style.setProperty("--brand-secondary", secondaryHex);
+  }, [loaded, companyName, settings.company_faviconUrl, primaryHex, secondaryHex]);
 
   const money = useCallback(
     (n: number) =>
@@ -119,8 +156,10 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     settings,
     loaded,
     refresh,
-    companyName: settings.company_name || settings.companyName || "CMP CRM",
+    companyName,
     logoUrl: settings.company_logoUrl || "/logo.png",
+    loginLogoUrl:
+      settings.company_loginLogoUrl || settings.company_logoUrl || "/logo.png",
     currencyCode,
     money,
     moneyCompact,
@@ -128,6 +167,9 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     landingRoute: LANDING_ROUTES[settings.landingPage || "Dashboard"] || "/",
     dealView: settings.dealView === "List" || settings.dealView === "Table" ? "list" : "kanban",
     pageSize: parseInt(settings.pageSize) || 10,
+    primaryHex,
+    secondaryHex,
+    primaryBg: `${primaryHex}1a`,
   };
 
   return <SettingsContext.Provider value={value}>{children}</SettingsContext.Provider>;
@@ -151,6 +193,10 @@ export function useSettings(): SettingsContextValue {
       landingRoute: "/",
       dealView: "kanban",
       pageSize: 10,
+      loginLogoUrl: "/logo.png",
+      primaryHex: BRAND_COLORS.blue,
+      secondaryHex: BRAND_COLORS.indigo,
+      primaryBg: "#3b82f61a",
     };
   }
   return ctx;
