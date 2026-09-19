@@ -107,11 +107,13 @@ function ImageUploader({
   value,
   onChange,
   aspect = "square",
+  fallback,
 }: {
   label: string;
   value?: string;
   onChange: (url: string) => void;
   aspect?: "square" | "wide";
+  fallback?: string;
 }) {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -153,12 +155,19 @@ function ImageUploader({
         >
           {uploading ? (
             <Loader2 className="w-5 h-5 text-blue-500 animate-spin" />
-          ) : value ? (
-            <img
-              src={value}
-              alt={label}
-              className="w-full h-full object-contain p-1"
-            />
+          ) : value || fallback ? (
+            <>
+              <img
+                src={value || fallback}
+                alt={label}
+                className={`w-full h-full object-contain p-1 ${value ? "" : "opacity-90"}`}
+              />
+              {!value && (
+                <span className="absolute bottom-0.5 right-0.5 text-[8px] font-bold bg-slate-800/70 text-white px-1 py-px rounded">
+                  default
+                </span>
+              )}
+            </>
           ) : (
             <div className="flex flex-col items-center justify-center text-slate-400">
               <ImageIcon className="w-5 h-5" />
@@ -325,6 +334,7 @@ export default function CompanyProfilePage() {
               label="Logo"
               value={formData.company_logoUrl}
               onChange={set("company_logoUrl")}
+              fallback="/logo.png"
             />
           </FormField>
 
@@ -333,6 +343,7 @@ export default function CompanyProfilePage() {
               label="Favicon"
               value={formData.company_faviconUrl}
               onChange={set("company_faviconUrl")}
+              fallback="/favicon-32.png"
             />
           </FormField>
 
@@ -511,6 +522,7 @@ export default function CompanyProfilePage() {
               aspect="wide"
               value={formData.company_logoUrl}
               onChange={set("company_logoUrl")}
+              fallback="/logo.png"
             />
           </div>
 
@@ -526,6 +538,7 @@ export default function CompanyProfilePage() {
               aspect="wide"
               value={formData.company_emailLogoUrl}
               onChange={set("company_emailLogoUrl")}
+              fallback="/logo.png"
             />
           </div>
 
@@ -541,6 +554,7 @@ export default function CompanyProfilePage() {
               aspect="wide"
               value={formData.company_loginLogoUrl}
               onChange={set("company_loginLogoUrl")}
+              fallback="/logo.png"
             />
           </div>
 
@@ -556,6 +570,7 @@ export default function CompanyProfilePage() {
               aspect="wide"
               value={formData.company_invoiceLogoUrl}
               onChange={set("company_invoiceLogoUrl")}
+              fallback="/logo.png"
             />
           </div>
         </div>
