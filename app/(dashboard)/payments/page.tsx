@@ -20,7 +20,9 @@ import {
   Landmark,
   Smartphone,
   Receipt,
+  Download,
 } from "lucide-react";
+import { downloadInvoicePdf, type InvoiceBranding } from "@/lib/invoice";
 
 interface PaymentItem {
   id: string;
@@ -125,6 +127,8 @@ export default function PaymentsPage() {
   const [submitting, setSubmitting] = useState(false);
   const [clientOptions, setClientOptions] = useState<ClientOption[]>([]);
   const [dealOptions, setDealOptions] = useState<DealOption[]>([]);
+  const [branding, setBranding] = useState<InvoiceBranding>({ companyName: "CodeMyPixel Ltd." });
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
   const fetchPayments = useCallback(async () => {
     try {
@@ -183,7 +187,39 @@ export default function PaymentsPage() {
       }
     };
     loadOptions();
+
+    // Load company branding for invoice PDFs
+    const loadBranding = async () => {
+      try {
+        const res = await fetch("/api/settings");
+        if (!res.ok) return;
+        const s = await res.json();
+        setBranding({
+          companyName: s.company_name || "CodeMyPixel Ltd.",
+          companyEmail: s.company_officialEmail || undefined,
+          companyPhone: s.company_phone || undefined,
+          companyAddress:
+            [s.company_address, s.company_city, s.company_country].filter(Boolean).join(", ") ||
+            undefined,
+          logoUrl: s.company_invoiceLogoUrl || s.company_logoUrl || undefined,
+        });
+      } catch {
+        // Branding is best-effort; fall back to defaults
+      }
+    };
+    loadBranding();
   }, []);
+
+  const handleDownloadInvoice = async (item: PaymentItem) => {
+    setDownloadingId(item.id);
+    try {
+      await downloadInvoicePdf(item, branding);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to generate invoice PDF");
+    } finally {
+      setDownloadingId(null);
+    }
+  };
 
   const markAsPaid = async (item: PaymentItem) => {
     try {
@@ -523,6 +559,18 @@ export default function PaymentsPage() {
                       </td>
                       <td className="py-3 px-2">
                         <div className="flex items-center justify-center gap-1">
+                          <button
+                            onClick={() => handleDownloadInvoice(item)}
+                            disabled={downloadingId === item.id}
+                            title="Download Invoice PDF"
+                            className="p-1.5 rounded-lg text-slate-400 hover:bg-indigo-50 hover:text-indigo-600 transition-colors cursor-pointer disabled:opacity-50"
+                          >
+                            {downloadingId === item.id ? (
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            ) : (
+                              <Download className="w-3.5 h-3.5" />
+                            )}
+                          </button>
                           {item.status !== "Paid" && item.status !== "Refunded" && (
                             <button
                               onClick={() => markAsPaid(item)}
