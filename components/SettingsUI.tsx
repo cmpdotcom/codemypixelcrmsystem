@@ -150,29 +150,31 @@ export function SaveBar({
   onCancel?: () => void;
 }) {
   return (
-    <div className="flex items-center justify-end gap-3 mt-6">
-      {saved && (
-        <span className="text-xs font-semibold text-emerald-600 flex items-center gap-1">
-          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-          Saved!
-        </span>
-      )}
-      <button
-        onClick={onCancel}
-        className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-900 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer"
-      >
-        Cancel
-      </button>
-      <button
-        onClick={onSave}
-        disabled={saving}
-        className="px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 rounded-lg shadow-sm shadow-blue-500/20 transition-colors cursor-pointer flex items-center gap-1.5"
-      >
-        {saving && (
-          <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+    <div className="sticky bottom-0 -mx-1 mt-6 z-20">
+      <div className="flex items-center justify-end gap-3 bg-white/90 backdrop-blur-md border border-slate-200/80 rounded-2xl px-4 py-3 shadow-lg shadow-slate-200/50">
+        {saved && (
+          <span className="text-xs font-semibold text-emerald-600 flex items-center gap-1 mr-auto">
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+            Saved — changes are live across the CRM
+          </span>
         )}
-        {saving ? "Saving..." : "Save Changes"}
-      </button>
+        <button
+          onClick={onCancel}
+          className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-900 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={onSave}
+          disabled={saving}
+          className="px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 rounded-lg shadow-sm shadow-blue-500/20 transition-colors cursor-pointer flex items-center gap-1.5"
+        >
+          {saving && (
+            <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+          )}
+          {saving ? "Saving..." : "Save Changes"}
+        </button>
+      </div>
     </div>
   );
 }
