@@ -20,6 +20,8 @@ export interface InvoiceBranding {
   companyPhone?: string;
   companyAddress?: string;
   logoUrl?: string;
+  /** ISO currency code, e.g. "USD", "BDT" */
+  currency?: string;
 }
 
 const STATUS_RGB: Record<string, [number, number, number]> = {
@@ -30,8 +32,14 @@ const STATUS_RGB: Record<string, [number, number, number]> = {
   Refunded: [100, 116, 139],
 };
 
-const fmtMoney = (n: number) =>
-  `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const fmtMoney = (n: number, currency = "USD") =>
+  new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency,
+    currencyDisplay: "code", // ISO code — safe for jsPDF's built-in fonts
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(n);
 
 const fmtDate = (d?: string | null) =>
   d
@@ -67,6 +75,7 @@ async function loadImageDataUrl(url: string): Promise<{ dataUrl: string; width: 
 
 export async function downloadInvoicePdf(payment: InvoicePayment, branding: InvoiceBranding) {
   const doc = new jsPDF({ unit: "mm", format: "a4" });
+  const cur = branding.currency || "USD";
   const pageW = doc.internal.pageSize.getWidth(); // 210
   const pageH = doc.internal.pageSize.getHeight(); // 297
   const margin = 18;
@@ -205,17 +214,17 @@ export async function downloadInvoicePdf(payment: InvoicePayment, branding: Invo
   doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
   doc.text("1", colX.qty, y + 8, { align: "right" });
-  doc.text(fmtMoney(payment.amount), colX.rate, y + 8, { align: "right" });
+  doc.text(fmtMoney(payment.amount, cur), colX.rate, y + 8, { align: "right" });
   doc.setFont("helvetica", "bold");
-  doc.text(fmtMoney(payment.amount), colX.amount - 3, y + 8, { align: "right" });
+  doc.text(fmtMoney(payment.amount, cur), colX.amount - 3, y + 8, { align: "right" });
 
   // ---------- Totals ----------
   y += 26;
   const totLabelX = right - 60;
   const totValX = right - 3;
   const rows: [string, string][] = [
-    ["Subtotal", fmtMoney(payment.amount)],
-    ["Tax (0%)", "$0.00"],
+    ["Subtotal", fmtMoney(payment.amount, cur)],
+    ["Tax (0%)", fmtMoney(0, cur)],
   ];
   doc.setFontSize(9.5);
   rows.forEach(([label, val]) => {
@@ -234,7 +243,7 @@ export async function downloadInvoicePdf(payment: InvoicePayment, branding: Invo
   doc.setFont("helvetica", "bold");
   doc.setFontSize(10);
   doc.text("TOTAL DUE", totLabelX, y + 3, { align: "left" });
-  doc.text(fmtMoney(payment.amount), totValX, y + 3, { align: "right" });
+  doc.text(fmtMoney(payment.amount, cur), totValX, y + 3, { align: "right" });
 
   // ---------- Notes / terms ----------
   y += 22;

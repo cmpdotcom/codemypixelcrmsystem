@@ -38,6 +38,7 @@ import {
   Copy,
   Check as CheckIcon,
 } from "lucide-react";
+import { useSettings } from "@/components/SettingsProvider";
 
 function LinkedinIcon({ className = "w-3.5 h-3.5" }: { className?: string }) {
   return (
@@ -195,8 +196,16 @@ function LeadsPage() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [total, setTotal] = useState(0);
   const [stats, setStats] = useState<LeadStats | null>(null);
+  const { pageSize: defaultPageSize, loaded: settingsLoaded } = useSettings();
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(defaultPageSize);
+  const pageSizeInitialized = React.useRef(false);
+  useEffect(() => {
+    if (!pageSizeInitialized.current && settingsLoaded) {
+      setPageSize(defaultPageSize);
+      pageSizeInitialized.current = true;
+    }
+  }, [defaultPageSize, settingsLoaded]);
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

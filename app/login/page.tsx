@@ -42,7 +42,25 @@ export default function LoginPage() {
         setLoading(false);
         return;
       }
-      router.push("/");
+      // Route to the landing page configured in Settings → General
+      let target = "/";
+      try {
+        const s = await fetch("/api/settings");
+        if (s.ok) {
+          const settings = await s.json();
+          const routes: Record<string, string> = {
+            Dashboard: "/",
+            Leads: "/leads",
+            Deals: "/deals",
+            Activities: "/activities",
+            Clients: "/clients",
+          };
+          target = routes[settings.landingPage] || "/";
+        }
+      } catch {
+        // fall back to dashboard
+      }
+      router.push(target);
       router.refresh();
     } catch {
       setError("Login failed. Please try again.");

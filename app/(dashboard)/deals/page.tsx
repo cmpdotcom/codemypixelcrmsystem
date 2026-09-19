@@ -31,6 +31,7 @@ import {
   Building2,
   DollarSign,
 } from "lucide-react";
+import { useSettings } from "@/components/SettingsProvider";
 
 interface DealItem {
   id: string;
@@ -84,6 +85,7 @@ const FORECAST_BAR_DATA = [
 ];
 
 export default function DealsPage() {
+  const { money: fmt, dealView, loaded: settingsLoaded } = useSettings();
   const [deals, setDeals] = useState<DealItem[]>([]);
   const [kpi, setKpi] = useState<KPIStats>({
     totalDeals: 0,
@@ -97,7 +99,15 @@ export default function DealsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [pipelineFilter, setPipelineFilter] = useState("All Pipelines");
   const [closerFilter, setCloserFilter] = useState("All Closers");
-  const [currentView, setCurrentView] = useState<"kanban" | "list" | "forecast">("kanban");
+  const [currentView, setCurrentView] = useState<"kanban" | "list" | "forecast">(dealView);
+  // Honor the "Default Deal View" setting once settings finish loading
+  const viewInitialized = React.useRef(false);
+  useEffect(() => {
+    if (!viewInitialized.current && settingsLoaded) {
+      setCurrentView(dealView);
+      viewInitialized.current = true;
+    }
+  }, [dealView, settingsLoaded]);
   const [error, setError] = useState<string | null>(null);
 
   // Add / Edit Deal Modal
@@ -254,7 +264,7 @@ export default function DealsPage() {
     return {
       ...st,
       count: stageDeals.length,
-      valueFormatted: `$${sumVal.toLocaleString()}`,
+      valueFormatted: fmt(sumVal),
       deals: stageDeals,
     };
   });
@@ -349,7 +359,7 @@ export default function DealsPage() {
             <div>
               <p className="text-[11px] font-medium text-slate-500">Pipeline Value</p>
               <h3 className="text-xl font-extrabold text-slate-900 mt-0.5">
-                ${kpi.pipelineValue.toLocaleString()}
+                {fmt(kpi.pipelineValue)}
               </h3>
               <p className="text-[10px] text-emerald-600 font-semibold">Active deals</p>
             </div>
@@ -362,7 +372,7 @@ export default function DealsPage() {
             <div>
               <p className="text-[11px] font-medium text-slate-500">Won Deals</p>
               <h3 className="text-xl font-extrabold text-slate-900 mt-0.5">{kpi.wonDealsCount}</h3>
-              <p className="text-[10px] text-amber-600 font-semibold">${kpi.wonValue.toLocaleString()}</p>
+              <p className="text-[10px] text-amber-600 font-semibold">{fmt(kpi.wonValue)}</p>
             </div>
           </div>
 
@@ -481,7 +491,7 @@ export default function DealsPage() {
 
                       <div className="mt-2.5 flex items-center justify-between">
                         <span className="text-sm font-extrabold text-slate-900">
-                          ${deal.value.toLocaleString()}
+                          {fmt(deal.value)}
                         </span>
 
                         {/* Quick stage mover dropdown */}
@@ -558,7 +568,7 @@ export default function DealsPage() {
                     <td className="py-3 px-4 font-bold text-slate-900">{deal.title}</td>
                     <td className="py-3 px-3 text-slate-700 font-medium">{deal.company}</td>
                     <td className="py-3 px-3 font-extrabold text-slate-900">
-                      ${deal.value.toLocaleString()}
+                      {fmt(deal.value)}
                     </td>
                     <td className="py-3 px-3 capitalize">
                       <select
@@ -615,7 +625,7 @@ export default function DealsPage() {
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                   <XAxis dataKey="name" tick={{ fontSize: 11, fill: "#64748b" }} />
                   <YAxis tick={{ fontSize: 11, fill: "#64748b" }} tickFormatter={(v) => `$${v / 1000}k`} />
-                  <RechartsTooltip formatter={(val?: any) => [`$${Number(val || 0).toLocaleString()}`, ""]} />
+                  <RechartsTooltip formatter={(val?: any) => [fmt(Number(val || 0)), ""]} />
                   <Bar dataKey="value" name="Total Pipeline" fill="#3b82f6" radius={[4, 4, 0, 0]} />
                   <Bar dataKey="weighted" name="Weighted Forecast" fill="#10b981" radius={[4, 4, 0, 0]} />
                 </BarChart>

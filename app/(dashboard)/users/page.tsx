@@ -21,6 +21,7 @@ import {
   DollarSign,
   Target,
 } from "lucide-react";
+import { useSettings } from "@/components/SettingsProvider";
 
 interface MemberStats {
   leads: number;
@@ -79,10 +80,6 @@ const AVATAR_GRADIENTS = [
   "from-sky-500 to-cyan-600",
 ];
 
-const fmt = (n: number) => `$${n.toLocaleString()}`;
-const fmtDate = (d: string | null) =>
-  d ? new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—";
-
 function getInitials(name: string) {
   return name.split(" ").map((n) => n[0]).join("").slice(0, 3).toUpperCase();
 }
@@ -97,10 +94,11 @@ function timeAgo(d: string | null) {
   if (hrs < 24) return `${hrs}h ago`;
   const days = Math.floor(hrs / 24);
   if (days < 30) return `${days}d ago`;
-  return fmtDate(d);
+  return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
 export default function UsersPage() {
+  const { money: fmt, formatDate: fmtDate } = useSettings();
   const [users, setUsers] = useState<DirectoryUser[]>([]);
   const [kpi, setKpi] = useState<DirectoryKPI>({
     totalMembers: 0,

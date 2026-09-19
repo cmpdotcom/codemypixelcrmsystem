@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
+import { useSettings } from "@/components/SettingsProvider";
 import {
   LayoutDashboard,
   Users,
@@ -83,6 +84,7 @@ const navSections = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const { companyName, logoUrl } = useSettings();
   const [collapsed, setCollapsed] = useState(false);
 
   return (
@@ -104,16 +106,17 @@ export function Sidebar() {
           className="flex items-center gap-2.5 group"
         >
           <Image
-            src="/logo.png"
-            alt="CMP CRM"
+            src={logoUrl}
+            alt={companyName}
             width={36}
             height={36}
-            className="rounded-xl shadow-sm group-hover:scale-105 transition-transform shrink-0"
+            unoptimized={logoUrl.startsWith("http")}
+            className="rounded-xl shadow-sm group-hover:scale-105 transition-transform shrink-0 object-cover"
           />
           {!collapsed && (
             <div>
               <h1 className="text-lg font-bold tracking-tight text-slate-900 leading-none whitespace-nowrap">
-                CMP CRM
+                {companyName}
               </h1>
               <p className="text-[10px] text-slate-400 mt-1 font-medium tracking-wide whitespace-nowrap">
                 Sell. Deliver. Grow.

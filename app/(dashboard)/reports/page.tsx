@@ -30,6 +30,7 @@ import {
   Tooltip as RechartsTooltip,
   Legend,
 } from "recharts";
+import { useSettings } from "@/components/SettingsProvider";
 
 interface KPI {
   totalRevenue: number;
@@ -109,9 +110,6 @@ const STATUS_COLORS: Record<string, string> = {
   Critical: "#f43f5e", High: "#f97316", Medium: "#f59e0b", Low: "#10b981",
 };
 
-const fmt = (n: number) => `$${n.toLocaleString()}`;
-const fmtK = (n: number) => (n >= 1000 ? `$${(n / 1000).toFixed(0)}k` : `$${n}`);
-
 const ROLE_STYLES: Record<string, string> = {
   Closer: "bg-purple-50 text-purple-600 border border-purple-100",
   Setter: "bg-sky-50 text-sky-600 border border-sky-100",
@@ -143,6 +141,7 @@ function ChartCard({
 }
 
 export default function ReportsPage() {
+  const { money: fmt, moneyCompact: fmtK } = useSettings();
   const [period, setPeriod] = useState("all");
   const [data, setData] = useState<ReportData | null>(null);
   const [loading, setLoading] = useState(true);

@@ -17,6 +17,7 @@ import {
   Clock,
   Briefcase,
 } from "lucide-react";
+import { useSettings } from "@/components/SettingsProvider";
 
 interface MemberRank {
   id: string;
@@ -60,6 +61,7 @@ function getInitials(name: string) {
 }
 
 export default function PerformancePage() {
+  const { money: fmt } = useSettings();
   const [rankings, setRankings] = useState<MemberRank[]>([]);
   const [kpi, setKpi] = useState<KPIStats>({
     totalRevenueWon: "$0",
@@ -227,7 +229,7 @@ export default function PerformancePage() {
             </div>
             <div>
               <span className="text-[10px] uppercase font-semibold text-white/80 block">Revenue Won</span>
-              <span className="text-xl font-extrabold mt-0.5 block">${topPerformer.revenueWon.toLocaleString()}</span>
+              <span className="text-xl font-extrabold mt-0.5 block">{fmt(topPerformer.revenueWon)}</span>
             </div>
             <div>
               <span className="text-[10px] uppercase font-semibold text-white/80 block">Tasks Done</span>
@@ -299,7 +301,7 @@ export default function PerformancePage() {
                   </td>
 
                   <td className="py-3.5 px-3 text-center font-bold text-slate-900">
-                    {mem.revenueWon > 0 ? `$${mem.revenueWon.toLocaleString()}` : "—"}
+                    {mem.revenueWon > 0 ? fmt(mem.revenueWon) : "—"}
                   </td>
 
                   <td className="py-3.5 px-3 text-center font-bold text-emerald-600">

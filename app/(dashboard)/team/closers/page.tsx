@@ -16,6 +16,7 @@ import {
   Briefcase,
   Layers,
 } from "lucide-react";
+import { useSettings } from "@/components/SettingsProvider";
 
 interface CloserItem {
   id: string;
@@ -61,6 +62,7 @@ function getInitials(name: string) {
 }
 
 export default function ClosersPage() {
+  const { money: fmt } = useSettings();
   const [closers, setClosers] = useState<CloserItem[]>([]);
   const [kpi, setKpi] = useState<KPIStats>({
     activeClosersCount: 0,
@@ -223,7 +225,7 @@ export default function ClosersPage() {
           <div className="grid grid-cols-3 gap-6 border-t md:border-t-0 md:border-l border-white/20 pt-3 md:pt-0 md:pl-6">
             <div>
               <span className="text-[10px] uppercase font-semibold text-white/70 block">Revenue Won</span>
-              <span className="text-xl font-extrabold mt-0.5 block">${topCloser.revenueClosed.toLocaleString()}</span>
+              <span className="text-xl font-extrabold mt-0.5 block">{fmt(topCloser.revenueClosed)}</span>
             </div>
             <div>
               <span className="text-[10px] uppercase font-semibold text-white/70 block">Won Deals</span>
@@ -335,15 +337,15 @@ export default function ClosersPage() {
                     </td>
 
                     <td className="py-3.5 px-3 text-center font-bold text-slate-700">
-                      ${closer.pipelineValue.toLocaleString()}
+                      {fmt(closer.pipelineValue)}
                     </td>
 
                     <td className="py-3.5 px-3 font-extrabold text-slate-900 text-sm">
-                      ${closer.revenueClosed.toLocaleString()}
+                      {fmt(closer.revenueClosed)}
                     </td>
 
                     <td className="py-3.5 px-3 text-slate-600 font-medium">
-                      ${closer.avgDealSize.toLocaleString()}
+                      {fmt(closer.avgDealSize)}
                     </td>
 
                     <td className="py-3.5 px-4">

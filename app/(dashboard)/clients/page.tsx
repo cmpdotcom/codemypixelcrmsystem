@@ -27,6 +27,7 @@ import {
   Copy,
   Check,
 } from "lucide-react";
+import { useSettings } from "@/components/SettingsProvider";
 
 interface ClientItem {
   id: string;
@@ -56,8 +57,8 @@ interface ClientItem {
 interface KPIStats {
   totalClients: number;
   activeClients: number;
-  totalRevenue: string;
-  pendingPayments: string;
+  totalRevenue: number;
+  pendingPayments: number;
 }
 
 const STATUS_STYLES: Record<string, string> = {
@@ -88,20 +89,28 @@ function getInitials(name: string) {
 }
 
 export default function ClientsPage() {
+  const { money, pageSize: defaultPageSize, loaded: settingsLoaded } = useSettings();
   const [clients, setClients] = useState<ClientItem[]>([]);
   const [selectedClient, setSelectedClient] = useState<ClientItem | null>(null);
   const [kpi, setKpi] = useState<KPIStats>({
     totalClients: 0,
     activeClients: 0,
-    totalRevenue: "$0",
-    pendingPayments: "$0",
+    totalRevenue: 0,
+    pendingPayments: 0,
   });
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [industryFilter, setIndustryFilter] = useState("All Industries");
   const [statusFilter, setStatusFilter] = useState("All Statuses");
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(defaultPageSize);
+  const pageSizeInitialized = React.useRef(false);
+  useEffect(() => {
+    if (!pageSizeInitialized.current && settingsLoaded) {
+      setPageSize(defaultPageSize);
+      pageSizeInitialized.current = true;
+    }
+  }, [defaultPageSize, settingsLoaded]);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -335,7 +344,7 @@ export default function ClientsPage() {
           </div>
           <div>
             <p className="text-[11px] font-medium text-slate-500">Total Revenue</p>
-            <h3 className="text-xl font-extrabold text-slate-900 mt-0.5">{kpi.totalRevenue}</h3>
+            <h3 className="text-xl font-extrabold text-slate-900 mt-0.5">{money(kpi.totalRevenue)}</h3>
             <p className="text-[10px] text-emerald-600 font-semibold">From all clients</p>
           </div>
         </div>
@@ -346,7 +355,7 @@ export default function ClientsPage() {
           </div>
           <div>
             <p className="text-[11px] font-medium text-slate-500">Pending Receivables</p>
-            <h3 className="text-xl font-extrabold text-slate-900 mt-0.5">{kpi.pendingPayments}</h3>
+            <h3 className="text-xl font-extrabold text-slate-900 mt-0.5">{money(kpi.pendingPayments)}</h3>
             <p className="text-[10px] text-rose-500 font-semibold">Outstanding invoices</p>
           </div>
         </div>
@@ -475,10 +484,10 @@ export default function ClientsPage() {
                             <p className="text-[10px] text-slate-400">{client.contactRole || ""}</p>
                           </td>
                           <td className="py-3 px-3 font-extrabold text-slate-900">
-                            ${client.revenue.toLocaleString()}
+                            {money(client.revenue)}
                           </td>
                           <td className="py-3 px-3 font-bold text-rose-600">
-                            ${client.outstanding.toLocaleString()}
+                            {money(client.outstanding)}
                           </td>
                           <td className="py-3 px-3">
                             <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${STATUS_STYLES[client.status] || "bg-slate-50 text-slate-600"}`}>
@@ -619,13 +628,13 @@ export default function ClientsPage() {
               <div className="bg-slate-50 p-3 rounded-xl">
                 <span className="text-[10px] text-slate-400 font-semibold block">Total Revenue</span>
                 <span className="text-base font-extrabold text-slate-900 mt-0.5 block">
-                  ${selectedClient.revenue.toLocaleString()}
+                  {money(selectedClient.revenue)}
                 </span>
               </div>
               <div className="bg-slate-50 p-3 rounded-xl">
                 <span className="text-[10px] text-slate-400 font-semibold block">Outstanding</span>
                 <span className="text-base font-extrabold text-rose-600 mt-0.5 block">
-                  ${selectedClient.outstanding.toLocaleString()}
+                  {money(selectedClient.outstanding)}
                 </span>
               </div>
             </div>

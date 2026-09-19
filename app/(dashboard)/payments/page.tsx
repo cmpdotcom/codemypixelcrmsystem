@@ -23,6 +23,7 @@ import {
   Download,
 } from "lucide-react";
 import { downloadInvoicePdf, type InvoiceBranding } from "@/lib/invoice";
+import { useSettings } from "@/components/SettingsProvider";
 
 interface PaymentItem {
   id: string;
@@ -79,11 +80,8 @@ const METHOD_ICONS: Record<string, { icon: typeof Banknote; style: string }> = {
   Cheque: { icon: Receipt, style: "bg-amber-50 text-amber-600 border border-amber-100" },
 };
 
-const fmt = (n: number) => `$${n.toLocaleString()}`;
-const fmtDate = (d: string | null) =>
-  d ? new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—";
-
 export default function PaymentsPage() {
+  const { money: fmt, formatDate: fmtDate, currencyCode } = useSettings();
   const [payments, setPayments] = useState<PaymentItem[]>([]);
   const [selectedTab, setSelectedTab] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
@@ -195,7 +193,8 @@ export default function PaymentsPage() {
         if (!res.ok) return;
         const s = await res.json();
         setBranding({
-          companyName: s.company_name || "CodeMyPixel Ltd.",
+          companyName: s.company_name || s.companyName || "CodeMyPixel Ltd.",
+          currency: currencyCode,
           companyEmail: s.company_officialEmail || undefined,
           companyPhone: s.company_phone || undefined,
           companyAddress:

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { SettingsPageHeader } from "@/components/SettingsPageHeader";
+import { notifySettingsSaved } from "@/components/SettingsProvider";
 import {
   FormCard,
   FormField,
@@ -59,6 +60,13 @@ export default function GeneralSettingsPage() {
             for (const key of Object.keys(DEFAULTS)) {
               if (data[key] !== undefined) merged[key] = data[key];
             }
+            // Stay in sync with the company_* keys managed in Company Settings
+            if (data.company_name !== undefined) merged.companyName = data.company_name;
+            if (data.company_officialEmail !== undefined) merged.companyEmail = data.company_officialEmail;
+            if (data.company_phone !== undefined) merged.companyPhone = data.company_phone;
+            if (data.company_website !== undefined) merged.companyWebsite = data.company_website;
+            if (data.company_industry !== undefined) merged.industry = data.company_industry;
+            if (data.company_country !== undefined) merged.country = data.company_country;
             return merged;
           });
         }
@@ -81,9 +89,20 @@ export default function GeneralSettingsPage() {
       const res = await fetch("/api/settings", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        // Mirror shared company fields into the company_* keys so
+        // General Settings and Company Settings stay in sync system-wide
+        body: JSON.stringify({
+          ...formData,
+          company_name: formData.companyName,
+          company_officialEmail: formData.companyEmail,
+          company_phone: formData.companyPhone,
+          company_website: formData.companyWebsite,
+          company_industry: formData.industry,
+          company_country: formData.country,
+        }),
       });
       if (!res.ok) throw new Error("Failed to save settings");
+      notifySettingsSaved();
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch (err) {

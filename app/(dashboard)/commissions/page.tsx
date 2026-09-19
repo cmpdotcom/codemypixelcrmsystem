@@ -19,6 +19,7 @@ import {
   BadgeCheck,
   PauseCircle,
 } from "lucide-react";
+import { useSettings } from "@/components/SettingsProvider";
 
 interface CommissionItem {
   id: string;
@@ -79,10 +80,6 @@ const ROLE_STYLES: Record<string, string> = {
   Manager: "bg-rose-50 text-rose-600 border border-rose-100",
 };
 
-const fmt = (n: number) => `$${n.toLocaleString()}`;
-const fmtDate = (d: string | null) =>
-  d ? new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—";
-
 function getInitials(name: string) {
   return name
     .split(" ")
@@ -93,6 +90,7 @@ function getInitials(name: string) {
 }
 
 export default function CommissionsPage() {
+  const { money: fmt, formatDate: fmtDate } = useSettings();
   const [commissions, setCommissions] = useState<CommissionItem[]>([]);
   const [memberStats, setMemberStats] = useState<MemberStat[]>([]);
   const [memberOptions, setMemberOptions] = useState<string[]>([]);

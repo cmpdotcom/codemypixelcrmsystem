@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { SettingsPageHeader } from "@/components/SettingsPageHeader";
+import { notifySettingsSaved } from "@/components/SettingsProvider";
 import {
   FormCard,
   FormField,
@@ -239,9 +240,19 @@ export default function CompanyProfilePage() {
       const res = await fetch("/api/settings", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          // Mirror shared fields into the general_* namespace used by General Settings
+          companyName: formData.company_name,
+          companyEmail: formData.company_officialEmail,
+          companyPhone: formData.company_phone,
+          companyWebsite: formData.company_website,
+          industry: formData.company_industry,
+          country: formData.company_country,
+        }),
       });
       if (!res.ok) throw new Error("Failed to save company settings");
+      notifySettingsSaved();
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch (err) {

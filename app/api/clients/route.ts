@@ -60,8 +60,8 @@ export async function GET(request: NextRequest) {
     kpi: {
       totalClients,
       activeClients,
-      totalRevenue: `$${totalRevenue.toLocaleString()}`,
-      pendingPayments: `$${pendingPayments.toLocaleString()}`,
+      totalRevenue,
+      pendingPayments,
     },
   });
 }

@@ -20,6 +20,7 @@ import {
   Building2,
   X,
 } from "lucide-react";
+import { useSettings } from "@/components/SettingsProvider";
 
 interface ProjectItem {
   id: string;
@@ -78,6 +79,7 @@ const AVATAR_COLORS: Record<string, string> = {
 };
 
 export default function ProjectsPage() {
+  const { money } = useSettings();
   const [projects, setProjects] = useState<ProjectItem[]>([]);
   const [kpi, setKpi] = useState<KPIStats>({
     totalProjects: 0,
@@ -554,7 +556,7 @@ export default function ProjectsPage() {
                       <span className="font-semibold text-slate-700">{proj.progress}%</span>
                     </div>
                   </td>
-                  <td className="py-3 px-3 font-extrabold text-slate-900">${proj.budget.toLocaleString()}</td>
+                  <td className="py-3 px-3 font-extrabold text-slate-900">{money(proj.budget)}</td>
                   <td className="py-3 px-3 text-slate-600">
                     {new Date(proj.deadline).toLocaleDateString()}
                   </td>
