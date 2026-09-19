@@ -68,13 +68,13 @@ const navSections = [
     items: [
       { icon: CreditCard, label: "Payments", href: "/payments" },
       { icon: DollarSign, label: "Commissions", href: "/commissions" },
-      { icon: FileText, label: "Reports", href: "#" },
+      { icon: FileText, label: "Reports", href: "/reports" },
     ],
   },
   {
     title: "System",
     items: [
-      { icon: Users, label: "Users", href: "#" },
+      { icon: Users, label: "Users", href: "/users" },
       { icon: Settings, label: "Settings", href: "/settings" },
       { icon: LinkIcon, label: "Integrations", href: "#" },
     ],
