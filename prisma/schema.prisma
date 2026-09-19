@@ -454,6 +454,25 @@ model Commission {
   @@index([earnedAt])
 }
 
+model Integration {
+  id          String    @id @default(cuid())
+  key         String    @unique // e.g. "stripe", "slack"
+  name        String
+  description String?
+  category    String    @default("Other") // Payments, Communication, Storage, Analytics, Productivity, Developer, Marketing
+  icon        String?   // lucide icon key or emoji
+  color       String    @default("blue")
+  status      String    @default("Not Connected") // Connected, Not Connected, Error
+  config      Json?     // integration-specific settings
+  connectedAt DateTime?
+  connectedBy String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([category])
+  @@index([status])
+}
+
 model Deployment {
   id           String    @id @default(cuid())
   depNumber    Int       @unique @default(autoincrement())
