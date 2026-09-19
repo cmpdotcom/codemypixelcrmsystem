@@ -207,6 +207,7 @@ model Deal {
   updatedAt        DateTime  @updatedAt
   lead             Lead?     @relation(fields: [leadId], references: [id], onDelete: SetNull)
   client           Client?   @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  payments         Payment[]
 
   @@index([stage])
   @@index([pipeline])
@@ -244,6 +245,7 @@ model Client {
   deals           Deal[]
   followUps       FollowUp[]
   projects        Project[]
+  payments        Payment[]
 
   @@index([status])
   @@index([industry])
@@ -391,6 +393,34 @@ model Bug {
   @@index([priority])
   @@index([projectId])
   @@index([createdAt])
+}
+
+model Payment {
+  id             String    @id @default(cuid())
+  payNumber      Int       @unique @default(autoincrement())
+  invoiceNumber  String    // e.g. "INV-2026-001"
+  label          String    // e.g. "1st Installment", "Final Payment"
+  description    String?
+  clientName     String
+  dealTitle      String?
+  amount         Float     @default(0)
+  status         String    @default("Pending") // Paid, Pending, Overdue, Partial, Refunded
+  method         String?   @default("Bank Transfer") // Bank Transfer, Credit Card, Stripe, PayPal, Cash, Cheque
+  dueDate        DateTime
+  paidAt         DateTime?
+  notes          String?
+  dealId         String?
+  clientId       String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  deal           Deal?     @relation(fields: [dealId], references: [id], onDelete: SetNull)
+  client         Client?   @relation(fields: [clientId], references: [id], onDelete: SetNull)
+
+  @@index([status])
+  @@index([clientName])
+  @@index([dueDate])
+  @@index([dealId])
+  @@index([clientId])
 }
 
 model Deployment {
