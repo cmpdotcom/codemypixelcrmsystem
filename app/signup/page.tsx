@@ -18,6 +18,9 @@ import {
   BarChart2,
   Rocket,
   ArrowRight,
+  Building2,
+  Phone,
+  Globe,
 } from "lucide-react";
 
 export default function SignupPage() {
@@ -352,6 +355,129 @@ export default function SignupPage() {
                         <Eye className="w-3.5 h-3.5" />
                       )}
                     </button>
+                  </div>
+                </div>
+
+                {/* Company Information */}
+                <div className="pt-2 border-t border-slate-100">
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider pt-2 pb-2.5 flex items-center gap-1.5">
+                    <Building2 className="w-3 h-3" />
+                    Company Information
+                  </p>
+                  <div className="space-y-3">
+                    {/* Company Name */}
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">
+                        Company Name
+                      </label>
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                          <Building2 className="w-3.5 h-3.5" />
+                        </div>
+                        <input
+                          type="text"
+                          required
+                          name="companyName"
+                          placeholder="Acme Inc."
+                          className="block w-full pl-9 pr-3 py-2.5 bg-white border border-slate-200/90 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all shadow-2xs"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Industry & Company Size */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 mb-1">
+                          Industry
+                        </label>
+                        <select
+                          name="industry"
+                          className="block w-full px-3 py-2.5 bg-white border border-slate-200/90 rounded-xl text-xs text-slate-800 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all shadow-2xs cursor-pointer"
+                        >
+                          <option value="Software & Technology">Software &amp; Technology</option>
+                          <option value="Manufacturing">Manufacturing</option>
+                          <option value="Healthcare">Healthcare</option>
+                          <option value="Education">Education</option>
+                          <option value="Real Estate">Real Estate</option>
+                          <option value="Finance">Finance</option>
+                          <option value="E-commerce">E-commerce</option>
+                          <option value="Construction">Construction</option>
+                          <option value="Logistics">Logistics</option>
+                          <option value="Marketing">Marketing</option>
+                          <option value="Other">Other</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 mb-1">
+                          Company Size
+                        </label>
+                        <select
+                          name="companySize"
+                          className="block w-full px-3 py-2.5 bg-white border border-slate-200/90 rounded-xl text-xs text-slate-800 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all shadow-2xs cursor-pointer"
+                        >
+                          <option value="1-10">1-10</option>
+                          <option value="11-50">11-50</option>
+                          <option value="51-200">51-200</option>
+                          <option value="201-500">201-500</option>
+                          <option value="500+">500+</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Country & Phone */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 mb-1">
+                          Country
+                        </label>
+                        <select
+                          name="country"
+                          className="block w-full px-3 py-2.5 bg-white border border-slate-200/90 rounded-xl text-xs text-slate-800 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all shadow-2xs cursor-pointer"
+                        >
+                          <option value="Bangladesh">Bangladesh</option>
+                          <option value="USA">USA</option>
+                          <option value="UK">UK</option>
+                          <option value="Canada">Canada</option>
+                          <option value="Australia">Australia</option>
+                          <option value="India">India</option>
+                          <option value="Other">Other</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 mb-1">
+                          Phone
+                        </label>
+                        <div className="relative">
+                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                            <Phone className="w-3.5 h-3.5" />
+                          </div>
+                          <input
+                            type="tel"
+                            name="phone"
+                            placeholder="+880 1234 567890"
+                            className="block w-full pl-9 pr-3 py-2.5 bg-white border border-slate-200/90 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all shadow-2xs"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Website */}
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">
+                        Website <span className="text-slate-400 font-normal">(optional)</span>
+                      </label>
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                          <Globe className="w-3.5 h-3.5" />
+                        </div>
+                        <input
+                          type="url"
+                          name="website"
+                          placeholder="https://yourcompany.com"
+                          className="block w-full pl-9 pr-3 py-2.5 bg-white border border-slate-200/90 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all shadow-2xs"
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
 
