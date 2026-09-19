@@ -208,6 +208,7 @@ model Deal {
   lead             Lead?     @relation(fields: [leadId], references: [id], onDelete: SetNull)
   client           Client?   @relation(fields: [clientId], references: [id], onDelete: SetNull)
   payments         Payment[]
+  commissions      Commission[]
 
   @@index([stage])
   @@index([pipeline])
@@ -415,12 +416,42 @@ model Payment {
   updatedAt      DateTime  @updatedAt
   deal           Deal?     @relation(fields: [dealId], references: [id], onDelete: SetNull)
   client         Client?   @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  commissions    Commission[]
 
   @@index([status])
   @@index([clientName])
   @@index([dueDate])
   @@index([dealId])
   @@index([clientId])
+}
+
+model Commission {
+  id          String    @id @default(cuid())
+  commNumber  Int       @unique @default(autoincrement())
+  memberName  String
+  memberRole  String    @default("Closer") // Setter, Closer, Developer, Manager
+  dealTitle   String?
+  clientName  String?
+  basis       String?   // e.g. "10% of deal value", "Qualified lead bonus"
+  rate        Float     @default(0) // percentage or flat descriptor
+  dealValue   Float     @default(0)
+  amount      Float     @default(0)
+  status      String    @default("Pending") // Pending, Approved, Paid, On Hold
+  period      String?   // e.g. "Sep 2026"
+  earnedAt    DateTime  @default(now())
+  paidAt      DateTime?
+  notes       String?
+  dealId      String?
+  paymentId   String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deal        Deal?     @relation(fields: [dealId], references: [id], onDelete: SetNull)
+  payment     Payment?  @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+
+  @@index([status])
+  @@index([memberName])
+  @@index([memberRole])
+  @@index([earnedAt])
 }
 
 model Deployment {

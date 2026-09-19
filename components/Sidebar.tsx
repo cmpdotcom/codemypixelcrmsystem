@@ -67,7 +67,7 @@ const navSections = [
     title: "Finance",
     items: [
       { icon: CreditCard, label: "Payments", href: "/payments" },
-      { icon: DollarSign, label: "Commissions", href: "#" },
+      { icon: DollarSign, label: "Commissions", href: "/commissions" },
       { icon: FileText, label: "Reports", href: "#" },
     ],
   },
