@@ -9,6 +9,16 @@ interface SignupState {
   success?: boolean;
 }
 
+// Free/public email providers — work email required
+const FREE_EMAIL_DOMAINS = new Set([
+  "gmail.com", "googlemail.com", "yahoo.com", "ymail.com", "rocketmail.com",
+  "hotmail.com", "outlook.com", "live.com", "msn.com", "aol.com",
+  "icloud.com", "me.com", "mac.com", "protonmail.com", "proton.me",
+  "gmx.com", "gmx.net", "mail.com", "email.com", "yandex.com", "yandex.ru",
+  "zoho.com", "inbox.com", "rediffmail.com", "mail.ru", "bk.ru",
+  "tutanota.com", "tuta.io", "fastmail.com", "hushmail.com", "mailfence.com",
+]);
+
 export async function signup(
   _prev: SignupState,
   formData: FormData,
@@ -35,6 +45,10 @@ export async function signup(
   }
   if (password.length < 6) {
     return { error: "Password must be at least 6 characters." };
+  }
+  const emailDomain = email.split("@")[1]?.toLowerCase() || "";
+  if (FREE_EMAIL_DOMAINS.has(emailDomain)) {
+    return { error: `We don't accept ${emailDomain} addresses. Please use your work email.` };
   }
 
   // --- Verify Cloudflare Turnstile ---

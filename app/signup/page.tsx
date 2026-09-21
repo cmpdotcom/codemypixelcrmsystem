@@ -21,18 +21,36 @@ import {
   Building2,
   Phone,
   Globe,
+  AlertCircle,
 } from "lucide-react";
+
+const FREE_EMAIL_DOMAINS = new Set([
+  "gmail.com", "googlemail.com", "yahoo.com", "ymail.com", "rocketmail.com",
+  "hotmail.com", "outlook.com", "live.com", "msn.com", "aol.com",
+  "icloud.com", "me.com", "mac.com", "protonmail.com", "proton.me",
+  "gmx.com", "gmx.net", "mail.com", "email.com", "yandex.com", "yandex.ru",
+  "zoho.com", "inbox.com", "rediffmail.com", "mail.ru", "bk.ru",
+  "tutanota.com", "tuta.io", "fastmail.com", "hushmail.com", "mailfence.com",
+]);
 
 export default function SignupPage() {
   const router = useRouter();
   const [brandName, setBrandName] = useState("CMP CRM");
   const [brandLogo, setBrandLogo] = useState("/logo.png");
+  const [email, setEmail] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(true);
   const [turnstileToken, setTurnstileToken] = useState("");
 
   const [state, formAction, isPending] = useActionState(signup, {});
+
+  // Real-time work-email check — reject free providers
+  const emailDomain = email.split("@")[1]?.toLowerCase().trim() || "";
+  const emailError =
+    email.includes("@") && emailDomain && FREE_EMAIL_DOMAINS.has(emailDomain)
+      ? `We don't accept ${emailDomain} addresses. Please use your work email.`
+      : null;
 
   // Redirect on success
   React.useEffect(() => {
@@ -292,10 +310,22 @@ export default function SignupPage() {
                       type="email"
                       required
                       name="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
                       placeholder="you@company.com"
-                      className="block w-full pl-9 pr-3 py-2.5 bg-white border border-slate-200/90 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all shadow-2xs"
+                      className={`block w-full pl-9 pr-3 py-2.5 bg-white border rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-4 transition-all shadow-2xs ${
+                        emailError
+                          ? "border-rose-300 focus:ring-rose-500/10 focus:border-rose-500"
+                          : "border-slate-200/90 focus:ring-blue-500/10 focus:border-blue-500"
+                      }`}
                     />
                   </div>
+                  {emailError && (
+                    <p className="mt-1.5 text-[10px] font-medium text-rose-600 flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3 shrink-0" />
+                      {emailError}
+                    </p>
+                  )}
                 </div>
 
                 {/* Password */}
@@ -514,7 +544,7 @@ export default function SignupPage() {
                 {/* Submit Button */}
                 <button
                   type="submit"
-                  disabled={!agreedToTerms || isPending || !turnstileToken}
+                  disabled={!agreedToTerms || isPending || !turnstileToken || !!emailError}
                   className="w-full mt-2 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 disabled:opacity-50 text-white text-xs font-semibold py-3 px-4 rounded-xl transition-all shadow-md shadow-blue-600/25 flex items-center justify-center gap-1.5 cursor-pointer"
                 >
                   <span>{isPending ? "Creating account…" : "Create Account"}</span>
