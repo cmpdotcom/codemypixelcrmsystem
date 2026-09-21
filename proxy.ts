@@ -6,7 +6,7 @@ export default auth((req) => {
   const isLoggedIn = !!req.auth;
 
   // Public routes that don't require authentication
-  const publicRoutes = ["/login", "/signup"];
+  const publicRoutes = ["/login", "/signup", "/verify-email"];
   const isPublicRoute = publicRoutes.includes(pathname);
 
   // API auth and uploadthing routes should always pass through

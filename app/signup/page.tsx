@@ -52,12 +52,12 @@ export default function SignupPage() {
       ? `We don't accept ${emailDomain} addresses. Please use your work email.`
       : null;
 
-  // Redirect on success
+  // Redirect on success → email verification step
   React.useEffect(() => {
-    if (state.success) {
-      router.push("/");
+    if (state.success && state.needsVerification) {
+      router.push(`/verify-email?email=${encodeURIComponent(email)}`);
     }
-  }, [state.success, router]);
+  }, [state, router, email]);
 
   // Load company branding (login logo + name) from Company Settings
   React.useEffect(() => {

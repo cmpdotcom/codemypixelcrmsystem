@@ -28,6 +28,8 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [unverifiedEmail, setUnverifiedEmail] = useState<string | null>(null);
+  const [justVerified, setJustVerified] = useState(false);
 
   // Load company branding (login logo + name) from Company Settings
   useEffect(() => {
@@ -39,11 +41,16 @@ export default function LoginPage() {
         setBrandLogo(s.company_loginLogoUrl || s.company_logoUrl || "/logo.png");
       })
       .catch(() => {});
+    // Show confirmation when arriving from the verify page
+    if (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("verified")) {
+      setJustVerified(true);
+    }
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setUnverifiedEmail(null);
     setLoading(true);
     try {
       const res = await signIn("credentials", {
@@ -52,6 +59,20 @@ export default function LoginPage() {
         redirect: false,
       });
       if (res?.error) {
+        // Distinguish unverified accounts from bad credentials
+        try {
+          const statusRes = await fetch(
+            `/api/auth/email-status?email=${encodeURIComponent(email)}`
+          );
+          if (statusRes.ok) {
+            const status = await statusRes.json();
+            if (status.exists && !status.verified) {
+              setUnverifiedEmail(email);
+              setLoading(false);
+              return;
+            }
+          }
+        } catch { /* fall through to generic error */ }
         setError("Invalid email or password.");
         setLoading(false);
         return;
@@ -243,6 +264,22 @@ export default function LoginPage() {
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-4">
+                {justVerified && !error && !unverifiedEmail && (
+                  <div className="rounded-xl bg-emerald-50 border border-emerald-100 px-3.5 py-2.5 text-xs font-medium text-emerald-700">
+                    Email verified successfully — you can log in now.
+                  </div>
+                )}
+                {unverifiedEmail && (
+                  <div className="rounded-xl bg-amber-50 border border-amber-200 px-3.5 py-2.5 text-xs font-medium text-amber-700">
+                    Your email isn&apos;t verified yet.{" "}
+                    <Link
+                      href={`/verify-email?email=${encodeURIComponent(unverifiedEmail)}`}
+                      className="font-bold underline hover:text-amber-800"
+                    >
+                      Verify now
+                    </Link>
+                  </div>
+                )}
                 {error && (
                   <div className="rounded-xl bg-rose-50 border border-rose-100 px-3.5 py-2.5 text-xs font-medium text-rose-600">
                     {error}

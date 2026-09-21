@@ -203,6 +203,7 @@ async function main() {
         roleId,
         teamId,
         status: u.status,
+        emailVerified: new Date(),
       },
       create: {
         firstName: u.firstName,

@@ -1,12 +1,16 @@
 "use server";
 
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
-import { signIn } from "@/lib/auth";
+import { sendVerificationEmail } from "@/lib/mail";
 
 interface SignupState {
   error?: string;
   success?: boolean;
+  needsVerification?: boolean;
+  /** Shown in the UI only when no mail provider is configured (dev fallback) */
+  devCode?: string;
 }
 
 // Free/public email providers — work email required
@@ -141,16 +145,68 @@ export async function signup(
     // Settings are best-effort; account creation already succeeded
   }
 
-  // --- Sign in the new user ---
-  try {
-    await signIn("credentials", {
-      email,
-      password,
-      redirect: false,
-    });
-    return { success: true };
-  } catch {
-    // Account created but auto-login failed — redirect to login
-    return { success: true };
+  // --- Issue email verification code ---
+  const result = await issueVerificationCode(email, `${firstName} ${lastName}`);
+  return {
+    success: true,
+    needsVerification: true,
+    devCode: result.devCode,
+  };
+}
+
+async function issueVerificationCode(email: string, userName: string) {
+  const code = crypto.randomInt(100000, 999999).toString();
+  const expires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+  await prisma.verificationToken.deleteMany({ where: { identifier: email } });
+  await prisma.verificationToken.create({
+    data: { identifier: email, token: code, expires },
+  });
+
+  return sendVerificationEmail(email, code, userName);
+}
+
+export async function verifyEmail(
+  _prev: SignupState,
+  formData: FormData,
+): Promise<SignupState> {
+  const email = (formData.get("email") as string)?.trim().toLowerCase();
+  const code = (formData.get("code") as string)?.trim();
+
+  if (!email || !code) return { error: "Enter the 6-digit verification code." };
+  if (!/^\d{6}$/.test(code)) return { error: "The code must be exactly 6 digits." };
+
+  const token = await prisma.verificationToken.findFirst({
+    where: { identifier: email, token: code },
+  });
+  if (!token) {
+    return { error: "Invalid verification code. Please check and try again." };
   }
+  if (token.expires < new Date()) {
+    await prisma.verificationToken.deleteMany({ where: { identifier: email } });
+    return { error: "This code has expired. Request a new one." };
+  }
+
+  await prisma.user.update({
+    where: { email },
+    data: { emailVerified: new Date() },
+  });
+  await prisma.verificationToken.deleteMany({ where: { identifier: email } });
+
+  return { success: true };
+}
+
+export async function resendVerification(
+  _prev: SignupState,
+  formData: FormData,
+): Promise<SignupState> {
+  const email = (formData.get("email") as string)?.trim().toLowerCase();
+  if (!email) return { error: "Email is required." };
+
+  const user = await prisma.user.findUnique({ where: { email } });
+  if (!user) return { error: "No account found with this email." };
+  if (user.emailVerified) return { error: "This email is already verified. Please log in." };
+
+  const result = await issueVerificationCode(email, `${user.firstName} ${user.lastName}`);
+  return { success: true, devCode: result.devCode };
 }

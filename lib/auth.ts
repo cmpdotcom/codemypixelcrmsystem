@@ -27,6 +27,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const valid = await bcrypt.compare(password, user.password);
         if (!valid) return null;
 
+        // Block sign-in until the email is verified
+        if (!user.emailVerified) return null;
+
         return {
           id: user.id,
           email: user.email,
