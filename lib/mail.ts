@@ -24,6 +24,39 @@ export interface PasswordResetMailInput {
   userName: string;
 }
 
+interface EmailMessage {
+  from: string;
+  to: string;
+  subject: string;
+  html: string;
+  text: string;
+}
+
+function resolveFromAddress(companyName: string) {
+  const configured = process.env.MAIL_FROM?.trim();
+  // Avoid sending an invalid From header when a local env file only contains a label.
+  if (configured && /(?:^[^\s@]+@[^\s@]+\.[^\s@]+$|<[^>]+@[^>]+>)/.test(configured)) return configured;
+  return `${companyName} <onboarding@resend.dev>`;
+}
+
+async function sendSmtpEmail(message: EmailMessage) {
+  if (!process.env.SMTP_HOST) return false;
+  const configuredFrom = process.env.MAIL_FROM?.trim();
+  const transport = nodemailer.createTransport({
+    host: process.env.SMTP_HOST,
+    port: parseInt(process.env.SMTP_PORT || "587"),
+    secure: process.env.SMTP_SECURE === "true",
+    auth: process.env.SMTP_USER ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS } : undefined,
+  });
+  await transport.sendMail({
+    ...message,
+    from: configuredFrom && /(?:^[^\s@]+@[^\s@]+\.[^\s@]+$|<[^>]+@[^>]+>)/.test(configuredFrom)
+      ? configuredFrom
+      : process.env.SMTP_USER || message.from,
+  });
+  return true;
+}
+
 async function getBranding() {
   const settings = await prisma.setting.findMany();
   const obj: Record<string, string> = {};
@@ -75,7 +108,7 @@ export async function sendVerificationEmail(
   const subject = `${code} is your ${companyName} verification code`;
   const html = buildHtml(code, companyName, logoUrl, userName);
   const text = `Your ${companyName} verification code is ${code}. It expires in 10 minutes.`;
-  const from = process.env.MAIL_FROM || `${companyName} <onboarding@resend.dev>`;
+  const from = resolveFromAddress(companyName);
 
   // 1) Resend
   if (process.env.RESEND_API_KEY) {
@@ -105,7 +138,7 @@ export async function sendVerificationEmail(
         : undefined,
     });
     await transport.sendMail({
-      from: process.env.MAIL_FROM || process.env.SMTP_USER || "noreply@localhost",
+      from: process.env.MAIL_FROM || process.env.SMTP_USER || from,
       to,
       subject,
       html,
@@ -144,7 +177,7 @@ export async function sendPasswordResetEmail(input: PasswordResetMailInput): Pro
 </body>
 </html>`;
   const text = `Reset your ${companyName} password here: ${input.resetUrl}. This link expires in 30 minutes.`;
-  const from = process.env.MAIL_FROM || `${companyName} <onboarding@resend.dev>`;
+  const from = resolveFromAddress(companyName);
   const subject = `Reset your ${companyName} password`;
 
   if (process.env.RESEND_API_KEY) {
@@ -158,13 +191,7 @@ export async function sendPasswordResetEmail(input: PasswordResetMailInput): Pro
   }
 
   if (process.env.SMTP_HOST) {
-    const transport = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: parseInt(process.env.SMTP_PORT || "587"),
-      secure: process.env.SMTP_SECURE === "true",
-      auth: process.env.SMTP_USER ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS } : undefined,
-    });
-    await transport.sendMail({ from: process.env.MAIL_FROM || process.env.SMTP_USER || "noreply@localhost", to: input.to, subject, html, text });
+    await sendSmtpEmail({ from, to: input.to, subject, html, text });
     return { sent: true };
   }
 
@@ -194,28 +221,42 @@ export async function sendInvitationEmail(input: InvitationMailInput): Promise<S
 </body>
 </html>`;
   const text = `${inviterName} invited you to join ${companyName} as a ${roleName}. Accept your invitation here: ${inviteUrl}`;
-  const from = process.env.MAIL_FROM || `${companyName} <onboarding@resend.dev>`;
+  const from = resolveFromAddress(companyName);
 
+  let resendFailure = "";
   if (process.env.RESEND_API_KEY) {
+    try {
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({ from, to, subject: `You’re invited to join ${companyName}`, html, text }),
     });
-    if (!res.ok) throw new Error(`Invitation email failed: ${await res.text()}`);
-    return { sent: true };
+      if (res.ok) {
+        const result = (await res.json()) as { id?: string };
+        console.info(`[MAIL:RESEND] Invitation accepted for ${to}${result.id ? ` (${result.id})` : ""}`);
+        return { sent: true };
+      }
+      resendFailure = await res.text();
+      console.error(`[MAIL:RESEND] Invitation rejected for ${to}: ${resendFailure}`);
+    } catch (error) {
+      resendFailure = error instanceof Error ? error.message : "Unknown Resend error";
+      console.error(`[MAIL:RESEND] Invitation request failed for ${to}: ${resendFailure}`);
+    }
   }
 
   if (process.env.SMTP_HOST) {
-    const transport = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: parseInt(process.env.SMTP_PORT || "587"),
-      secure: process.env.SMTP_SECURE === "true",
-      auth: process.env.SMTP_USER ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS } : undefined,
-    });
-    await transport.sendMail({ from: process.env.MAIL_FROM || process.env.SMTP_USER || "noreply@localhost", to, subject: `You’re invited to join ${companyName}`, html, text });
-    return { sent: true };
+    try {
+      await sendSmtpEmail({ from, to, subject: `You’re invited to join ${companyName}`, html, text });
+      console.info(`[MAIL:SMTP] Invitation sent for ${to}`);
+      return { sent: true };
+    } catch (error) {
+      const smtpFailure = error instanceof Error ? error.message : "Unknown SMTP error";
+      console.error(`[MAIL:SMTP] Invitation failed for ${to}: ${smtpFailure}`);
+      throw new Error(`Invitation email failed${resendFailure ? ` (Resend: ${resendFailure})` : ""} (SMTP: ${smtpFailure})`);
+    }
   }
+
+  if (resendFailure) throw new Error(`Invitation email failed: ${resendFailure}`);
 
   console.log(`\n[MAIL:DEV] Invitation link for ${to}: ${inviteUrl}\n`);
   return { sent: false, devLink: inviteUrl };
