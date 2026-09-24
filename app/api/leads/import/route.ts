@@ -81,6 +81,23 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ inserted: 0, skipped: body.leads.length });
   }
 
-  const result = await prisma.lead.createMany({ data: validLeads });
-  return NextResponse.json({ inserted: result.count, skipped: body.leads.length - validLeads.length });
+  // Imports can be retried after a network interruption. Avoid creating the same
+  // email twice, including duplicate rows within the same uploaded file.
+  const existing = await prisma.lead.findMany({
+    where: { email: { in: validLeads.map((lead) => lead.email) } },
+    select: { email: true },
+  });
+  const seenEmails = new Set(existing.map((lead) => lead.email.toLowerCase()));
+  const newLeads = validLeads.filter((lead) => {
+    const email = lead.email.toLowerCase();
+    if (seenEmails.has(email)) return false;
+    seenEmails.add(email);
+    return true;
+  });
+  if (newLeads.length === 0) {
+    return NextResponse.json({ inserted: 0, skipped: body.leads.length });
+  }
+
+  const result = await prisma.lead.createMany({ data: newLeads });
+  return NextResponse.json({ inserted: result.count, skipped: body.leads.length - result.count });
 }
