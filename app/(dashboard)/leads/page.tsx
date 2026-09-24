@@ -107,7 +107,7 @@ function getAvatarBg(name: string) {
 }
 
 type LeadImportField =
-  | "name" | "company" | "email" | "phone" | "location" | "linkedin"
+  | "name" | "firstName" | "lastName" | "company" | "email" | "phone" | "location" | "linkedin"
   | "source" | "service" | "status" | "setter" | "budget" | "timeline"
   | "companySize" | "industry" | "nextFollowUp" | "notes";
 
@@ -117,7 +117,9 @@ interface LeadCsvData {
 }
 
 const leadImportFields: { key: LeadImportField; label: string; required?: boolean }[] = [
-  { key: "name", label: "Full Name", required: true },
+  { key: "name", label: "Full Name (CRM)" },
+  { key: "firstName", label: "First Name (combine)" },
+  { key: "lastName", label: "Last Name (combine)" },
   { key: "company", label: "Company", required: true },
   { key: "email", label: "Email", required: true },
   { key: "phone", label: "Phone" },
@@ -137,6 +139,8 @@ const leadImportFields: { key: LeadImportField; label: string; required?: boolea
 
 const leadImportAliases: Record<LeadImportField, string[]> = {
   name: ["name", "fullname", "full name", "contactname", "leadname"],
+  firstName: ["firstname", "first name", "givenname", "given name"],
+  lastName: ["lastname", "last name", "surname", "familyname", "family name"],
   company: ["company", "companyname", "business", "organization"],
   email: ["email", "emailaddress", "mail"],
   phone: ["phone", "phonenumber", "mobile", "telephone"],
@@ -315,6 +319,7 @@ function LeadsPage() {
   const [showFilters, setShowFilters] = useState(false);
   const [showColumns, setShowColumns] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [importProgress, setImportProgress] = useState({ completed: 0, total: 0 });
   const [importPreview, setImportPreview] = useState<LeadCsvData | null>(null);
   const [importMapping, setImportMapping] = useState<Partial<Record<LeadImportField, string>>>({});
   const [importResult, setImportResult] = useState<string | null>(null);
@@ -495,9 +500,11 @@ function LeadsPage() {
       setTotal(data.total);
       setTotalPages(data.totalPages);
       setStats(data.stats);
-      if (data.leads.length > 0 && !selectedLead) {
-        setSelectedLead(data.leads[0]);
-      }
+      setSelectedLead((current) => {
+        if (data.leads.length === 0) return null;
+        const refreshedSelection = current && data.leads.find((lead: Lead) => lead.id === current.id);
+        return refreshedSelection || data.leads[0];
+      });
     } catch (e) {
       setError(e instanceof Error ? e.message : "An error occurred");
     } finally {
@@ -513,7 +520,7 @@ function LeadsPage() {
   const searchParams = useSearchParams();
   useEffect(() => {
     const leadId = searchParams.get("lead");
-    if (leadId && leads.length > 0 && !selectedLead) {
+    if (leadId && leads.length > 0 && selectedLead?.id !== leadId) {
       const lead = leads.find((l) => l.id === leadId);
       if (lead) {
         setSelectedLead(lead);
@@ -589,9 +596,10 @@ function LeadsPage() {
   const confirmImport = async () => {
     if (!importPreview) return;
     const requiredFields = leadImportFields.filter((field) => field.required);
-    const missingField = requiredFields.find((field) => !importMapping[field.key]);
+    const hasNameMapping = Boolean(importMapping.name || (importMapping.firstName && importMapping.lastName));
+    const missingField = requiredFields.find((field) => field.key === "name" ? !hasNameMapping : !importMapping[field.key]);
     if (missingField) {
-      setError(`Please map the required field: ${missingField.label}`);
+      setError(`Please map Full Name, or map both First Name and Last Name.`);
       return;
     }
 
@@ -599,20 +607,23 @@ function LeadsPage() {
     setError(null);
     try {
       const validRows = importPreview.rows.filter((row) => {
-        const name = importMapping.name ? row[importMapping.name] : "";
+        const name = importMapping.name
+          ? row[importMapping.name]
+          : [importMapping.firstName ? row[importMapping.firstName] : "", importMapping.lastName ? row[importMapping.lastName] : ""].filter(Boolean).join(" ");
         const company = importMapping.company ? row[importMapping.company] : "";
         const email = importMapping.email ? row[importMapping.email] : "";
         return Boolean(name?.trim() && company?.trim() && email?.match(/^\S+@\S+\.\S+$/));
       });
       if (validRows.length === 0) throw new Error("No valid rows found. Check the required field mappings and email values.");
 
-      for (const row of validRows) {
+      setImportProgress({ completed: 0, total: validRows.length });
+      for (const [index, row] of validRows.entries()) {
         const value = (field: LeadImportField) => {
           const column = importMapping[field];
           return column ? row[column]?.trim() || "" : "";
         };
         await createLead({
-          name: value("name"),
+          name: value("name") || [value("firstName"), value("lastName")].filter(Boolean).join(" "),
           company: value("company"),
           email: value("email"),
           phone: value("phone"),
@@ -629,6 +640,7 @@ function LeadsPage() {
           nextFollowUp: value("nextFollowUp"),
           notes: value("notes"),
         });
+        setImportProgress({ completed: index + 1, total: validRows.length });
       }
       await fetchLeads();
       setImportResult(`Imported ${validRows.length} of ${importPreview.rows.length} rows successfully${validRows.length < importPreview.rows.length ? `; skipped ${importPreview.rows.length - validRows.length} invalid rows` : ""}.`);
@@ -638,6 +650,7 @@ function LeadsPage() {
       setError(error instanceof Error ? error.message : "Failed to import leads");
     } finally {
       setImporting(false);
+      setImportProgress({ completed: 0, total: 0 });
     }
   };
 
@@ -670,7 +683,8 @@ function LeadsPage() {
   const handleInlineSave = async (id: string, field: string, value: string) => {
     setInlineEdit(null);
     try {
-      await updateLead(id, { [field]: value });
+      const updatedLead = await updateLead(id, { [field]: value });
+      setSelectedLead((current) => current?.id === id ? { ...current, ...updatedLead } : current);
       await fetchLeads();
     } catch {
       setError("Failed to save changes");
@@ -857,7 +871,7 @@ function LeadsPage() {
         )}
 
         {/* Main 2-Column Workspace Layout - flex with animated right panel width */}
-        <div className="flex flex-col xl:flex-row gap-6 items-start">
+        <div className="flex flex-col xl:flex-row gap-6 items-stretch">
           {/* Left/Center Leads Table Container - flex-1 grows to fill, shrinks when right panel opens */}
           <div className="flex-1 min-w-0 bg-white rounded-2xl border border-slate-100/90 shadow-[0_1px_3px_rgba(0,0,0,0.02),0_6px_16px_rgba(0,0,0,0.02)] p-5 space-y-4 transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]">
             {/* Category Status Tabs */}
@@ -1156,13 +1170,13 @@ function LeadsPage() {
 
           {/* Right Column: Detail Panel - always in DOM, width + opacity animates */}
           <div
-            className={`shrink-0 overflow-hidden transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] ${
+            className={`shrink-0 self-stretch overflow-hidden transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] ${
               selectedLead
                 ? "xl:w-[340px] opacity-100"
                 : "xl:w-0 opacity-0"
             }`}
           >
-            <div className="w-[340px] bg-white rounded-2xl border border-slate-100/90 shadow-[0_1px_3px_rgba(0,0,0,0.02),0_6px_16px_rgba(0,0,0,0.02)] p-5 space-y-4">
+            <div className="w-[340px] h-full min-h-[620px] bg-white rounded-2xl border border-slate-100/90 shadow-[0_1px_3px_rgba(0,0,0,0.02),0_6px_16px_rgba(0,0,0,0.02)] p-5 space-y-4 flex flex-col">
               {selectedLead && (
                 <>
                   {/* Header: ID, Status, Close */}
@@ -1290,7 +1304,7 @@ function LeadsPage() {
 
               {/* ============ OVERVIEW TAB ============ */}
               {detailsTab === "Overview" && (
-                <div className="space-y-2 pt-2 border-t border-slate-100 text-xs">
+                <div className="space-y-2 pt-2 border-t border-slate-100 text-xs overflow-y-auto flex-1 custom-scrollbar pr-1">
                   <div className="flex justify-between py-1 border-b border-slate-50">
                     <span className="text-slate-400">Source</span>
                     <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${sourceStyles[selectedLead.source] || sourceStyles["Website"]}`}>
@@ -1341,6 +1355,33 @@ function LeadsPage() {
                     <span className="bg-amber-50 text-amber-700 border border-amber-200/70 px-2 py-0.5 rounded text-[11px] font-bold">
                       {formatDate(selectedLead.nextFollowUp)}
                     </span>
+                  </div>
+                  <div className="pt-2 mt-1 border-t border-slate-100">
+                    <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400 mb-2">All CRM fields</p>
+                    <div className="space-y-2">
+                      {[
+                        ["Full Name", selectedLead.name],
+                        ["Company", selectedLead.company],
+                        ["Email", selectedLead.email],
+                        ["Phone", selectedLead.phone],
+                        ["Location", selectedLead.location],
+                        ["LinkedIn", selectedLead.linkedin],
+                        ["Source", selectedLead.source],
+                        ["Service", selectedLead.service],
+                        ["Status", selectedLead.status],
+                        ["Assigned Setter", selectedLead.setter],
+                        ["Budget", selectedLead.budget],
+                        ["Timeline", selectedLead.timeline],
+                        ["Company Size", selectedLead.companySize],
+                        ["Industry", selectedLead.industry],
+                        ["Notes", selectedLead.notes],
+                      ].map(([label, value]) => (
+                        <div key={label} className="flex items-start justify-between gap-3 border-b border-slate-50 pb-1.5">
+                          <span className="text-slate-400 shrink-0">{label}</span>
+                          <span className="text-right font-semibold text-slate-800 break-words">{value || "—"}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
               )}
@@ -1453,8 +1494,11 @@ function LeadsPage() {
                 <div className="pt-3 border-t border-slate-100">
                   <h4 className="text-xs font-bold text-slate-900 mb-2">Notes</h4>
                   <textarea
+                    key={selectedLead.id}
                     defaultValue={selectedLead.notes || ""}
-                    onBlur={(e) => updateLead(selectedLead.id, { notes: e.target.value })}
+                    onBlur={(e) => updateLead(selectedLead.id, { notes: e.target.value })
+                      .then((updatedLead) => setSelectedLead((current) => current?.id === selectedLead.id ? { ...current, ...updatedLead } : current))
+                      .catch(() => setError("Failed to save notes"))}
                     placeholder="Add notes about this lead..."
                     className="w-full text-xs border border-slate-200 rounded-xl p-3 min-h-[120px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 resize-none"
                   />
@@ -1557,6 +1601,7 @@ function LeadsPage() {
           preview={importPreview}
           mapping={importMapping}
           importing={importing}
+          importProgress={importProgress}
           onMappingChange={(field, column) => setImportMapping((current) => ({ ...current, [field]: column || undefined }))}
           onClose={() => { if (!importing) { setImportPreview(null); setImportMapping({}); } }}
           onImport={confirmImport}
@@ -1612,6 +1657,7 @@ function LeadImportModal({
   preview,
   mapping,
   importing,
+  importProgress,
   onMappingChange,
   onClose,
   onImport,
@@ -1619,11 +1665,15 @@ function LeadImportModal({
   preview: LeadCsvData;
   mapping: Partial<Record<LeadImportField, string>>;
   importing: boolean;
+  importProgress: { completed: number; total: number };
   onMappingChange: (field: LeadImportField, column: string) => void;
   onClose: () => void;
   onImport: () => void;
 }) {
   const mappedCount = Object.values(mapping).filter(Boolean).length;
+  const mappedColumns = new Set(Object.values(mapping).filter(Boolean));
+  const unmappedHeaders = preview.headers.filter((header) => !mappedColumns.has(header.key));
+  const progressPercent = importProgress.total ? Math.round((importProgress.completed / importProgress.total) * 100) : 0;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm" onClick={onClose}>
       <div className="bg-white rounded-3xl shadow-2xl w-full max-w-6xl max-h-[92vh] overflow-hidden flex flex-col" onClick={(event) => event.stopPropagation()}>
@@ -1638,7 +1688,20 @@ function LeadImportModal({
         </div>
 
         <div className="overflow-y-auto p-6 space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {importing && (
+              <div className="rounded-2xl border border-blue-100 bg-blue-50/70 p-4 space-y-2">
+                <div className="flex items-center justify-between text-xs font-semibold text-blue-800">
+                  <span className="flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Importing rows</span>
+                  <span>{importProgress.completed} of {importProgress.total}</span>
+                </div>
+                <div className="h-2 overflow-hidden rounded-full bg-blue-100">
+                  <div className="h-full rounded-full bg-blue-600 transition-all duration-300" style={{ width: `${progressPercent}%` }} />
+                </div>
+                <p className="text-[11px] text-blue-600">{progressPercent}% complete. Please keep this window open.</p>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div>
               <div className="flex items-center justify-between mb-3">
                 <div>
@@ -1663,6 +1726,20 @@ function LeadImportModal({
                     </select>
                   </div>
                 ))}
+              </div>
+              <div className="mt-4 rounded-xl border border-amber-100 bg-amber-50/60 p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <h4 className="text-xs font-bold text-amber-900">CSV columns not mapped</h4>
+                    <p className="text-[11px] text-amber-700 mt-1">These columns will not be saved to the CRM unless you map them above.</p>
+                  </div>
+                  <span className="text-[10px] font-bold text-amber-700">{unmappedHeaders.length}</span>
+                </div>
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {unmappedHeaders.length ? unmappedHeaders.map((header) => (
+                    <span key={header.key} className="rounded-md border border-amber-200 bg-white px-2 py-1 text-[10px] font-medium text-amber-800">{header.label}</span>
+                  )) : <span className="text-[11px] text-emerald-700">Every CSV column is mapped.</span>}
+                </div>
               </div>
             </div>
 
@@ -1691,12 +1768,12 @@ function LeadImportModal({
         </div>
 
         <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-between gap-3">
-          <p className="text-[11px] text-slate-400"><span className="text-red-500">*</span> Name, Company, and Email are required.</p>
+          <p className="text-[11px] text-slate-400"><span className="text-red-500">*</span> Full Name (or First + Last Name), Company, and Email are required.</p>
           <div className="flex items-center gap-2">
             <button onClick={onClose} disabled={importing} className="px-4 py-2.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer disabled:opacity-50">Cancel</button>
             <button onClick={onImport} disabled={importing} className="px-5 py-2.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl flex items-center gap-2 cursor-pointer disabled:opacity-50">
               {importing && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-              {importing ? "Importing..." : `Import ${preview.rows.length} rows`}
+              {importing ? `Importing ${importProgress.completed}/${importProgress.total}` : `Import ${preview.rows.length} rows`}
             </button>
           </div>
         </div>

@@ -112,6 +112,7 @@ export async function POST(request: NextRequest) {
       companySize: optionalString(body.companySize),
       industry: optionalString(body.industry),
       nextFollowUp: optionalDate(body.nextFollowUp),
+      notes: optionalString(body.notes),
     },
   });
 
