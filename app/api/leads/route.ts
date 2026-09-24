@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 
 // GET /api/leads - List leads with pagination, search, filters
 export async function GET(request: NextRequest) {
+  try {
   const session = await auth();
   const { searchParams } = new URL(request.url);
   const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10) || 1);
@@ -46,19 +47,20 @@ export async function GET(request: NextRequest) {
     prisma.lead.count({ where }),
   ]);
 
-  // Compute KPI stats
-  const allLeads = await prisma.lead.findMany({ select: { status: true } });
+  // Compute KPI stats in the database instead of loading every lead into memory.
+  const groupedStatuses = await prisma.lead.groupBy({ by: ["status"], _count: { id: true } });
+  const statusCounts = Object.fromEntries(groupedStatuses.map((item) => [item.status, item._count.id]));
   const stats = {
-    total: allLeads.length,
-    new: allLeads.filter((l) => l.status === "New").length,
-    contacted: allLeads.filter((l) => l.status === "Contacted").length,
-    qualified: allLeads.filter((l) => l.status === "Qualified").length,
-    notInterested: allLeads.filter((l) => l.status === "Not Interested").length,
-    lost: allLeads.filter((l) => l.status === "Lost").length,
-    nurture: allLeads.filter((l) => l.status === "Nurture").length,
-    meeting: allLeads.filter((l) => l.status === "Meeting").length,
-    proposal: allLeads.filter((l) => l.status === "Proposal").length,
-    converted: allLeads.filter((l) => l.status === "Converted").length,
+    total: Object.values(statusCounts).reduce((sum, count) => sum + count, 0),
+    new: statusCounts.New || 0,
+    contacted: statusCounts.Contacted || 0,
+    qualified: statusCounts.Qualified || 0,
+    notInterested: statusCounts["Not Interested"] || 0,
+    lost: statusCounts.Lost || 0,
+    nurture: statusCounts.Nurture || 0,
+    meeting: statusCounts.Meeting || 0,
+    proposal: statusCounts.Proposal || 0,
+    converted: statusCounts.Converted || 0,
   };
 
   return NextResponse.json({
@@ -69,6 +71,10 @@ export async function GET(request: NextRequest) {
     totalPages: Math.ceil(total / pageSize),
     stats,
   });
+  } catch (error) {
+    console.error("GET /api/leads failed", error);
+    return NextResponse.json({ error: "Unable to load leads right now. Please retry." }, { status: 503 });
+  }
 }
 
 // POST /api/leads - Create a new lead

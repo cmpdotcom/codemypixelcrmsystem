@@ -510,7 +510,10 @@ function LeadsPage() {
       if (sourceFilter) params.set("source", sourceFilter);
       if (setterFilter) params.set("setter", setterFilter);
       const res = await fetch(`/api/leads?${params}`);
-      if (!res.ok) throw new Error("Failed to fetch leads");
+      if (!res.ok) {
+        const payload = await res.json().catch(() => null);
+        throw new Error(payload?.error || `Failed to fetch leads (${res.status})`);
+      }
       const data = await res.json();
       setLeads(data.leads);
       setTotal(data.total);
