@@ -620,12 +620,12 @@ function LeadsPage() {
       if (validRows.length === 0) throw new Error("No valid rows found. Check the required field mappings and email values.");
 
       setImportProgress({ completed: 0, total: validRows.length });
-      for (const [index, row] of validRows.entries()) {
+      const importPayload = validRows.map((row) => {
         const value = (field: LeadImportField) => {
           const column = importMapping[field];
           return column ? row[column]?.trim() || "" : "";
         };
-        await createLead({
+        return {
           name: value("name") || [value("firstName"), value("lastName")].filter(Boolean).join(" "),
           company: value("company"),
           email: value("email"),
@@ -643,8 +643,24 @@ function LeadsPage() {
           nextFollowUp: value("nextFollowUp"),
           notes: value("notes"),
           customData: Object.fromEntries(customImportFields.filter((field) => field.column).map((field) => [field.name, row[field.column!]?.trim() || ""])),
+        };
+      });
+      const batchSize = 1000;
+      let completed = 0;
+      for (let start = 0; start < importPayload.length; start += batchSize) {
+        const batch = importPayload.slice(start, start + batchSize);
+        const response = await fetch("/api/leads/import", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ leads: batch }),
         });
-        setImportProgress({ completed: index + 1, total: validRows.length });
+        if (!response.ok) {
+          const payload = await response.json().catch(() => null);
+          throw new Error(payload?.error || `Import stopped after ${completed} rows`);
+        }
+        const result = await response.json();
+        completed += result.inserted || 0;
+        setImportProgress({ completed, total: validRows.length });
       }
       await fetchLeads();
       setImportResult(`Imported ${validRows.length} of ${importPreview.rows.length} rows successfully${validRows.length < importPreview.rows.length ? `; skipped ${importPreview.rows.length - validRows.length} invalid rows` : ""}.`);
