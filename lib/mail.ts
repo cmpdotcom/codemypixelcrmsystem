@@ -1,5 +1,6 @@
 import nodemailer from "nodemailer";
 import { prisma } from "@/lib/prisma";
+import { toAbsoluteUrl } from "@/lib/app-url";
 
 interface SendResult {
   sent: boolean;
@@ -22,7 +23,7 @@ async function getBranding() {
   for (const s of settings) obj[s.key] = s.value;
   return {
     companyName: obj.company_name || obj.companyName || "CMP CRM",
-    logoUrl: obj.company_emailLogoUrl || obj.company_logoUrl || "/demo-logo-email.svg",
+    logoUrl: toAbsoluteUrl(obj.company_emailLogoUrl || obj.company_logoUrl || "/demo-logo-email.svg"),
     supportEmail: obj.company_supportEmail || "",
   };
 }

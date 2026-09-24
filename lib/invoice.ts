@@ -1,4 +1,5 @@
 import { jsPDF } from "jspdf";
+import { toAbsoluteUrl } from "@/lib/app-url";
 
 export interface InvoicePayment {
   invoiceNumber: string;
@@ -50,6 +51,15 @@ const fmtDate = (d?: string | null) =>
       })
     : "—";
 
+function resolveAssetUrl(url: string) {
+  if (/^https?:\/\//i.test(url)) return url;
+  if (typeof window !== "undefined") {
+    const path = url.startsWith("/") ? url : `/${url}`;
+    return `${window.location.origin}${path}`;
+  }
+  return toAbsoluteUrl(url);
+}
+
 async function loadImageDataUrl(url: string): Promise<{ dataUrl: string; width: number; height: number } | null> {
   try {
     const res = await fetch(url);
@@ -91,7 +101,7 @@ export async function downloadInvoicePdf(payment: InvoicePayment, branding: Invo
   let logoDrawn = false;
   const candidates = [branding.logoUrl, "/demo-logo-invoice.svg", "/logo.png"].filter(Boolean) as string[];
   for (const url of candidates) {
-    const img = await loadImageDataUrl(url);
+    const img = await loadImageDataUrl(resolveAssetUrl(url));
     if (img) {
       const maxH = 16;
       const maxW = 52;

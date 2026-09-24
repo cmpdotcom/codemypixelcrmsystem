@@ -4,15 +4,10 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { ensureInvitableRoles, INVITABLE_ROLES } from "@/lib/invitations";
 import { sendInvitationEmail } from "@/lib/mail";
+import { getAppUrl } from "@/lib/app-url";
 
 function hashToken(token: string) {
   return crypto.createHash("sha256").update(token).digest("hex");
-}
-
-function getOrigin(request: NextRequest) {
-  const forwardedHost = request.headers.get("x-forwarded-host") || request.headers.get("host");
-  const forwardedProto = request.headers.get("x-forwarded-proto") || "http";
-  return process.env.AUTH_URL || process.env.NEXTAUTH_URL || `${forwardedProto}://${forwardedHost || "localhost:3000"}`;
 }
 
 export async function GET() {
@@ -48,7 +43,7 @@ export async function POST(request: NextRequest) {
   const invitation = await prisma.invitation.create({ data: { email, firstName, lastName, roleId: role.id, teamId, invitedById: session.user.id, tokenHash: hashToken(token), expiresAt } });
   const settings = await prisma.setting.findMany({ where: { key: { in: ["company_name", "companyName"] } } });
   const companyName = settings.find((item) => item.key === "company_name")?.value || settings.find((item) => item.key === "companyName")?.value || "CMP CRM";
-  const inviteUrl = `${getOrigin(request)}/invite/${token}`;
+  const inviteUrl = `${getAppUrl(request)}/invite/${token}`;
   try {
     const mailResult = await sendInvitationEmail({ to: email, inviteUrl, inviterName: `${inviter.firstName} ${inviter.lastName}`.trim(), roleName: role.name, companyName, expiresAt });
     return NextResponse.json({ success: true, invitationId: invitation.id, expiresAt, devLink: mailResult.devLink || null });

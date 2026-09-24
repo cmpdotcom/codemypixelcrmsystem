@@ -4,7 +4,12 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { normalizePermissions } from "@/lib/permissions";
 
+if (!process.env.AUTH_URL && process.env.NEXT_PUBLIC_URL) {
+  process.env.AUTH_URL = process.env.NEXT_PUBLIC_URL;
+}
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  trustHost: true,
   session: { strategy: "jwt" },
   pages: {
     signIn: "/login",

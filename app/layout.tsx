@@ -23,7 +23,10 @@ const geistMono = Geist_Mono({
   display: "swap",
 });
 
+const appUrl = process.env.NEXT_PUBLIC_URL || "http://localhost:3000";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(appUrl),
   title: "CMP CRM - Sell. Deliver. Grow.",
   description: "Modern CRM & Project Management System",
   icons: {
