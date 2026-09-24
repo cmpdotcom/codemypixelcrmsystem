@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
-import { DEFAULT_LOGO } from "@/lib/brand";
+import { DEFAULT_FAVICON, DEFAULT_LOGO } from "@/lib/brand";
 
 export type SettingsMap = Record<string, string>;
 
@@ -115,7 +115,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!loaded) return;
     document.title = `${companyName} — CRM`;
-    const favicon = settings.company_faviconUrl || DEFAULT_LOGO;
+    const favicon = settings.company_faviconUrl || DEFAULT_FAVICON;
     let link = document.querySelector<HTMLLinkElement>("link[rel~='icon']");
     if (!link) {
       link = document.createElement("link");

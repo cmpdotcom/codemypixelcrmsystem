@@ -11,7 +11,7 @@ import {
   SaveBar,
 } from "@/components/SettingsUI";
 import { useUploadThing } from "@/lib/uploadthing";
-import { DEFAULT_LOGO } from "@/lib/brand";
+import { DEFAULT_FAVICON, DEFAULT_LOGO } from "@/lib/brand";
 import { Loader2, Upload, Trash2, CheckCircle2, Image as ImageIcon } from "lucide-react";
 
 const INDUSTRIES = [
@@ -70,7 +70,7 @@ const DEFAULTS: Record<string, string> = {
   company_primaryColor: "blue",
   company_secondaryColor: "indigo",
   company_logoUrl: DEFAULT_LOGO,
-  company_faviconUrl: DEFAULT_LOGO,
+  company_faviconUrl: DEFAULT_FAVICON,
   company_emailLogoUrl: DEFAULT_LOGO,
   company_loginLogoUrl: DEFAULT_LOGO,
   company_invoiceLogoUrl: DEFAULT_LOGO,
@@ -347,7 +347,7 @@ export default function CompanyProfilePage() {
               label="Favicon"
               value={formData.company_faviconUrl}
               onChange={set("company_faviconUrl")}
-              fallback={DEFAULT_LOGO}
+              fallback={DEFAULT_FAVICON}
             />
           </FormField>
 
