@@ -363,7 +363,7 @@ function LeadsPage() {
   const [leadSettings, setLeadSettings] = useState<LeadSettings>({ statuses: [], industries: [] });
 
   useEffect(() => {
-    fetch("/api/settings/leads")
+    fetch("/api/leads/options")
       .then((res) => (res.ok ? res.json() : Promise.reject(new Error("Failed to load lead options"))))
       .then((data: LeadSettings) => setLeadSettings({
         statuses: Array.isArray(data.statuses) ? data.statuses : [],
