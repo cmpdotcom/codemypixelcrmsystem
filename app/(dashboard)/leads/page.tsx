@@ -349,11 +349,11 @@ function LeadsPage() {
   const [stats, setStats] = useState<LeadStats | null>(null);
   const { pageSize: defaultPageSize, loaded: settingsLoaded } = useSettings();
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(defaultPageSize);
+  const [pageSize, setPageSize] = useState(Math.min(500, Math.max(50, defaultPageSize || 50)));
   const pageSizeInitialized = React.useRef(false);
   useEffect(() => {
     if (!pageSizeInitialized.current && settingsLoaded) {
-      setPageSize(defaultPageSize);
+      setPageSize(Math.min(500, Math.max(50, defaultPageSize || 50)));
       pageSizeInitialized.current = true;
     }
   }, [defaultPageSize, settingsLoaded]);
@@ -1221,9 +1221,12 @@ function LeadsPage() {
                   onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}
                   className="bg-white border border-slate-200/80 rounded-lg px-2.5 py-1 text-xs font-medium text-slate-700 cursor-pointer shadow-2xs"
                 >
-                  <option value={10}>10 / page</option>
-                  <option value={25}>25 / page</option>
                   <option value={50}>50 / page</option>
+                  <option value={100}>100 / page</option>
+                  <option value={200}>200 / page</option>
+                  <option value={300}>300 / page</option>
+                  <option value={400}>400 / page</option>
+                  <option value={500}>500 / page</option>
                 </select>
               </div>
             </div>

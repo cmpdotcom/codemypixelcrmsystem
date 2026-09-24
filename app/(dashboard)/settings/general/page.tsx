@@ -22,7 +22,7 @@ const LANGUAGES = ["English", "Bengali", "Hindi", "Arabic", "Spanish"];
 const LANDING_PAGES = ["Dashboard", "Leads", "Deals", "Activities", "Clients"];
 const LEAD_VIEWS = ["Kanban", "List", "Table"];
 const DEAL_VIEWS = ["Kanban", "List", "Table"];
-const PAGE_SIZES = ["10", "25", "50", "100"];
+const PAGE_SIZES = ["50", "100", "200", "300", "400", "500"];
 
 const DEFAULTS: Record<string, string> = {
   companyName: "AmarSolution Ltd.",
@@ -39,7 +39,7 @@ const DEFAULTS: Record<string, string> = {
   landingPage: "Dashboard",
   leadView: "List",
   dealView: "Kanban",
-  pageSize: "10",
+  pageSize: "50",
 };
 
 export default function GeneralSettingsPage() {
