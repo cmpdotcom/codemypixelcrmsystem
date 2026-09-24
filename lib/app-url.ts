@@ -5,7 +5,16 @@ export function getAppUrl(request?: { headers: { get(name: string): string | nul
     process.env.AUTH_URL ||
     process.env.NEXTAUTH_URL;
 
-  if (configured) return configured.replace(/\/+$/, "");
+  const normalizedConfigured = configured?.replace(/\/+$/, "");
+  const isLocalUrl = normalizedConfigured && /^https?:\/\/(localhost|127\.0\.0\.1)(?::\d+)?$/i.test(normalizedConfigured);
+
+  // Never generate localhost links from a production deployment, even if an old
+  // environment variable was copied into Vercel by mistake.
+  if (normalizedConfigured && (!isLocalUrl || process.env.NODE_ENV !== "production")) {
+    return normalizedConfigured;
+  }
+
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
 
   if (request) {
     const host = request.headers.get("x-forwarded-host") || request.headers.get("host");
