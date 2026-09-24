@@ -1,6 +1,7 @@
 import crypto from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
+import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
 function hashToken(token: string) {
@@ -12,6 +13,11 @@ async function findInvitation(token: string) {
 }
 
 type InvitationRouteContext = { params: Promise<{ token: string }> };
+
+async function requireSession() {
+  const session = await auth();
+  return session?.user?.id ? session : null;
+}
 
 export async function GET(_request: NextRequest, context: InvitationRouteContext) {
   const { token } = await context.params;
@@ -37,4 +43,15 @@ export async function POST(request: NextRequest, context: InvitationRouteContext
     await tx.invitation.update({ where: { id: invitation.id }, data: { firstName, lastName, acceptedAt: new Date() } });
   });
   return NextResponse.json({ success: true, email: invitation.email });
+}
+
+export async function DELETE(_request: NextRequest, context: InvitationRouteContext) {
+  const session = await requireSession();
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const { token: invitationId } = await context.params;
+  const invitation = await prisma.invitation.findUnique({ where: { id: invitationId }, select: { id: true, acceptedAt: true } });
+  if (!invitation) return NextResponse.json({ error: "Invitation not found." }, { status: 404 });
+  if (invitation.acceptedAt) return NextResponse.json({ error: "This invitation has already been accepted." }, { status: 409 });
+  await prisma.invitation.delete({ where: { id: invitation.id } });
+  return NextResponse.json({ success: true });
 }

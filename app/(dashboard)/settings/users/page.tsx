@@ -16,6 +16,7 @@ import {
   Shield,
   Users,
   Mail,
+  RefreshCw,
 } from "lucide-react";
 
 interface UserItem {
@@ -53,6 +54,17 @@ interface InviteRoleOption {
   description?: string | null;
 }
 
+interface InvitationItem {
+  id: string;
+  email: string;
+  firstName: string | null;
+  lastName: string | null;
+  expiresAt: string;
+  createdAt: string;
+  role: { name: string; color: string };
+  team: { name: string } | null;
+}
+
 const avatarColors = [
   "bg-blue-500",
   "bg-emerald-500",
@@ -76,6 +88,7 @@ export default function UsersSettingsPage() {
   const [roles, setRoles] = useState<RoleOption[]>([]);
   const [teams, setTeams] = useState<TeamOption[]>([]);
   const [inviteRoles, setInviteRoles] = useState<InviteRoleOption[]>([]);
+  const [invitations, setInvitations] = useState<InvitationItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("All Roles");
@@ -101,6 +114,7 @@ export default function UsersSettingsPage() {
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [inviteForm, setInviteForm] = useState({ email: "", firstName: "", lastName: "", roleId: "", teamId: "" });
   const [inviteLink, setInviteLink] = useState<string | null>(null);
+  const [invitationActionId, setInvitationActionId] = useState<string | null>(null);
 
   const fetchUsers = useCallback(async () => {
     try {
@@ -112,6 +126,16 @@ export default function UsersSettingsPage() {
       setError(err instanceof Error ? err.message : "Error loading users");
     } finally {
       setLoading(false);
+    }
+  }, []);
+
+  const fetchInvitations = useCallback(async () => {
+    try {
+      const res = await fetch("/api/invitations");
+      if (!res.ok) throw new Error("Failed to load invitations");
+      setInvitations(await res.json());
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error loading invitations");
     }
   }, []);
 
@@ -158,6 +182,7 @@ export default function UsersSettingsPage() {
       setSuccess(`Invitation sent to ${inviteForm.email}.`);
       setTimeout(() => setSuccess(null), 5000);
       if (!data.devLink) setShowInviteModal(false);
+      await fetchInvitations();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not send invitation");
     } finally {
@@ -167,8 +192,48 @@ export default function UsersSettingsPage() {
 
   useEffect(() => {
     fetchUsers();
+    fetchInvitations();
     fetchFilters();
-  }, [fetchUsers, fetchFilters]);
+  }, [fetchUsers, fetchInvitations, fetchFilters]);
+
+  const handleResendInvitation = async (invitation: InvitationItem) => {
+    setInvitationActionId(invitation.id);
+    setError(null);
+    try {
+      const res = await fetch(`/api/invitations/${invitation.id}/resend`, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Could not resend invitation");
+      setSuccess(`Invitation resent to ${invitation.email}.`);
+      setTimeout(() => setSuccess(null), 4000);
+      await fetchInvitations();
+      if (data.devLink) {
+        setInviteLink(data.devLink);
+        setShowInviteModal(true);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not resend invitation");
+    } finally {
+      setInvitationActionId(null);
+    }
+  };
+
+  const handleDeleteInvitation = async (invitation: InvitationItem) => {
+    if (!confirm(`Delete the pending invitation for ${invitation.email}?`)) return;
+    setInvitationActionId(invitation.id);
+    setError(null);
+    try {
+      const res = await fetch(`/api/invitations/${invitation.id}`, { method: "DELETE" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Could not delete invitation");
+      setSuccess(`Invitation for ${invitation.email} deleted.`);
+      setTimeout(() => setSuccess(null), 4000);
+      await fetchInvitations();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not delete invitation");
+    } finally {
+      setInvitationActionId(null);
+    }
+  };
 
   const handleOpenEditModal = (u: UserItem) => {
     setModalMode("edit");
@@ -472,6 +537,55 @@ export default function UsersSettingsPage() {
           </table>
         </div>
       </FormCard>
+
+      {invitations.length > 0 && (
+        <div className="mt-5">
+          <FormCard title="Pending Invitations" description={`${invitations.length} invitation${invitations.length === 1 ? "" : "s"} awaiting acceptance`}>
+            <div className="overflow-x-auto -mx-6">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-slate-200/80 bg-slate-50/50">
+                    <th className="text-left text-[10px] font-semibold text-slate-500 uppercase tracking-wider px-6 py-3">Invitee</th>
+                    <th className="text-left text-[10px] font-semibold text-slate-500 uppercase tracking-wider px-3 py-3">Role</th>
+                    <th className="text-left text-[10px] font-semibold text-slate-500 uppercase tracking-wider px-3 py-3">Team</th>
+                    <th className="text-left text-[10px] font-semibold text-slate-500 uppercase tracking-wider px-3 py-3">Expires</th>
+                    <th className="text-right text-[10px] font-semibold text-slate-500 uppercase tracking-wider px-6 py-3">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {invitations.map((invitation, idx) => {
+                    const inviteeName = `${invitation.firstName || ""} ${invitation.lastName || ""}`.trim() || "Invited user";
+                    const isBusy = invitationActionId === invitation.id;
+                    return (
+                      <tr key={invitation.id} className="hover:bg-slate-50/50 transition-colors">
+                        <td className="px-6 py-3.5">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-semibold shrink-0 shadow-2xs ${avatarColors[idx % avatarColors.length]}`}>{getInitials(inviteeName)}</div>
+                            <div><p className="text-xs font-semibold text-slate-900">{inviteeName}</p><p className="text-[11px] text-slate-400">{invitation.email}</p></div>
+                          </div>
+                        </td>
+                        <td className="px-3 py-3.5"><Badge label={invitation.role.name} color={(invitation.role.color || "blue") as UserItem["roleColor"]} /></td>
+                        <td className="px-3 py-3.5"><span className="text-xs text-slate-600 font-medium">{invitation.team?.name || "Unassigned"}</span></td>
+                        <td className="px-3 py-3.5"><span className="text-xs text-slate-500">{new Date(invitation.expiresAt).toLocaleDateString()}</span></td>
+                        <td className="px-6 py-3.5 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <button onClick={() => handleResendInvitation(invitation)} disabled={isBusy} className="p-1 text-slate-400 hover:text-blue-600 rounded-md hover:bg-blue-50 transition-colors cursor-pointer disabled:opacity-50" title="Resend invitation">
+                              <RefreshCw className={`w-3.5 h-3.5 ${isBusy ? "animate-spin" : ""}`} />
+                            </button>
+                            <button onClick={() => handleDeleteInvitation(invitation)} disabled={isBusy} className="p-1 text-slate-400 hover:text-red-600 rounded-md hover:bg-red-50 transition-colors cursor-pointer disabled:opacity-50" title="Delete invitation">
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </FormCard>
+        </div>
+      )}
 
       {showInviteModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs" onClick={() => setShowInviteModal(false)}>
