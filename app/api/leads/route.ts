@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
 
 // GET /api/leads - List leads with pagination, search, filters
 export async function GET(request: NextRequest) {
+  const session = await auth();
   const { searchParams } = new URL(request.url);
   const page = parseInt(searchParams.get("page") || "1");
   const pageSize = parseInt(searchParams.get("pageSize") || "10");
@@ -12,6 +14,9 @@ export async function GET(request: NextRequest) {
   const setter = searchParams.get("setter") || "";
 
   const where: Record<string, unknown> = {};
+  if (session?.user?.roleName === "Setter") {
+    where.setter = session.user.name || "";
+  }
   if (search) {
     where.OR = [
       { name: { contains: search, mode: "insensitive" } },
@@ -26,7 +31,7 @@ export async function GET(request: NextRequest) {
   if (source && source !== "All Sources") {
     where.source = source;
   }
-  if (setter && setter !== "All Setters") {
+  if (setter && setter !== "All Setters" && session?.user?.roleName !== "Setter") {
     where.setter = setter;
   }
 

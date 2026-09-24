@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
 
 const MAX_BATCH_SIZE = 2000;
 
@@ -15,6 +16,10 @@ function optionalDate(value: unknown) {
 
 // POST /api/leads/import - Insert a validated batch of leads in one database call.
 export async function POST(request: NextRequest) {
+  const session = await auth();
+  if (!session?.user?.roleName || !["Super Admin", "Executive", "Sales Manager"].includes(session.user.roleName)) {
+    return NextResponse.json({ error: "Only workspace managers can import leads" }, { status: 403 });
+  }
   let body: { leads?: unknown };
   try {
     body = await request.json();

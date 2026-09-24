@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
+import { useSession } from "next-auth/react";
 import {
   FileText,
   Link as LinkIcon,
@@ -313,6 +314,10 @@ export default function LeadsPageWrapper() {
 }
 
 function LeadsPage() {
+  const { data: session } = useSession();
+  const roleName = session?.user?.roleName || "";
+  const canImportLeads = ["Super Admin", "Executive", "Sales Manager"].includes(roleName);
+  const canAssignLeads = canImportLeads;
   const [activeTab, setActiveTab] = useState("All Leads");
   const [searchQuery, setSearchQuery] = useState("");
   const [sourceFilter, setSourceFilter] = useState("");
@@ -367,11 +372,20 @@ function LeadsPage() {
       .catch(() => setError("Lead options could not be loaded. Default options are being used."));
   }, []);
 
+  useEffect(() => {
+    if (!canAssignLeads) return;
+    fetch("/api/leads/assignees")
+      .then((res) => (res.ok ? res.json() : Promise.reject(new Error("Failed to load assignees"))))
+      .then((data) => setAssignees(Array.isArray(data) ? data : []))
+      .catch(() => setError("Lead assignees could not be loaded."));
+  }, [canAssignLeads]);
+
   // Modal state
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
   const [showBulkActions, setShowBulkActions] = useState(false);
+  const [assignees, setAssignees] = useState<{ id: string; name: string; image: string | null; role: string }[]>([]);
 
   // Inline edit state
   const [inlineEdit, setInlineEdit] = useState<{ id: string; field: string; value: string } | null>(null);
@@ -691,11 +705,11 @@ function LeadsPage() {
     return res.json();
   };
 
-  const bulkAction = async (action: string, ids: string[], status?: string) => {
+  const bulkAction = async (action: string, ids: string[], status?: string, setter?: string) => {
     const res = await fetch("/api/leads/bulk", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action, ids, status }),
+      body: JSON.stringify({ action, ids, status, setter }),
     });
     if (!res.ok) throw new Error("Bulk action failed");
     return res.json();
@@ -732,6 +746,20 @@ function LeadsPage() {
       await fetchLeads();
     } catch {
       setError("Failed to update leads");
+    }
+  };
+
+  const handleBulkAssign = async (userId: string) => {
+    const assignee = assignees.find((user) => user.id === userId);
+    if (!assignee) return;
+    try {
+      await bulkAction("updateSetter", selectedRows, undefined, assignee.name);
+      setSelectedRows([]);
+      setSelectAll(false);
+      setShowBulkActions(false);
+      await fetchLeads();
+    } catch {
+      setError("Failed to assign leads");
     }
   };
 
@@ -814,14 +842,16 @@ function LeadsPage() {
               onChange={importLeads}
               className="hidden"
             />
-            <button
-              onClick={() => importInputRef.current?.click()}
-              disabled={importing}
-              className="bg-white hover:bg-slate-50 border border-slate-200/80 text-slate-700 text-xs font-semibold py-2.5 px-4 rounded-xl shadow-2xs flex items-center gap-2 transition-all cursor-pointer disabled:opacity-50"
-            >
-              {importing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4 text-slate-500" />}
-              <span>{importing ? "Importing..." : "Import CSV"}</span>
-            </button>
+            {canImportLeads && (
+              <button
+                onClick={() => importInputRef.current?.click()}
+                disabled={importing}
+                className="bg-white hover:bg-slate-50 border border-slate-200/80 text-slate-700 text-xs font-semibold py-2.5 px-4 rounded-xl shadow-2xs flex items-center gap-2 transition-all cursor-pointer disabled:opacity-50"
+              >
+                {importing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4 text-slate-500" />}
+                <span>{importing ? "Importing..." : "Import CSV"}</span>
+              </button>
+            )}
 
             <button
               onClick={() => setShowAddModal(true)}
@@ -866,6 +896,16 @@ function LeadsPage() {
               <span>{selectedRows.length} lead{selectedRows.length > 1 ? "s" : ""} selected</span>
             </div>
             <div className="flex items-center gap-2">
+              {canAssignLeads && (
+                <select
+                  onChange={(event) => { if (event.target.value) handleBulkAssign(event.target.value); event.target.value = ""; }}
+                  className="bg-white border border-slate-200 text-xs font-semibold text-slate-700 px-3 py-1.5 rounded-lg cursor-pointer"
+                  defaultValue=""
+                >
+                  <option value="">Assign to...</option>
+                  {assignees.map((assignee) => <option key={assignee.id} value={assignee.id}>{assignee.name} ({assignee.role})</option>)}
+                </select>
+              )}
               <select
                 onChange={(e) => { if (e.target.value) handleBulkStatus(e.target.value); e.target.value = ""; }}
                 className="bg-white border border-slate-200 text-xs font-semibold text-slate-700 px-3 py-1.5 rounded-lg cursor-pointer"
