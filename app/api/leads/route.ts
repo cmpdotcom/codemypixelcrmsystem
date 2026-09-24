@@ -113,6 +113,7 @@ export async function POST(request: NextRequest) {
       industry: optionalString(body.industry),
       nextFollowUp: optionalDate(body.nextFollowUp),
       notes: optionalString(body.notes),
+      customData: body.customData && typeof body.customData === "object" ? body.customData as object : undefined,
     },
   });
 

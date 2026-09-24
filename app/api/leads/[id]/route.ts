@@ -62,6 +62,7 @@ export async function PATCH(
       ...(body.companySize !== undefined && { companySize: updateString(body.companySize) }),
       ...(body.industry !== undefined && { industry: updateString(body.industry) }),
       ...(body.notes !== undefined && { notes: updateString(body.notes) }),
+      ...(body.customData !== undefined && body.customData && typeof body.customData === "object" && { customData: body.customData as object }),
       ...(body.nextFollowUp !== undefined && {
         nextFollowUp: optionalDate(body.nextFollowUp),
       }),

@@ -248,6 +248,7 @@ interface Lead {
   lastContact: Date | null;
   nextFollowUp: Date | null;
   notes: string | null;
+  customData: Record<string, string> | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -322,6 +323,7 @@ function LeadsPage() {
   const [importProgress, setImportProgress] = useState({ completed: 0, total: 0 });
   const [importPreview, setImportPreview] = useState<LeadCsvData | null>(null);
   const [importMapping, setImportMapping] = useState<Partial<Record<LeadImportField, string>>>({});
+  const [customImportFields, setCustomImportFields] = useState<{ id: string; name: string; column?: string }[]>([]);
   const [importResult, setImportResult] = useState<string | null>(null);
   const importInputRef = React.useRef<HTMLInputElement>(null);
   const [visibleColumns, setVisibleColumns] = useState({
@@ -564,7 +566,7 @@ function LeadsPage() {
   }, [page]);
 
   // --- CRUD operations ---
-  const createLead = async (formData: Record<string, string>) => {
+  const createLead = async (formData: Record<string, unknown>) => {
     const res = await fetch("/api/leads", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -588,6 +590,7 @@ function LeadsPage() {
       if (preview.rows.length === 0) throw new Error("CSV must include a header row and at least one data row");
       setImportPreview(preview);
       setImportMapping(createImportMapping(preview.headers));
+      setCustomImportFields([]);
     } catch (error) {
       setError(error instanceof Error ? error.message : "Failed to import leads");
     }
@@ -639,6 +642,7 @@ function LeadsPage() {
           industry: value("industry"),
           nextFollowUp: value("nextFollowUp"),
           notes: value("notes"),
+          customData: Object.fromEntries(customImportFields.filter((field) => field.column).map((field) => [field.name, row[field.column!]?.trim() || ""])),
         });
         setImportProgress({ completed: index + 1, total: validRows.length });
       }
@@ -646,6 +650,7 @@ function LeadsPage() {
       setImportResult(`Imported ${validRows.length} of ${importPreview.rows.length} rows successfully${validRows.length < importPreview.rows.length ? `; skipped ${importPreview.rows.length - validRows.length} invalid rows` : ""}.`);
       setImportPreview(null);
       setImportMapping({});
+      setCustomImportFields([]);
     } catch (error) {
       setError(error instanceof Error ? error.message : "Failed to import leads");
     } finally {
@@ -1383,6 +1388,19 @@ function LeadsPage() {
                       ))}
                     </div>
                   </div>
+                  {selectedLead.customData && Object.keys(selectedLead.customData).length > 0 && (
+                    <div className="pt-2 mt-1 border-t border-slate-100">
+                      <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400 mb-2">Custom fields</p>
+                      <div className="space-y-2">
+                        {Object.entries(selectedLead.customData).map(([label, value]) => (
+                          <div key={label} className="flex items-start justify-between gap-3 border-b border-slate-50 pb-1.5">
+                            <span className="text-slate-400">{label}</span>
+                            <span className="text-right font-semibold text-slate-800 break-words">{value || "—"}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -1603,7 +1621,10 @@ function LeadsPage() {
           importing={importing}
           importProgress={importProgress}
           onMappingChange={(field, column) => setImportMapping((current) => ({ ...current, [field]: column || undefined }))}
-          onClose={() => { if (!importing) { setImportPreview(null); setImportMapping({}); } }}
+          customFields={customImportFields}
+          onAddCustomField={(name) => setCustomImportFields((current) => [...current, { id: `custom-${Date.now()}`, name }])}
+          onCustomFieldMappingChange={(id, column) => setCustomImportFields((current) => current.map((field) => field.id === id ? { ...field, column: column || undefined } : field))}
+          onClose={() => { if (!importing) { setImportPreview(null); setImportMapping({}); setCustomImportFields([]); } }}
           onImport={confirmImport}
         />
       )}
@@ -1658,6 +1679,9 @@ function LeadImportModal({
   mapping,
   importing,
   importProgress,
+  customFields,
+  onAddCustomField,
+  onCustomFieldMappingChange,
   onMappingChange,
   onClose,
   onImport,
@@ -1666,14 +1690,18 @@ function LeadImportModal({
   mapping: Partial<Record<LeadImportField, string>>;
   importing: boolean;
   importProgress: { completed: number; total: number };
+  customFields: { id: string; name: string; column?: string }[];
+  onAddCustomField: (name: string) => void;
+  onCustomFieldMappingChange: (id: string, column: string) => void;
   onMappingChange: (field: LeadImportField, column: string) => void;
   onClose: () => void;
   onImport: () => void;
 }) {
-  const mappedCount = Object.values(mapping).filter(Boolean).length;
-  const mappedColumns = new Set(Object.values(mapping).filter(Boolean));
-  const unmappedHeaders = preview.headers.filter((header) => !mappedColumns.has(header.key));
+  const [newCustomField, setNewCustomField] = useState("");
+  const mappedCount = Object.values(mapping).filter(Boolean).length + customFields.filter((field) => field.column).length;
   const progressPercent = importProgress.total ? Math.round((importProgress.completed / importProgress.total) * 100) : 0;
+  const mappedColumns = new Set([...Object.values(mapping).filter(Boolean), ...customFields.map((field) => field.column).filter(Boolean)]);
+  const unmappedHeaders = preview.headers.filter((header) => !mappedColumns.has(header.key));
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm" onClick={onClose}>
       <div className="bg-white rounded-3xl shadow-2xl w-full max-w-6xl max-h-[92vh] overflow-hidden flex flex-col" onClick={(event) => event.stopPropagation()}>
@@ -1701,8 +1729,8 @@ function LeadImportModal({
               </div>
             )}
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+            <div className="h-full">
               <div className="flex items-center justify-between mb-3">
                 <div>
                   <h4 className="text-xs font-bold text-slate-800">CRM field mapping</h4>
@@ -1727,6 +1755,30 @@ function LeadImportModal({
                   </div>
                 ))}
               </div>
+              <div className="mt-4 rounded-xl border border-blue-100 bg-blue-50/50 p-3">
+                <div className="flex items-center justify-between gap-3 mb-2">
+                  <div>
+                    <h4 className="text-xs font-bold text-blue-900">Custom CRM fields</h4>
+                    <p className="text-[11px] text-blue-700 mt-1">Keep extra CSV data on each lead as custom fields.</p>
+                  </div>
+                  <span className="text-[10px] font-bold text-blue-700">{customFields.length} added</span>
+                </div>
+                <div className="space-y-2">
+                  {customFields.map((field) => (
+                    <div key={field.id} className="flex items-center gap-2">
+                      <span className="w-36 shrink-0 truncate text-xs font-semibold text-slate-700">{field.name}</span>
+                      <select value={field.column || ""} onChange={(event) => onCustomFieldMappingChange(field.id, event.target.value)} className="flex-1 min-w-0 rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-xs text-slate-700">
+                        <option value="">Choose CSV column</option>
+                        {preview.headers.map((header) => <option key={header.key} value={header.key}>{header.label}</option>)}
+                      </select>
+                    </div>
+                  ))}
+                  <div className="flex items-center gap-2 pt-1">
+                    <input value={newCustomField} onChange={(event) => setNewCustomField(event.target.value)} placeholder="New field name, e.g. Annual Revenue" className="flex-1 min-w-0 rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-xs" />
+                    <button type="button" onClick={() => { if (newCustomField.trim()) { onAddCustomField(newCustomField.trim()); setNewCustomField(""); } }} className="shrink-0 rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-700">Add field</button>
+                  </div>
+                </div>
+              </div>
               <div className="mt-4 rounded-xl border border-amber-100 bg-amber-50/60 p-3">
                 <div className="flex items-center justify-between gap-3">
                   <div>
@@ -1743,7 +1795,7 @@ function LeadImportModal({
               </div>
             </div>
 
-            <div>
+            <div className="h-full flex flex-col">
               <div className="flex items-center justify-between mb-3">
                 <div>
                   <h4 className="text-xs font-bold text-slate-800">Uploaded data preview</h4>
@@ -1751,7 +1803,7 @@ function LeadImportModal({
                 </div>
                 <span className="text-[10px] font-semibold text-slate-500">{preview.headers.length} columns</span>
               </div>
-              <div className="border border-slate-200 rounded-xl overflow-auto max-h-[520px]">
+              <div className="border border-slate-200 rounded-xl overflow-auto min-h-[520px] max-h-[520px] flex-1">
                 <table className="min-w-full text-[11px] text-left">
                   <thead className="bg-slate-50 sticky top-0">
                     <tr>{preview.headers.map((header) => <th key={header.key} className="px-3 py-2 font-semibold text-slate-500 whitespace-nowrap">{header.label}</th>)}</tr>
