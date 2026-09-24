@@ -8,24 +8,25 @@ datasource db {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  firstName     String
-  lastName      String
-  email         String    @unique
-  password      String
-  emailVerified DateTime?
-  image         String?
-  roleId        String?
-  teamId        String?
-  status        String    @default("Active") // Active, Inactive
-  lastActive    DateTime? @default(now())
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  accounts      Account[]
-  sessions      Session[]
-  role          Role?     @relation(fields: [roleId], references: [id], onDelete: SetNull)
-  team          Team?     @relation("TeamMembers", fields: [teamId], references: [id], onDelete: SetNull)
-  ledTeams      Team[]    @relation("TeamLeader")
+  id              String       @id @default(cuid())
+  firstName       String
+  lastName        String
+  email           String       @unique
+  password        String
+  emailVerified   DateTime?
+  image           String?
+  roleId          String?
+  teamId          String?
+  status          String       @default("Active") // Active, Inactive
+  lastActive      DateTime?    @default(now())
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  accounts        Account[]
+  sessions        Session[]
+  sentInvitations Invitation[] @relation("SentInvitations")
+  role            Role?        @relation(fields: [roleId], references: [id], onDelete: SetNull)
+  team            Team?        @relation("TeamMembers", fields: [teamId], references: [id], onDelete: SetNull)
+  ledTeams        Team[]       @relation("TeamLeader")
 
   @@index([roleId])
   @@index([teamId])
@@ -33,27 +34,29 @@ model User {
 }
 
 model Role {
-  id          String   @id @default(cuid())
-  name        String   @unique
+  id          String       @id @default(cuid())
+  name        String       @unique
   description String?
-  color       String   @default("blue") // blue, green, amber, purple, rose, slate
-  permissions Json?    // matrix of module: { view, create, edit, del, assign }
-  isDefault   Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  color       String       @default("blue") // blue, green, amber, purple, rose, slate
+  permissions Json? // matrix of module: { view, create, edit, del, assign }
+  isDefault   Boolean      @default(false)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
   users       User[]
+  invitations Invitation[]
 }
 
 model Team {
-  id          String   @id @default(cuid())
-  name        String   @unique
-  department  String   @default("Sales") // Sales, Delivery, Operations, etc.
-  color       String   @default("blue")
+  id          String       @id @default(cuid())
+  name        String       @unique
+  department  String       @default("Sales") // Sales, Delivery, Operations, etc.
+  color       String       @default("blue")
   leaderId    String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  leader      User?    @relation("TeamLeader", fields: [leaderId], references: [id], onDelete: SetNull)
-  members     User[]   @relation("TeamMembers")
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  leader      User?        @relation("TeamLeader", fields: [leaderId], references: [id], onDelete: SetNull)
+  members     User[]       @relation("TeamMembers")
+  invitations Invitation[]
 
   @@index([department])
 }
@@ -71,7 +74,7 @@ model Account {
   scope             String?
   id_token          String?
   session_state     String?
-  user             User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
 }
@@ -92,34 +95,56 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
-model Lead {
+model Invitation {
   id          String    @id @default(cuid())
-  leadNumber  Int       @unique @default(autoincrement())
-  name        String
-  company     String
   email       String
-  phone       String?
-  location    String?
-  linkedin    String?
-  source      String    @default("Website")
-  service     String?
-  status      String    @default("New")
-  setter      String?
-  setterImg   String?
-  budget      String?
-  timeline    String?
-  companySize String?
-  industry    String?
-  lastContact DateTime?
-  nextFollowUp DateTime?
-  notes       String?
+  tokenHash   String    @unique
+  firstName   String?
+  lastName    String?
+  roleId      String
+  teamId      String?
+  invitedById String?
+  expiresAt   DateTime
+  acceptedAt  DateTime?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
-  activities  LeadActivity[]
-  files       LeadFile[]
+  role        Role      @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  team        Team?     @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  invitedBy   User?     @relation("SentInvitations", fields: [invitedById], references: [id], onDelete: SetNull)
+
+  @@index([email])
+  @@index([expiresAt])
+  @@index([acceptedAt])
+}
+
+model Lead {
+  id            String         @id @default(cuid())
+  leadNumber    Int            @unique @default(autoincrement())
+  name          String
+  company       String
+  email         String
+  phone         String?
+  location      String?
+  linkedin      String?
+  source        String         @default("Website")
+  service       String?
+  status        String         @default("New")
+  setter        String?
+  setterImg     String?
+  budget        String?
+  timeline      String?
+  companySize   String?
+  industry      String?
+  lastContact   DateTime?
+  nextFollowUp  DateTime?
+  notes         String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  activities    LeadActivity[]
+  files         LeadFile[]
   crmActivities Activity[]
-  deals       Deal[]
-  followUps   FollowUp[]
+  deals         Deal[]
+  followUps     FollowUp[]
 
   @@index([status])
   @@index([source])
@@ -127,28 +152,28 @@ model Lead {
 }
 
 model LeadActivity {
-  id        String   @id @default(cuid())
-  leadId    String
-  type      String   // Call, Email, Meeting, Note, WhatsApp, Other
-  title     String
+  id          String   @id @default(cuid())
+  leadId      String
+  type        String // Call, Email, Meeting, Note, WhatsApp, Other
+  title       String
   description String?
   performedBy String?
-  createdAt DateTime @default(now())
-  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  lead        Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
 
   @@index([leadId])
 }
 
 model LeadFile {
-  id        String   @id @default(cuid())
-  leadId    String
-  fileName  String
-  fileSize  Int      @default(0)
-  fileType  String?
-  fileUrl   String
+  id         String   @id @default(cuid())
+  leadId     String
+  fileName   String
+  fileSize   Int      @default(0)
+  fileType   String?
+  fileUrl    String
   uploadedBy String?
-  createdAt DateTime @default(now())
-  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+  lead       Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
 
   @@index([leadId])
 }
@@ -161,21 +186,21 @@ model Setting {
 }
 
 model Activity {
-  id          String   @id @default(cuid())
-  activityNumber Int  @unique @default(autoincrement())
-  type        String   @default("Note")  // Call, Email, WhatsApp, Meeting, Note, Task, SMS, Other
-  direction   String?  // Outbound, Inbound, Sent, Received, Internal, Online, In Person
-  title       String
-  description String?
-  company     String?
-  contact     String?
-  leadId      String?
-  performedBy String?
-  status      String   @default("Completed") // Completed, Scheduled, Pending, Cancelled
-  scheduledAt DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  lead        Lead?    @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  id             String    @id @default(cuid())
+  activityNumber Int       @unique @default(autoincrement())
+  type           String    @default("Note") // Call, Email, WhatsApp, Meeting, Note, Task, SMS, Other
+  direction      String? // Outbound, Inbound, Sent, Received, Internal, Online, In Person
+  title          String
+  description    String?
+  company        String?
+  contact        String?
+  leadId         String?
+  performedBy    String?
+  status         String    @default("Completed") // Completed, Scheduled, Pending, Cancelled
+  scheduledAt    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  lead           Lead?     @relation(fields: [leadId], references: [id], onDelete: SetNull)
 
   @@index([type])
   @@index([status])
@@ -184,31 +209,31 @@ model Activity {
 }
 
 model Deal {
-  id               String    @id @default(cuid())
-  dealNumber       Int       @unique @default(autoincrement())
-  title            String
-  company          String
-  contact          String?
-  service          String?
-  value            Float     @default(0)
-  stage            String    @default("qualified") // qualified, discovery, proposal, negotiation, contract, won, lost
-  pipeline         String    @default("Software Sales")
-  probability      Int       @default(20)
-  priority         String    @default("Medium") // Low, Medium, High, Urgent
-  closer           String?
-  closerImg        String?
-  leadId           String?
-  clientId         String?
+  id                String       @id @default(cuid())
+  dealNumber        Int          @unique @default(autoincrement())
+  title             String
+  company           String
+  contact           String?
+  service           String?
+  value             Float        @default(0)
+  stage             String       @default("qualified") // qualified, discovery, proposal, negotiation, contract, won, lost
+  pipeline          String       @default("Software Sales")
+  probability       Int          @default(20)
+  priority          String       @default("Medium") // Low, Medium, High, Urgent
+  closer            String?
+  closerImg         String?
+  leadId            String?
+  clientId          String?
   expectedCloseDate DateTime?
-  closedAt         DateTime?
-  lostReason       String?
-  notes            String?
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
-  lead             Lead?     @relation(fields: [leadId], references: [id], onDelete: SetNull)
-  client           Client?   @relation(fields: [clientId], references: [id], onDelete: SetNull)
-  payments         Payment[]
-  commissions      Commission[]
+  closedAt          DateTime?
+  lostReason        String?
+  notes             String?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+  lead              Lead?        @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  client            Client?      @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  payments          Payment[]
+  commissions       Commission[]
 
   @@index([stage])
   @@index([pipeline])
@@ -218,35 +243,35 @@ model Deal {
 }
 
 model Client {
-  id              String   @id @default(cuid())
-  clientNumber    Int      @unique @default(autoincrement())
-  company         String
-  tagline         String?
-  location        String?
-  address         String?
-  website         String?
-  email           String
-  phone           String?
-  industry        String?  @default("Technology")
-  companySize     String?  @default("50–200 employees")
-  status          String   @default("Active") // Active, Inactive, Prospect, VIP, At Risk, Churned
-  contactName     String?
-  contactRole     String?
-  contactEmail    String?
-  contactPhone    String?
-  contactImg      String?
-  revenue         Float    @default(0)
-  outstanding     Float    @default(0)
-  projectsCount   Int      @default(0)
-  clientSince     DateTime @default(now())
-  lastActivity    DateTime? @default(now())
-  notes           String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  deals           Deal[]
-  followUps       FollowUp[]
-  projects        Project[]
-  payments        Payment[]
+  id            String     @id @default(cuid())
+  clientNumber  Int        @unique @default(autoincrement())
+  company       String
+  tagline       String?
+  location      String?
+  address       String?
+  website       String?
+  email         String
+  phone         String?
+  industry      String?    @default("Technology")
+  companySize   String?    @default("50–200 employees")
+  status        String     @default("Active") // Active, Inactive, Prospect, VIP, At Risk, Churned
+  contactName   String?
+  contactRole   String?
+  contactEmail  String?
+  contactPhone  String?
+  contactImg    String?
+  revenue       Float      @default(0)
+  outstanding   Float      @default(0)
+  projectsCount Int        @default(0)
+  clientSince   DateTime   @default(now())
+  lastActivity  DateTime?  @default(now())
+  notes         String?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  deals         Deal[]
+  followUps     FollowUp[]
+  projects      Project[]
+  payments      Payment[]
 
   @@index([status])
   @@index([industry])
@@ -260,7 +285,7 @@ model FollowUp {
   subjectDesc  String?
   company      String
   contact      String?
-  relatedRef   String?   // e.g. "Deal #DL-1082", "Lead #LD-2291"
+  relatedRef   String? // e.g. "Deal #DL-1082", "Lead #LD-2291"
   type         String    @default("Call") // Call, Email, Meeting, WhatsApp, SMS
   assigneeName String?
   dueDate      DateTime
@@ -284,29 +309,29 @@ model FollowUp {
 }
 
 model Project {
-  id           String    @id @default(cuid())
-  projNumber   Int       @unique @default(autoincrement())
-  name         String
-  clientName   String
-  description  String?
-  status       String    @default("Planning") // Planning, Requirements, Design, Development, Testing, Deployment, Completed, On Hold
-  health       String    @default("on-track") // on-track, at-risk, critical
-  progress     Int       @default(0) // 0 - 100
-  budget       Float     @default(0)
-  spent        Float     @default(0)
-  startDate    DateTime  @default(now())
-  deadline     DateTime
-  teamMembers  String[]  // array of user initials or names
-  leadId       String?
-  clientId     String?
-  notes        String?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  client       Client?   @relation(fields: [clientId], references: [id], onDelete: SetNull)
-  tasks        Task[]
-  milestones   Milestone[]
-  bugs         Bug[]
-  deployments  Deployment[]
+  id          String       @id @default(cuid())
+  projNumber  Int          @unique @default(autoincrement())
+  name        String
+  clientName  String
+  description String?
+  status      String       @default("Planning") // Planning, Requirements, Design, Development, Testing, Deployment, Completed, On Hold
+  health      String       @default("on-track") // on-track, at-risk, critical
+  progress    Int          @default(0) // 0 - 100
+  budget      Float        @default(0)
+  spent       Float        @default(0)
+  startDate   DateTime     @default(now())
+  deadline    DateTime
+  teamMembers String[] // array of user initials or names
+  leadId      String?
+  clientId    String?
+  notes       String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  client      Client?      @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  tasks       Task[]
+  milestones  Milestone[]
+  bugs        Bug[]
+  deployments Deployment[]
 
   @@index([status])
   @@index([health])
@@ -344,22 +369,22 @@ model Task {
 }
 
 model Milestone {
-  id             String    @id @default(cuid())
-  mstNumber      Int       @unique @default(autoincrement())
-  name           String
-  description    String?
-  projectName    String
-  status         String    @default("Not Started") // Completed, In Progress, Not Started
-  progress       Int       @default(0) // 0-100
-  deadline       DateTime
-  taskCount      Int       @default(0)
-  taskTotal      Int       @default(10)
-  owner          String    @default("Aarav Sharma")
-  ownerInitials  String    @default("AS")
-  projectId      String?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-  project        Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  id            String   @id @default(cuid())
+  mstNumber     Int      @unique @default(autoincrement())
+  name          String
+  description   String?
+  projectName   String
+  status        String   @default("Not Started") // Completed, In Progress, Not Started
+  progress      Int      @default(0) // 0-100
+  deadline      DateTime
+  taskCount     Int      @default(0)
+  taskTotal     Int      @default(10)
+  owner         String   @default("Aarav Sharma")
+  ownerInitials String   @default("AS")
+  projectId     String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  project       Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
 
   @@index([status])
   @@index([deadline])
@@ -367,27 +392,27 @@ model Milestone {
 }
 
 model Bug {
-  id             String    @id @default(cuid())
-  bugNumber      Int       @unique @default(autoincrement())
-  title          String
-  description    String?
-  projectName    String
-  module         String?   @default("General")
-  severity       String    @default("Medium") // Critical, High, Medium, Low
-  priority       String    @default("Medium") // Urgent, High, Medium, Low
-  status         String    @default("New")    // New, Assigned, In Progress, Fixed, Verified, Closed, Reopened
-  environment    String?   @default("Production") // Production, Staging, QA
-  reportedBy     String?   @default("QA Team")
-  assigneeName   String?
-  assigneeRole   String?   @default("Developer")
+  id               String    @id @default(cuid())
+  bugNumber        Int       @unique @default(autoincrement())
+  title            String
+  description      String?
+  projectName      String
+  module           String?   @default("General")
+  severity         String    @default("Medium") // Critical, High, Medium, Low
+  priority         String    @default("Medium") // Urgent, High, Medium, Low
+  status           String    @default("New") // New, Assigned, In Progress, Fixed, Verified, Closed, Reopened
+  environment      String?   @default("Production") // Production, Staging, QA
+  reportedBy       String?   @default("QA Team")
+  assigneeName     String?
+  assigneeRole     String?   @default("Developer")
   stepsToReproduce String?
-  expectedResult String?
-  actualResult   String?
-  resolvedAt     DateTime?
-  projectId      String?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-  project        Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  expectedResult   String?
+  actualResult     String?
+  resolvedAt       DateTime?
+  projectId        String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  project          Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
 
   @@index([status])
   @@index([severity])
@@ -397,26 +422,26 @@ model Bug {
 }
 
 model Payment {
-  id             String    @id @default(cuid())
-  payNumber      Int       @unique @default(autoincrement())
-  invoiceNumber  String    // e.g. "INV-2026-001"
-  label          String    // e.g. "1st Installment", "Final Payment"
-  description    String?
-  clientName     String
-  dealTitle      String?
-  amount         Float     @default(0)
-  status         String    @default("Pending") // Paid, Pending, Overdue, Partial, Refunded
-  method         String?   @default("Bank Transfer") // Bank Transfer, Credit Card, Stripe, PayPal, Cash, Cheque
-  dueDate        DateTime
-  paidAt         DateTime?
-  notes          String?
-  dealId         String?
-  clientId       String?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-  deal           Deal?     @relation(fields: [dealId], references: [id], onDelete: SetNull)
-  client         Client?   @relation(fields: [clientId], references: [id], onDelete: SetNull)
-  commissions    Commission[]
+  id            String       @id @default(cuid())
+  payNumber     Int          @unique @default(autoincrement())
+  invoiceNumber String // e.g. "INV-2026-001"
+  label         String // e.g. "1st Installment", "Final Payment"
+  description   String?
+  clientName    String
+  dealTitle     String?
+  amount        Float        @default(0)
+  status        String       @default("Pending") // Paid, Pending, Overdue, Partial, Refunded
+  method        String?      @default("Bank Transfer") // Bank Transfer, Credit Card, Stripe, PayPal, Cash, Cheque
+  dueDate       DateTime
+  paidAt        DateTime?
+  notes         String?
+  dealId        String?
+  clientId      String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  deal          Deal?        @relation(fields: [dealId], references: [id], onDelete: SetNull)
+  client        Client?      @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  commissions   Commission[]
 
   @@index([status])
   @@index([clientName])
@@ -426,27 +451,27 @@ model Payment {
 }
 
 model Commission {
-  id          String    @id @default(cuid())
-  commNumber  Int       @unique @default(autoincrement())
-  memberName  String
-  memberRole  String    @default("Closer") // Setter, Closer, Developer, Manager
-  dealTitle   String?
-  clientName  String?
-  basis       String?   // e.g. "10% of deal value", "Qualified lead bonus"
-  rate        Float     @default(0) // percentage or flat descriptor
-  dealValue   Float     @default(0)
-  amount      Float     @default(0)
-  status      String    @default("Pending") // Pending, Approved, Paid, On Hold
-  period      String?   // e.g. "Sep 2026"
-  earnedAt    DateTime  @default(now())
-  paidAt      DateTime?
-  notes       String?
-  dealId      String?
-  paymentId   String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  deal        Deal?     @relation(fields: [dealId], references: [id], onDelete: SetNull)
-  payment     Payment?  @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+  id         String    @id @default(cuid())
+  commNumber Int       @unique @default(autoincrement())
+  memberName String
+  memberRole String    @default("Closer") // Setter, Closer, Developer, Manager
+  dealTitle  String?
+  clientName String?
+  basis      String? // e.g. "10% of deal value", "Qualified lead bonus"
+  rate       Float     @default(0) // percentage or flat descriptor
+  dealValue  Float     @default(0)
+  amount     Float     @default(0)
+  status     String    @default("Pending") // Pending, Approved, Paid, On Hold
+  period     String? // e.g. "Sep 2026"
+  earnedAt   DateTime  @default(now())
+  paidAt     DateTime?
+  notes      String?
+  dealId     String?
+  paymentId  String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  deal       Deal?     @relation(fields: [dealId], references: [id], onDelete: SetNull)
+  payment    Payment?  @relation(fields: [paymentId], references: [id], onDelete: SetNull)
 
   @@index([status])
   @@index([memberName])
@@ -460,10 +485,10 @@ model Integration {
   name        String
   description String?
   category    String    @default("Other") // Payments, Communication, Storage, Analytics, Productivity, Developer, Marketing
-  icon        String?   // lucide icon key or emoji
+  icon        String? // lucide icon key or emoji
   color       String    @default("blue")
   status      String    @default("Not Connected") // Connected, Not Connected, Error
-  config      Json?     // integration-specific settings
+  config      Json? // integration-specific settings
   connectedAt DateTime?
   connectedBy String?
   createdAt   DateTime  @default(now())
@@ -474,24 +499,24 @@ model Integration {
 }
 
 model Deployment {
-  id           String    @id @default(cuid())
-  depNumber    Int       @unique @default(autoincrement())
+  id           String   @id @default(cuid())
+  depNumber    Int      @unique @default(autoincrement())
   projectName  String
-  environment  String    @default("Production") // Production, Staging, QA
-  version      String    @default("v1.0.0")
+  environment  String   @default("Production") // Production, Staging, QA
+  version      String   @default("v1.0.0")
   commitHash   String?
   commitMsg    String?
-  branch       String?   @default("main")
-  status       String    @default("Successful") // Successful, In Progress, Failed, Rolled Back
-  deployedBy   String    @default("Ali Khan")
-  duration     String?   @default("2m 34s")
+  branch       String?  @default("main")
+  status       String   @default("Successful") // Successful, In Progress, Failed, Rolled Back
+  deployedBy   String   @default("Ali Khan")
+  duration     String?  @default("2m 34s")
   releaseNotes String?
   url          String?
   rollbackFrom String?
   projectId    String?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  project      Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  project      Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
 
   @@index([environment])
   @@index([status])

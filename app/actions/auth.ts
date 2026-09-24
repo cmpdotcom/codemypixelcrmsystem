@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
 import { sendVerificationEmail } from "@/lib/mail";
+import { defaultPermissionsForRole } from "@/lib/permissions";
 
 interface SignupState {
   error?: string;
@@ -93,12 +94,26 @@ export async function signup(
   // --- Create user ---
   const hashedPassword = await bcrypt.hash(password, 12);
   try {
+    const isFirstUser = (await prisma.user.count()) === 0;
+    const ownerRole = isFirstUser
+      ? await prisma.role.upsert({
+          where: { name: "Super Admin" },
+          update: {},
+          create: {
+            name: "Super Admin",
+            description: "Full system control with all permissions",
+            color: "purple",
+            permissions: JSON.parse(JSON.stringify(defaultPermissionsForRole("Super Admin"))),
+          },
+        })
+      : null;
     await prisma.user.create({
       data: {
         firstName,
         lastName,
         email,
         password: hashedPassword,
+        roleId: ownerRole?.id || null,
       },
     });
   } catch {

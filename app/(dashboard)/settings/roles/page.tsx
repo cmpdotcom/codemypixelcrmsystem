@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { SettingsPageHeader } from "@/components/SettingsPageHeader";
 import { FormCard, Badge } from "@/components/SettingsUI";
+import { CRM_MODULES, normalizePermissions, type PermissionSet } from "@/lib/permissions";
 import {
   Shield,
   Plus,
@@ -22,19 +23,10 @@ interface Role {
   description: string | null;
   color: "blue" | "green" | "amber" | "purple" | "rose" | "slate";
   userCount: number;
-  permissions?: Record<string, { view: boolean; create: boolean; edit: boolean; del: boolean; assign: boolean }>;
+  permissions?: Record<string, PermissionSet>;
 }
 
-const MODULES = [
-  "Leads",
-  "Activities",
-  "Deals",
-  "Clients",
-  "Projects",
-  "Payments",
-  "Commissions",
-  "Reports",
-];
+const MODULES = [...CRM_MODULES];
 
 const PERMISSION_COLUMNS: { key: "view" | "create" | "edit" | "del" | "assign"; label: string }[] = [
   { key: "view", label: "View" },
@@ -52,7 +44,7 @@ export default function RolesSettingsPage() {
   const [search, setSearch] = useState("");
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
   const [editingPermissions, setEditingPermissions] = useState<
-    Record<string, { view: boolean; create: boolean; edit: boolean; del: boolean; assign: boolean }>
+    Record<string, PermissionSet>
   >({});
   const [savingPermissions, setSavingPermissions] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -93,28 +85,21 @@ export default function RolesSettingsPage() {
 
   useEffect(() => {
     if (selectedRole) {
-      const rawPerms = (selectedRole.permissions as Record<string, { view: boolean; create: boolean; edit: boolean; del: boolean; assign: boolean }>) || {};
-      const fullPerms: Record<string, { view: boolean; create: boolean; edit: boolean; del: boolean; assign: boolean }> = {};
-      for (const m of MODULES) {
-        fullPerms[m] = {
-          view: rawPerms[m]?.view ?? true,
-          create: rawPerms[m]?.create ?? false,
-          edit: rawPerms[m]?.edit ?? false,
-          del: rawPerms[m]?.del ?? false,
-          assign: rawPerms[m]?.assign ?? false,
-        };
-      }
-      setEditingPermissions(fullPerms);
+      setEditingPermissions(normalizePermissions(selectedRole.permissions, selectedRole.name));
     }
   }, [selectedRole]);
 
   const togglePermission = (module: string, key: "view" | "create" | "edit" | "del" | "assign") => {
     setEditingPermissions((prev) => {
       const currentMod = prev[module] || { view: false, create: false, edit: false, del: false, assign: false };
+      if (key === "view" && currentMod.view) {
+        return { ...prev, [module]: { view: false, create: false, edit: false, del: false, assign: false } };
+      }
       return {
         ...prev,
         [module]: {
           ...currentMod,
+          ...(key !== "view" && !currentMod.view ? { view: true } : {}),
           [key]: !currentMod[key],
         },
       };

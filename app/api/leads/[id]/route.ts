@@ -20,37 +20,53 @@ export async function PATCH(
   ctx: RouteContext<"/api/leads/[id]">,
 ) {
   const { id } = await ctx.params;
-  const body = await request.json();
+  let body: Record<string, unknown>;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
+  }
 
   const existing = await prisma.lead.findUnique({ where: { id } });
   if (!existing) {
     return NextResponse.json({ error: "Lead not found" }, { status: 404 });
   }
 
+  if (body.email !== undefined && (typeof body.email !== "string" || !/^\S+@\S+\.\S+$/.test(body.email.trim()))) {
+    return NextResponse.json({ error: "A valid email is required" }, { status: 400 });
+  }
+
+  const optionalDate = (value: unknown) => {
+    if (!value) return null;
+    const date = new Date(String(value));
+    return Number.isNaN(date.getTime()) ? null : date;
+  };
+  const updateString = (value: unknown) => typeof value === "string" ? value.trim() : null;
+
   const lead = await prisma.lead.update({
     where: { id },
     data: {
-      ...(body.name !== undefined && { name: body.name }),
-      ...(body.company !== undefined && { company: body.company }),
-      ...(body.email !== undefined && { email: body.email }),
-      ...(body.phone !== undefined && { phone: body.phone }),
-      ...(body.location !== undefined && { location: body.location }),
-      ...(body.linkedin !== undefined && { linkedin: body.linkedin }),
-      ...(body.source !== undefined && { source: body.source }),
-      ...(body.service !== undefined && { service: body.service }),
-      ...(body.status !== undefined && { status: body.status }),
-      ...(body.setter !== undefined && { setter: body.setter }),
-      ...(body.setterImg !== undefined && { setterImg: body.setterImg }),
-      ...(body.budget !== undefined && { budget: body.budget }),
-      ...(body.timeline !== undefined && { timeline: body.timeline }),
-      ...(body.companySize !== undefined && { companySize: body.companySize }),
-      ...(body.industry !== undefined && { industry: body.industry }),
-      ...(body.notes !== undefined && { notes: body.notes }),
+      ...(body.name !== undefined && { name: String(body.name).trim() }),
+      ...(body.company !== undefined && { company: String(body.company).trim() }),
+      ...(body.email !== undefined && { email: String(body.email).trim() }),
+      ...(body.phone !== undefined && { phone: updateString(body.phone) }),
+      ...(body.location !== undefined && { location: updateString(body.location) }),
+      ...(body.linkedin !== undefined && { linkedin: updateString(body.linkedin) }),
+      ...(body.source !== undefined && { source: updateString(body.source) || existing.source }),
+      ...(body.service !== undefined && { service: updateString(body.service) }),
+      ...(body.status !== undefined && { status: updateString(body.status) || existing.status }),
+      ...(body.setter !== undefined && { setter: updateString(body.setter) }),
+      ...(body.setterImg !== undefined && { setterImg: updateString(body.setterImg) }),
+      ...(body.budget !== undefined && { budget: updateString(body.budget) }),
+      ...(body.timeline !== undefined && { timeline: updateString(body.timeline) }),
+      ...(body.companySize !== undefined && { companySize: updateString(body.companySize) }),
+      ...(body.industry !== undefined && { industry: updateString(body.industry) }),
+      ...(body.notes !== undefined && { notes: updateString(body.notes) }),
       ...(body.nextFollowUp !== undefined && {
-        nextFollowUp: body.nextFollowUp ? new Date(body.nextFollowUp) : null,
+        nextFollowUp: optionalDate(body.nextFollowUp),
       }),
       ...(body.lastContact !== undefined && {
-        lastContact: body.lastContact ? new Date(body.lastContact) : null,
+        lastContact: optionalDate(body.lastContact),
       }),
     },
   });
@@ -64,6 +80,8 @@ export async function DELETE(
   ctx: RouteContext<"/api/leads/[id]">,
 ) {
   const { id } = await ctx.params;
+  const existing = await prisma.lead.findUnique({ where: { id }, select: { id: true } });
+  if (!existing) return NextResponse.json({ error: "Lead not found" }, { status: 404 });
   await prisma.lead.delete({ where: { id } });
   return NextResponse.json({ success: true });
 }

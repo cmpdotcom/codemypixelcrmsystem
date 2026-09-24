@@ -97,6 +97,15 @@ export default function LeadSettingsPage() {
     setSaved(false);
   };
 
+  const updateStatusColor = (name: string, color: string) => {
+    setStatuses((current) =>
+      current.map((status) =>
+        status.name === name ? { ...status, color } : status
+      )
+    );
+    setSaved(false);
+  };
+
   const handleSave = async () => {
     setSaving(true);
     setError(null);
@@ -170,6 +179,16 @@ export default function LeadSettingsPage() {
               </div>
               <div className="flex items-center gap-3">
                 <Badge label={`${status.count} leads in DB`} color="slate" />
+                <select
+                  aria-label={`Color for ${status.name}`}
+                  value={status.color}
+                  onChange={(event) => updateStatusColor(status.name, event.target.value)}
+                  className="px-2 py-1 text-[11px] capitalize text-slate-600 bg-white border border-slate-200 rounded-md cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                >
+                  {COLOR_OPTIONS.map((color) => (
+                    <option key={color} value={color}>{color}</option>
+                  ))}
+                </select>
                 <button
                   type="button"
                   onClick={() => removeStatus(status.name)}

@@ -1,16 +1,8 @@
 import { prisma } from "../lib/prisma";
 import bcrypt from "bcryptjs";
+import { CRM_MODULES } from "../lib/permissions";
 
-const DEFAULT_MODULES = [
-  "Leads",
-  "Activities",
-  "Deals",
-  "Clients",
-  "Projects",
-  "Payments",
-  "Commissions",
-  "Reports",
-];
+const DEFAULT_MODULES = [...CRM_MODULES];
 
 const FULL_PERMS = { view: true, create: true, edit: true, del: true, assign: true };
 const READ_PERMS = { view: true, create: false, edit: false, del: false, assign: false };
@@ -24,6 +16,12 @@ async function main() {
     {
       name: "Super Admin",
       description: "Full system control with all permissions",
+      color: "purple",
+      permissions: DEFAULT_MODULES.reduce((acc, m) => ({ ...acc, [m]: FULL_PERMS }), {}),
+    },
+    {
+      name: "Executive",
+      description: "Business leadership and workspace management",
       color: "purple",
       permissions: DEFAULT_MODULES.reduce((acc, m) => ({ ...acc, [m]: FULL_PERMS }), {}),
     },
@@ -46,7 +44,7 @@ async function main() {
       permissions: DEFAULT_MODULES.reduce(
         (acc, m) => ({
           ...acc,
-          [m]: m === "Leads" || m === "Activities" ? STANDARD_PERMS : READ_PERMS,
+          [m]: m === "Leads" || m === "Activities" || m === "Follow-ups" ? STANDARD_PERMS : READ_PERMS,
         }),
         {}
       ),
@@ -58,7 +56,7 @@ async function main() {
       permissions: DEFAULT_MODULES.reduce(
         (acc, m) => ({
           ...acc,
-          [m]: m === "Deals" || m === "Clients" || m === "Activities" ? FULL_PERMS : READ_PERMS,
+          [m]: m === "Deals" || m === "Clients" || m === "Activities" || m === "Follow-ups" ? FULL_PERMS : READ_PERMS,
         }),
         {}
       ),
@@ -70,7 +68,7 @@ async function main() {
       permissions: DEFAULT_MODULES.reduce(
         (acc, m) => ({
           ...acc,
-          [m]: m === "Projects" ? STANDARD_PERMS : READ_PERMS,
+          [m]: ["Projects", "Tasks", "Milestones", "Deployments"].includes(m) ? STANDARD_PERMS : READ_PERMS,
         }),
         {}
       ),
@@ -82,7 +80,19 @@ async function main() {
       permissions: DEFAULT_MODULES.reduce(
         (acc, m) => ({
           ...acc,
-          [m]: m === "Projects" ? STANDARD_PERMS : READ_PERMS,
+          [m]: m === "QA" ? STANDARD_PERMS : READ_PERMS,
+        }),
+        {}
+      ),
+    },
+    {
+      name: "Tester",
+      description: "Quality assurance, testing, and bug verification",
+      color: "rose",
+      permissions: DEFAULT_MODULES.reduce(
+        (acc, m) => ({
+          ...acc,
+          [m]: m === "QA" ? STANDARD_PERMS : READ_PERMS,
         }),
         {}
       ),

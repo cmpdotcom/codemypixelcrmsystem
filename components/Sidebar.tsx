@@ -4,7 +4,9 @@ import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { useSettings } from "@/components/SettingsProvider";
+import { hasPermission } from "@/lib/permissions";
 import {
   LayoutDashboard,
   Users,
@@ -33,59 +35,66 @@ import {
 const navSections = [
   {
     title: null,
-    items: [{ icon: LayoutDashboard, label: "Dashboard", href: "/" }],
+    items: [{ icon: LayoutDashboard, label: "Dashboard", href: "/", module: "Dashboard" }],
   },
   {
     title: "Sales",
     items: [
-      { icon: Users, label: "Leads", href: "/leads" },
-      { icon: Activity, label: "Activities", href: "/activities" },
-      { icon: Briefcase, label: "Deals", href: "/deals" },
-      { icon: Users2, label: "Clients", href: "/clients" },
-      { icon: UserPlus, label: "Follow-ups", href: "/follow-ups" },
+      { icon: Users, label: "Leads", href: "/leads", module: "Leads" },
+      { icon: Activity, label: "Activities", href: "/activities", module: "Activities" },
+      { icon: Briefcase, label: "Deals", href: "/deals", module: "Deals" },
+      { icon: Users2, label: "Clients", href: "/clients", module: "Clients" },
+      { icon: UserPlus, label: "Follow-ups", href: "/follow-ups", module: "Follow-ups" },
     ],
   },
   {
     title: "Delivery",
     items: [
-      { icon: FolderKanban, label: "Projects", href: "/projects" },
-      { icon: CheckSquare, label: "Tasks", href: "/projects/tasks" },
-      { icon: Flag, label: "Milestones", href: "/projects/milestones" },
-      { icon: Bug, label: "Bugs / QA", href: "/qa" },
-      { icon: Rocket, label: "Deployments", href: "/deployments" },
+      { icon: FolderKanban, label: "Projects", href: "/projects", module: "Projects" },
+      { icon: CheckSquare, label: "Tasks", href: "/projects/tasks", module: "Tasks" },
+      { icon: Flag, label: "Milestones", href: "/projects/milestones", module: "Milestones" },
+      { icon: Bug, label: "Bugs / QA", href: "/qa", module: "QA" },
+      { icon: Rocket, label: "Deployments", href: "/deployments", module: "Deployments" },
     ],
   },
   {
     title: "Team",
     items: [
-      { icon: UserPlus, label: "Setters", href: "/team/setters" },
-      { icon: UserCheck, label: "Closers", href: "/team/closers" },
-      { icon: Code, label: "Developers", href: "/team/developers" },
-      { icon: BarChart2, label: "Performance", href: "/team/performance" },
+      { icon: UserPlus, label: "Setters", href: "/team/setters", module: "Setters" },
+      { icon: UserCheck, label: "Closers", href: "/team/closers", module: "Closers" },
+      { icon: Code, label: "Developers", href: "/team/developers", module: "Developers" },
+      { icon: BarChart2, label: "Performance", href: "/team/performance", module: "Performance" },
     ],
   },
   {
     title: "Finance",
     items: [
-      { icon: CreditCard, label: "Payments", href: "/payments" },
-      { icon: DollarSign, label: "Commissions", href: "/commissions" },
-      { icon: FileText, label: "Reports", href: "/reports" },
+      { icon: CreditCard, label: "Payments", href: "/payments", module: "Payments" },
+      { icon: DollarSign, label: "Commissions", href: "/commissions", module: "Commissions" },
+      { icon: FileText, label: "Reports", href: "/reports", module: "Reports" },
     ],
   },
   {
     title: "System",
     items: [
-      { icon: Users, label: "Users", href: "/users" },
-      { icon: Settings, label: "Settings", href: "/settings" },
-      { icon: LinkIcon, label: "Integrations", href: "/integrations" },
+      { icon: Users, label: "Users", href: "/users", module: "Users" },
+      { icon: Settings, label: "Settings", href: "/settings", module: "Settings" },
+      { icon: LinkIcon, label: "Integrations", href: "/integrations", module: "Integrations" },
     ],
   },
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
+  const { data: session, status: sessionStatus } = useSession();
   const { companyName, logoUrl, primaryHex, primaryBg } = useSettings();
   const [collapsed, setCollapsed] = useState(false);
+  const visibleSections = navSections
+    .map((section) => ({
+      ...section,
+      items: section.items.filter((item) => sessionStatus === "loading" || !session?.user?.roleName || session?.user?.roleName === "Super Admin" || hasPermission(session?.user?.permissions, item.module, "view")),
+    }))
+    .filter((section) => section.items.length > 0);
 
   return (
     <aside
@@ -136,7 +145,7 @@ export function Sidebar() {
 
       {/* Navigation Sections - only this part scrolls */}
       <div className="flex-1 px-3 py-3 space-y-5 overflow-y-auto custom-scrollbar">
-        {navSections.map((section, si) => (
+        {visibleSections.map((section, si) => (
           <div key={si}>
             {section.title && !collapsed && (
               <h3 className="px-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5 whitespace-nowrap">

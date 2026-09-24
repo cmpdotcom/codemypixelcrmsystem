@@ -67,33 +67,51 @@ export async function GET(request: NextRequest) {
 
 // POST /api/leads - Create a new lead
 export async function POST(request: NextRequest) {
-  const body = await request.json();
+  let body: Record<string, unknown>;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
+  }
 
-  if (!body.name || !body.company || !body.email) {
+  const name = typeof body.name === "string" ? body.name.trim() : "";
+  const company = typeof body.company === "string" ? body.company.trim() : "";
+  const email = typeof body.email === "string" ? body.email.trim() : "";
+  if (!name || !company || !email) {
     return NextResponse.json(
       { error: "Name, company, and email are required" },
       { status: 400 },
     );
   }
+  if (!/^\S+@\S+\.\S+$/.test(email)) {
+    return NextResponse.json({ error: "A valid email is required" }, { status: 400 });
+  }
+
+  const optionalString = (value: unknown) => typeof value === "string" && value.trim() ? value.trim() : null;
+  const optionalDate = (value: unknown) => {
+    if (!value) return null;
+    const date = new Date(String(value));
+    return Number.isNaN(date.getTime()) ? null : date;
+  };
 
   const lead = await prisma.lead.create({
     data: {
-      name: body.name,
-      company: body.company,
-      email: body.email,
-      phone: body.phone || null,
-      location: body.location || null,
-      linkedin: body.linkedin || null,
-      source: body.source || "Website",
-      service: body.service || null,
-      status: body.status || "New",
-      setter: body.setter || null,
-      setterImg: body.setterImg || null,
-      budget: body.budget || null,
-      timeline: body.timeline || null,
-      companySize: body.companySize || null,
-      industry: body.industry || null,
-      nextFollowUp: body.nextFollowUp ? new Date(body.nextFollowUp) : null,
+      name,
+      company,
+      email,
+      phone: optionalString(body.phone),
+      location: optionalString(body.location),
+      linkedin: optionalString(body.linkedin),
+      source: optionalString(body.source) || "Website",
+      service: optionalString(body.service),
+      status: optionalString(body.status) || "New",
+      setter: optionalString(body.setter),
+      setterImg: optionalString(body.setterImg),
+      budget: optionalString(body.budget),
+      timeline: optionalString(body.timeline),
+      companySize: optionalString(body.companySize),
+      industry: optionalString(body.industry),
+      nextFollowUp: optionalDate(body.nextFollowUp),
     },
   });
 

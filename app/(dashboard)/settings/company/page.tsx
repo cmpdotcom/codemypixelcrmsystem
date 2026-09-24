@@ -68,11 +68,11 @@ const DEFAULTS: Record<string, string> = {
   company_country: "Bangladesh",
   company_primaryColor: "blue",
   company_secondaryColor: "indigo",
-  company_logoUrl: "",
-  company_faviconUrl: "",
-  company_emailLogoUrl: "",
-  company_loginLogoUrl: "",
-  company_invoiceLogoUrl: "",
+  company_logoUrl: "/demo-logo-horizontal.svg",
+  company_faviconUrl: "/demo-logo.svg",
+  company_emailLogoUrl: "/demo-logo-email.svg",
+  company_loginLogoUrl: "/demo-logo-horizontal.svg",
+  company_invoiceLogoUrl: "/demo-logo-invoice.svg",
 };
 
 function ColorPicker({
@@ -208,6 +208,7 @@ function ImageUploader({
 
 export default function CompanyProfilePage() {
   const [formData, setFormData] = useState<Record<string, string>>({ ...DEFAULTS });
+  const [initialFormData, setInitialFormData] = useState<Record<string, string>>({ ...DEFAULTS });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -222,8 +223,9 @@ export default function CompanyProfilePage() {
           setFormData((prev) => {
             const merged = { ...prev };
             for (const key of Object.keys(DEFAULTS)) {
-              if (data[key] !== undefined) merged[key] = data[key];
+              if (typeof data[key] === "string" && data[key].trim()) merged[key] = data[key];
             }
+            setInitialFormData(merged);
             return merged;
           });
         }
@@ -261,6 +263,7 @@ export default function CompanyProfilePage() {
         }),
       });
       if (!res.ok) throw new Error("Failed to save company settings");
+      setInitialFormData({ ...formData });
       notifySettingsSaved();
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
@@ -272,7 +275,7 @@ export default function CompanyProfilePage() {
   };
 
   const handleCancel = () => {
-    setFormData({ ...DEFAULTS });
+    setFormData({ ...initialFormData });
     setSaved(false);
     setError(null);
   };
@@ -334,7 +337,7 @@ export default function CompanyProfilePage() {
               label="Logo"
               value={formData.company_logoUrl}
               onChange={set("company_logoUrl")}
-              fallback="/logo.png"
+              fallback="/demo-logo-horizontal.svg"
             />
           </FormField>
 
@@ -343,7 +346,7 @@ export default function CompanyProfilePage() {
               label="Favicon"
               value={formData.company_faviconUrl}
               onChange={set("company_faviconUrl")}
-              fallback="/favicon-32.png"
+              fallback="/demo-logo.svg"
             />
           </FormField>
 
@@ -522,7 +525,7 @@ export default function CompanyProfilePage() {
               aspect="wide"
               value={formData.company_logoUrl}
               onChange={set("company_logoUrl")}
-              fallback="/logo.png"
+              fallback="/demo-logo-horizontal.svg"
             />
           </div>
 
@@ -538,7 +541,7 @@ export default function CompanyProfilePage() {
               aspect="wide"
               value={formData.company_emailLogoUrl}
               onChange={set("company_emailLogoUrl")}
-              fallback="/logo.png"
+              fallback="/demo-logo-email.svg"
             />
           </div>
 
@@ -554,7 +557,7 @@ export default function CompanyProfilePage() {
               aspect="wide"
               value={formData.company_loginLogoUrl}
               onChange={set("company_loginLogoUrl")}
-              fallback="/logo.png"
+              fallback="/demo-logo-horizontal.svg"
             />
           </div>
 
@@ -570,7 +573,7 @@ export default function CompanyProfilePage() {
               aspect="wide"
               value={formData.company_invoiceLogoUrl}
               onChange={set("company_invoiceLogoUrl")}
-              fallback="/logo.png"
+              fallback="/demo-logo-invoice.svg"
             />
           </div>
         </div>

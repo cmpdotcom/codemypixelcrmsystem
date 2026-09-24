@@ -28,6 +28,7 @@ import {
   Trash2,
   Edit3,
   Check,
+  CheckCircle2,
   Loader2,
   AlertCircle,
   Paperclip,
@@ -72,6 +73,19 @@ const statusStyles: Record<string, string> = {
   Lost: "bg-slate-100 text-slate-500 border border-slate-200",
 };
 
+const statusColorStyles: Record<string, string> = {
+  blue: "bg-blue-50 text-blue-600 border border-blue-100",
+  purple: "bg-purple-50 text-purple-600 border border-purple-100",
+  amber: "bg-amber-50 text-amber-600 border border-amber-100",
+  cyan: "bg-cyan-50 text-cyan-600 border border-cyan-100",
+  green: "bg-emerald-50 text-emerald-600 border border-emerald-100",
+  indigo: "bg-indigo-50 text-indigo-600 border border-indigo-100",
+  teal: "bg-teal-50 text-teal-600 border border-teal-100",
+  slate: "bg-slate-100 text-slate-500 border border-slate-200",
+  rose: "bg-rose-50 text-rose-500 border border-rose-100",
+  red: "bg-red-50 text-red-500 border border-red-100",
+};
+
 const avatarColors = [
   "bg-blue-100 text-blue-700",
   "bg-sky-100 text-sky-700",
@@ -90,6 +104,110 @@ function getInitials(name: string) {
 function getAvatarBg(name: string) {
   const hash = name.charCodeAt(0) + name.charCodeAt(name.length - 1);
   return avatarColors[hash % avatarColors.length];
+}
+
+type LeadImportField =
+  | "name" | "company" | "email" | "phone" | "location" | "linkedin"
+  | "source" | "service" | "status" | "setter" | "budget" | "timeline"
+  | "companySize" | "industry" | "nextFollowUp" | "notes";
+
+interface LeadCsvData {
+  headers: { key: string; label: string }[];
+  rows: Record<string, string>[];
+}
+
+const leadImportFields: { key: LeadImportField; label: string; required?: boolean }[] = [
+  { key: "name", label: "Full Name", required: true },
+  { key: "company", label: "Company", required: true },
+  { key: "email", label: "Email", required: true },
+  { key: "phone", label: "Phone" },
+  { key: "location", label: "Location" },
+  { key: "linkedin", label: "LinkedIn" },
+  { key: "source", label: "Source" },
+  { key: "service", label: "Service" },
+  { key: "status", label: "Status" },
+  { key: "setter", label: "Assigned Setter" },
+  { key: "budget", label: "Budget" },
+  { key: "timeline", label: "Timeline" },
+  { key: "companySize", label: "Company Size" },
+  { key: "industry", label: "Industry" },
+  { key: "nextFollowUp", label: "Next Follow-up" },
+  { key: "notes", label: "Notes" },
+];
+
+const leadImportAliases: Record<LeadImportField, string[]> = {
+  name: ["name", "fullname", "full name", "contactname", "leadname"],
+  company: ["company", "companyname", "business", "organization"],
+  email: ["email", "emailaddress", "mail"],
+  phone: ["phone", "phonenumber", "mobile", "telephone"],
+  location: ["location", "city", "address", "country"],
+  linkedin: ["linkedin", "linkedinurl", "linkedinprofile"],
+  source: ["source", "leadsource", "channel"],
+  service: ["service", "product", "projecttype"],
+  status: ["status", "leadstatus", "stage"],
+  setter: ["setter", "assignedsetter", "owner", "assignee"],
+  budget: ["budget", "dealvalue", "value"],
+  timeline: ["timeline", "timeframe", "duration"],
+  companySize: ["companysize", "employees", "sizeofcompany"],
+  industry: ["industry", "vertical", "sector"],
+  nextFollowUp: ["nextfollowup", "followupdate", "followup", "nextcontact"],
+  notes: ["notes", "note", "comments", "description"],
+};
+
+function normalizeImportHeader(value: string) {
+  return value.toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+function parseLeadCsv(contents: string): LeadCsvData {
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let cell = "";
+  let quoted = false;
+  for (let index = 0; index < contents.length; index += 1) {
+    const character = contents[index];
+    const nextCharacter = contents[index + 1];
+    if (character === '"' && quoted && nextCharacter === '"') {
+      cell += '"';
+      index += 1;
+    } else if (character === '"') {
+      quoted = !quoted;
+    } else if (character === "," && !quoted) {
+      row.push(cell.trim());
+      cell = "";
+    } else if ((character === "\n" || character === "\r") && !quoted) {
+      if (character === "\r" && nextCharacter === "\n") index += 1;
+      row.push(cell.trim());
+      if (row.some(Boolean)) rows.push(row);
+      row = [];
+      cell = "";
+    } else {
+      cell += character;
+    }
+  }
+  row.push(cell.trim());
+  if (row.some(Boolean)) rows.push(row);
+  if (rows.length < 2) return { headers: [], rows: [] };
+  const headers = rows[0].map((label, index) => ({
+    key: `${normalizeImportHeader(label) || "column"}${index}`,
+    label: label || `Column ${index + 1}`,
+  }));
+  return {
+    headers,
+    rows: rows.slice(1).map((values) => Object.fromEntries(
+      headers.map((header, index) => [header.key, values[index] || ""])
+    )),
+  };
+}
+
+function createImportMapping(headers: LeadCsvData["headers"]) {
+  const mapping: Partial<Record<LeadImportField, string>> = {};
+  for (const field of leadImportFields) {
+    const match = headers.find((header) =>
+      leadImportAliases[field.key].includes(normalizeImportHeader(header.label))
+    );
+    if (match) mapping[field.key] = match.key;
+  }
+  return mapping;
 }
 
 function formatDate(date: Date | string | null) {
@@ -171,6 +289,11 @@ interface LeadStats {
   converted: number;
 }
 
+interface LeadSettings {
+  statuses: { name: string; color: string; count: number }[];
+  industries: string[];
+}
+
 const SOURCES = ["LinkedIn", "Website", "Referral", "Instagram", "Cold Call", "Google Ads", "Facebook", "WhatsApp"];
 const STATUSES = ["New", "Contacted", "Qualified", "Meeting", "Proposal", "Not Interested", "Nurture", "Converted", "Lost"];
 const SERVICES = ["Custom ERP", "Website", "Mobile App", "CRM", "ERP", "Dashboard", "E-commerce", "Other"];
@@ -187,6 +310,22 @@ export default function LeadsPageWrapper() {
 function LeadsPage() {
   const [activeTab, setActiveTab] = useState("All Leads");
   const [searchQuery, setSearchQuery] = useState("");
+  const [sourceFilter, setSourceFilter] = useState("");
+  const [setterFilter, setSetterFilter] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
+  const [showColumns, setShowColumns] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [importPreview, setImportPreview] = useState<LeadCsvData | null>(null);
+  const [importMapping, setImportMapping] = useState<Partial<Record<LeadImportField, string>>>({});
+  const [importResult, setImportResult] = useState<string | null>(null);
+  const importInputRef = React.useRef<HTMLInputElement>(null);
+  const [visibleColumns, setVisibleColumns] = useState({
+    contact: true,
+    source: true,
+    service: true,
+    setter: true,
+    created: true,
+  });
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [selectAll, setSelectAll] = useState(false);
@@ -209,6 +348,17 @@ function LeadsPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [leadSettings, setLeadSettings] = useState<LeadSettings>({ statuses: [], industries: [] });
+
+  useEffect(() => {
+    fetch("/api/settings/leads")
+      .then((res) => (res.ok ? res.json() : Promise.reject(new Error("Failed to load lead options"))))
+      .then((data: LeadSettings) => setLeadSettings({
+        statuses: Array.isArray(data.statuses) ? data.statuses : [],
+        industries: Array.isArray(data.industries) ? data.industries : [],
+      }))
+      .catch(() => setError("Lead options could not be loaded. Default options are being used."));
+  }, []);
 
   // Modal state
   const [showAddModal, setShowAddModal] = useState(false);
@@ -336,6 +486,8 @@ function LeadsPage() {
       });
       if (searchQuery) params.set("search", searchQuery);
       if (activeTab !== "All Leads") params.set("status", activeTab);
+      if (sourceFilter) params.set("source", sourceFilter);
+      if (setterFilter) params.set("setter", setterFilter);
       const res = await fetch(`/api/leads?${params}`);
       if (!res.ok) throw new Error("Failed to fetch leads");
       const data = await res.json();
@@ -351,7 +503,7 @@ function LeadsPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, pageSize, searchQuery, activeTab]);
+  }, [page, pageSize, searchQuery, activeTab, sourceFilter, setterFilter]);
 
   useEffect(() => {
     fetchLeads();
@@ -379,7 +531,7 @@ function LeadsPage() {
   // Reset to page 1 when search/tab changes
   useEffect(() => {
     setPage(1);
-  }, [searchQuery, activeTab]);
+  }, [searchQuery, activeTab, sourceFilter, setterFilter]);
 
   const toggleSelectRow = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -416,6 +568,77 @@ function LeadsPage() {
       throw new Error(err.error || "Failed to create lead");
     }
     return res.json();
+  };
+
+  const importLeads = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    setError(null);
+    setImportResult(null);
+    try {
+      const preview = parseLeadCsv(await file.text());
+      if (preview.rows.length === 0) throw new Error("CSV must include a header row and at least one data row");
+      setImportPreview(preview);
+      setImportMapping(createImportMapping(preview.headers));
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Failed to import leads");
+    }
+  };
+
+  const confirmImport = async () => {
+    if (!importPreview) return;
+    const requiredFields = leadImportFields.filter((field) => field.required);
+    const missingField = requiredFields.find((field) => !importMapping[field.key]);
+    if (missingField) {
+      setError(`Please map the required field: ${missingField.label}`);
+      return;
+    }
+
+    setImporting(true);
+    setError(null);
+    try {
+      const validRows = importPreview.rows.filter((row) => {
+        const name = importMapping.name ? row[importMapping.name] : "";
+        const company = importMapping.company ? row[importMapping.company] : "";
+        const email = importMapping.email ? row[importMapping.email] : "";
+        return Boolean(name?.trim() && company?.trim() && email?.match(/^\S+@\S+\.\S+$/));
+      });
+      if (validRows.length === 0) throw new Error("No valid rows found. Check the required field mappings and email values.");
+
+      for (const row of validRows) {
+        const value = (field: LeadImportField) => {
+          const column = importMapping[field];
+          return column ? row[column]?.trim() || "" : "";
+        };
+        await createLead({
+          name: value("name"),
+          company: value("company"),
+          email: value("email"),
+          phone: value("phone"),
+          location: value("location"),
+          linkedin: value("linkedin"),
+          source: value("source") || "Website",
+          service: value("service"),
+          status: value("status") || "New",
+          setter: value("setter"),
+          budget: value("budget"),
+          timeline: value("timeline"),
+          companySize: value("companySize"),
+          industry: value("industry"),
+          nextFollowUp: value("nextFollowUp"),
+          notes: value("notes"),
+        });
+      }
+      await fetchLeads();
+      setImportResult(`Imported ${validRows.length} of ${importPreview.rows.length} rows successfully${validRows.length < importPreview.rows.length ? `; skipped ${importPreview.rows.length - validRows.length} invalid rows` : ""}.`);
+      setImportPreview(null);
+      setImportMapping({});
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Failed to import leads");
+    } finally {
+      setImporting(false);
+    }
   };
 
   const updateLead = async (id: string, data: Record<string, unknown>) => {
@@ -499,13 +722,16 @@ function LeadsPage() {
 
   const tabs = [
     { label: "All Leads", count: stats?.total ?? 0 },
-    { label: "New", count: stats?.new ?? 0 },
-    { label: "Contacted", count: stats?.contacted ?? 0 },
-    { label: "Qualified", count: stats?.qualified ?? 0 },
-    { label: "Not Interested", count: stats?.notInterested ?? 0 },
-    { label: "Lost", count: stats?.lost ?? 0 },
-    { label: "Nurture", count: stats?.nurture ?? 0 },
+    ...(leadSettings.statuses.length ? leadSettings.statuses : STATUSES.map((name) => ({ name, count: 0, color: "blue" }))).map((status) => ({
+      label: status.name,
+      count: status.count,
+    })),
   ];
+  const statusOptions = leadSettings.statuses.length ? leadSettings.statuses.map((status) => status.name) : STATUSES;
+  const industryOptions = leadSettings.industries.length ? leadSettings.industries : [];
+  const getStatusStyle = (status: string) =>
+    statusStyles[status] ||
+    statusColorStyles[leadSettings.statuses.find((item) => item.name === status)?.color || "blue"];
 
   return (
     <>
@@ -526,6 +752,13 @@ function LeadsPage() {
             </button>
           </div>
         )}
+        {importResult && (
+          <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-medium px-4 py-3 rounded-xl flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+            <span>{importResult}</span>
+            <button onClick={() => setImportResult(null)} className="ml-auto text-emerald-500 hover:text-emerald-700 cursor-pointer">×</button>
+          </div>
+        )}
 
         {/* Top Title Bar & Action Buttons */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -539,9 +772,20 @@ function LeadsPage() {
           </div>
 
           <div className="flex items-center gap-2.5">
-            <button className="bg-white hover:bg-slate-50 border border-slate-200/80 text-slate-700 text-xs font-semibold py-2.5 px-4 rounded-xl shadow-2xs flex items-center gap-2 transition-all cursor-pointer">
-              <Download className="w-4 h-4 text-slate-500" />
-              <span>Import Leads</span>
+            <input
+              ref={importInputRef}
+              type="file"
+              accept=".csv,text/csv"
+              onChange={importLeads}
+              className="hidden"
+            />
+            <button
+              onClick={() => importInputRef.current?.click()}
+              disabled={importing}
+              className="bg-white hover:bg-slate-50 border border-slate-200/80 text-slate-700 text-xs font-semibold py-2.5 px-4 rounded-xl shadow-2xs flex items-center gap-2 transition-all cursor-pointer disabled:opacity-50"
+            >
+              {importing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4 text-slate-500" />}
+              <span>{importing ? "Importing..." : "Import CSV"}</span>
             </button>
 
             <button
@@ -593,7 +837,7 @@ function LeadsPage() {
                 defaultValue=""
               >
                 <option value="">Change Status...</option>
-                {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+                {statusOptions.map((status) => <option key={status} value={status}>{status}</option>)}
               </select>
               <button
                 onClick={handleBulkDelete}
@@ -637,9 +881,6 @@ function LeadsPage() {
                     </span>
                   </button>
                 ))}
-                <button className="p-1 text-slate-400 hover:text-slate-600">
-                  <MoreHorizontal className="w-4 h-4" />
-                </button>
               </div>
             </div>
 
@@ -659,16 +900,49 @@ function LeadsPage() {
               </div>
 
               <div className="flex items-center gap-2 shrink-0">
-                <button className="bg-white border border-slate-200/80 hover:bg-slate-50 text-slate-700 text-xs font-semibold px-3 py-2 rounded-xl shadow-2xs flex items-center gap-1.5 transition-colors cursor-pointer">
+                <div className="relative">
+                <button onClick={() => setShowColumns((visible) => !visible)} className="bg-white border border-slate-200/80 hover:bg-slate-50 text-slate-700 text-xs font-semibold px-3 py-2 rounded-xl shadow-2xs flex items-center gap-1.5 transition-colors cursor-pointer">
                   <Columns className="w-3.5 h-3.5 text-slate-400" />
                   <span>Columns</span>
                 </button>
-                <button className="bg-white border border-slate-200/80 hover:bg-slate-50 text-slate-700 text-xs font-semibold px-3 py-2 rounded-xl shadow-2xs flex items-center gap-1.5 transition-colors cursor-pointer">
+                {showColumns && (
+                  <div className="absolute right-0 top-full z-20 mt-2 w-44 rounded-xl border border-slate-200 bg-white p-3 shadow-xl">
+                    {Object.entries(visibleColumns).map(([column, visible]) => (
+                      <label key={column} className="flex items-center gap-2 py-1 text-xs capitalize text-slate-600 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={visible}
+                          onChange={() => setVisibleColumns((current) => ({ ...current, [column]: !current[column as keyof typeof current] }))}
+                          className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                        />
+                        {column}
+                      </label>
+                    ))}
+                  </div>
+                )}
+                </div>
+                <button onClick={() => setShowFilters((visible) => !visible)} className="bg-white border border-slate-200/80 hover:bg-slate-50 text-slate-700 text-xs font-semibold px-3 py-2 rounded-xl shadow-2xs flex items-center gap-1.5 transition-colors cursor-pointer">
                   <Filter className="w-3.5 h-3.5 text-slate-400" />
                   <span>Filters</span>
                 </button>
               </div>
             </div>
+
+            {showFilters && (
+              <div className="flex flex-wrap items-center gap-2 rounded-xl border border-blue-100 bg-blue-50/50 p-3">
+                <select value={sourceFilter} onChange={(event) => setSourceFilter(event.target.value)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700">
+                  <option value="">All Sources</option>
+                  {SOURCES.map((source) => <option key={source} value={source}>{source}</option>)}
+                </select>
+                <select value={setterFilter} onChange={(event) => setSetterFilter(event.target.value)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700">
+                  <option value="">All Setters</option>
+                  {SETTERS.map((setter) => <option key={setter} value={setter}>{setter}</option>)}
+                </select>
+                {(sourceFilter || setterFilter) && (
+                  <button onClick={() => { setSourceFilter(""); setSetterFilter(""); }} className="text-xs font-semibold text-blue-600 hover:text-blue-700">Clear filters</button>
+                )}
+              </div>
+            )}
 
             {/* Leads Table */}
             <div className="overflow-x-auto pt-2 custom-scrollbar">
@@ -703,12 +977,12 @@ function LeadsPage() {
                       </th>
                       <th className="py-3 px-2 w-16 font-medium">#</th>
                       <th className="py-3 px-3 w-44 font-medium">Name / Company</th>
-                      <th className="py-3 px-3 w-40 font-medium">Contact</th>
-                      <th className="py-3 px-3 w-24 font-medium">Source</th>
-                      <th className="py-3 px-3 w-24 font-medium">Service</th>
+                      {visibleColumns.contact && <th className="py-3 px-3 w-40 font-medium">Contact</th>}
+                      {visibleColumns.source && <th className="py-3 px-3 w-24 font-medium">Source</th>}
+                      {visibleColumns.service && <th className="py-3 px-3 w-24 font-medium">Service</th>}
                       <th className="py-3 px-3 w-28 font-medium">Status</th>
-                      <th className="py-3 px-3 w-28 font-medium">Setter</th>
-                      <th className="py-3 px-3 w-24 font-medium">Created</th>
+                      {visibleColumns.setter && <th className="py-3 px-3 w-28 font-medium">Setter</th>}
+                      {visibleColumns.created && <th className="py-3 px-3 w-24 font-medium">Created</th>}
                       <th className="py-3 px-2 w-20 font-medium text-center">Actions</th>
                     </tr>
                   </thead>
@@ -746,20 +1020,20 @@ function LeadsPage() {
                               </div>
                             </div>
                           </td>
-                          <td className="py-3 px-3">
+                          {visibleColumns.contact && <td className="py-3 px-3">
                             <div className="min-w-0">
                               <p className="text-slate-700 font-medium truncate">{lead.email}</p>
                               <p className="text-[10px] text-slate-400 truncate">{lead.phone || "—"}</p>
                             </div>
-                          </td>
-                          <td className="py-3 px-3">
+                          </td>}
+                          {visibleColumns.source && <td className="py-3 px-3">
                             <span className={`px-2 py-0.5 rounded text-[10px] font-bold whitespace-nowrap ${sourceStyles[lead.source] || sourceStyles["Website"]}`}>
                               {lead.source}
                             </span>
-                          </td>
-                          <td className="py-3 px-3 text-slate-700 font-medium">
+                          </td>}
+                          {visibleColumns.service && <td className="py-3 px-3 text-slate-700 font-medium">
                             <span className="truncate block">{lead.service || "—"}</span>
-                          </td>
+                          </td>}
                           <td className="py-3 px-3">
                             {/* Inline-editable status */}
                             {inlineEdit?.id === lead.id && inlineEdit.field === "status" ? (
@@ -770,19 +1044,19 @@ function LeadsPage() {
                                 onBlur={() => setInlineEdit(null)}
                                 className="text-[10px] font-bold border border-blue-300 rounded px-1 py-0.5 cursor-pointer"
                               >
-                                {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+                                {statusOptions.map((status) => <option key={status} value={status}>{status}</option>)}
                               </select>
                             ) : (
                               <span
                                 onClick={(e) => { e.stopPropagation(); setInlineEdit({ id: lead.id, field: "status", value: lead.status }); }}
-                                className={`px-2 py-0.5 rounded text-[10px] font-bold cursor-pointer hover:opacity-80 whitespace-nowrap ${statusStyles[lead.status] || statusStyles["New"]}`}
+                                className={`px-2 py-0.5 rounded text-[10px] font-bold cursor-pointer hover:opacity-80 whitespace-nowrap ${getStatusStyle(lead.status)}`}
                                 title="Click to edit status"
                               >
                                 {lead.status}
                               </span>
                             )}
                           </td>
-                          <td className="py-3 px-3">
+                          {visibleColumns.setter && <td className="py-3 px-3">
                             {lead.setter ? (
                               <div className="flex items-center gap-2 min-w-0">
                                 {lead.setterImg ? (
@@ -795,8 +1069,8 @@ function LeadsPage() {
                                 <span className="font-medium text-slate-800 truncate">{lead.setter}</span>
                               </div>
                             ) : <span className="text-slate-400">—</span>}
-                          </td>
-                          <td className="py-3 px-3 text-slate-500 whitespace-nowrap">{formatDate(lead.createdAt)}</td>
+                          </td>}
+                          {visibleColumns.created && <td className="py-3 px-3 text-slate-500 whitespace-nowrap">{formatDate(lead.createdAt)}</td>}
                           <td className="py-3 px-2 text-center" onClick={(e) => e.stopPropagation()}>
                             <div className="flex items-center justify-center gap-1">
                               <button
@@ -826,7 +1100,7 @@ function LeadsPage() {
             {/* Table Pagination */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-3 border-t border-slate-100">
               <p className="text-xs text-slate-500 font-medium">
-                Showing <span className="font-bold text-slate-800">{(page - 1) * pageSize + 1}</span> to{" "}
+                Showing <span className="font-bold text-slate-800">{total === 0 ? 0 : (page - 1) * pageSize + 1}</span> to{" "}
                 <span className="font-bold text-slate-800">{Math.min(page * pageSize, total)}</span> of{" "}
                 <span className="font-bold text-slate-800">{total}</span> leads
               </p>
@@ -904,7 +1178,7 @@ function LeadsPage() {
                       <span className="text-xs font-bold text-slate-900">
                         LD-{String(selectedLead.leadNumber).padStart(5, "0")}
                       </span>
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${statusStyles[selectedLead.status] || statusStyles["New"]}`}>
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${getStatusStyle(selectedLead.status)}`}>
                         {selectedLead.status}
                       </span>
                     </div>
@@ -1278,10 +1552,23 @@ function LeadsPage() {
         </div>
       </div>
 
+      {importPreview && (
+        <LeadImportModal
+          preview={importPreview}
+          mapping={importMapping}
+          importing={importing}
+          onMappingChange={(field, column) => setImportMapping((current) => ({ ...current, [field]: column || undefined }))}
+          onClose={() => { if (!importing) { setImportPreview(null); setImportMapping({}); } }}
+          onImport={confirmImport}
+        />
+      )}
+
       {/* Add Lead Modal */}
       {showAddModal && (
         <LeadModal
           mode="add"
+          statusOptions={statusOptions}
+          industryOptions={industryOptions}
           onClose={() => setShowAddModal(false)}
           onSave={async (data) => {
             await createLead(data);
@@ -1296,6 +1583,8 @@ function LeadsPage() {
         <LeadModal
           mode="edit"
           lead={editingLead}
+          statusOptions={statusOptions}
+          industryOptions={industryOptions}
           onClose={() => { setShowEditModal(false); setEditingLead(null); }}
           onSave={async (data) => {
             await updateLead(editingLead.id, data);
@@ -1319,15 +1608,116 @@ function LeadsPage() {
   );
 }
 
+function LeadImportModal({
+  preview,
+  mapping,
+  importing,
+  onMappingChange,
+  onClose,
+  onImport,
+}: {
+  preview: LeadCsvData;
+  mapping: Partial<Record<LeadImportField, string>>;
+  importing: boolean;
+  onMappingChange: (field: LeadImportField, column: string) => void;
+  onClose: () => void;
+  onImport: () => void;
+}) {
+  const mappedCount = Object.values(mapping).filter(Boolean).length;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm" onClick={onClose}>
+      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-6xl max-h-[92vh] overflow-hidden flex flex-col" onClick={(event) => event.stopPropagation()}>
+        <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
+          <div>
+            <h3 className="text-base font-extrabold text-slate-900">Review CSV Import</h3>
+            <p className="text-xs text-slate-500 mt-1">Map uploaded columns to CRM fields before importing.</p>
+          </div>
+          <button onClick={onClose} disabled={importing} className="p-2 rounded-xl hover:bg-slate-100 text-slate-400 cursor-pointer disabled:opacity-50">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="overflow-y-auto p-6 space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <h4 className="text-xs font-bold text-slate-800">CRM field mapping</h4>
+                  <p className="text-[11px] text-slate-400 mt-1">Choose “Do not import” for fields you do not want to add.</p>
+                </div>
+                <span className="text-[10px] font-semibold text-blue-600">{mappedCount} mapped</span>
+              </div>
+              <div className="border border-slate-200 rounded-xl divide-y divide-slate-100 overflow-hidden">
+                {leadImportFields.map((field) => (
+                  <div key={field.key} className="flex items-center gap-3 px-3 py-2.5">
+                    <label className="w-36 shrink-0 text-xs font-semibold text-slate-700">
+                      {field.label}{field.required && <span className="text-red-500"> *</span>}
+                    </label>
+                    <select
+                      value={mapping[field.key] || ""}
+                      onChange={(event) => onMappingChange(field.key, event.target.value)}
+                      className="flex-1 min-w-0 text-xs border border-slate-200 bg-slate-50 rounded-lg px-2.5 py-2 text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer"
+                    >
+                      <option value="">Do not import</option>
+                      {preview.headers.map((header) => <option key={header.key} value={header.key}>{header.label}</option>)}
+                    </select>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <h4 className="text-xs font-bold text-slate-800">Uploaded data preview</h4>
+                  <p className="text-[11px] text-slate-400 mt-1">Showing the first {Math.min(preview.rows.length, 5)} of {preview.rows.length} rows.</p>
+                </div>
+                <span className="text-[10px] font-semibold text-slate-500">{preview.headers.length} columns</span>
+              </div>
+              <div className="border border-slate-200 rounded-xl overflow-auto max-h-[520px]">
+                <table className="min-w-full text-[11px] text-left">
+                  <thead className="bg-slate-50 sticky top-0">
+                    <tr>{preview.headers.map((header) => <th key={header.key} className="px-3 py-2 font-semibold text-slate-500 whitespace-nowrap">{header.label}</th>)}</tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {preview.rows.slice(0, 5).map((row, index) => (
+                      <tr key={index}>{preview.headers.map((header) => <td key={header.key} className="px-3 py-2 text-slate-600 max-w-40 truncate whitespace-nowrap">{row[header.key] || "—"}</td>)}</tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-between gap-3">
+          <p className="text-[11px] text-slate-400"><span className="text-red-500">*</span> Name, Company, and Email are required.</p>
+          <div className="flex items-center gap-2">
+            <button onClick={onClose} disabled={importing} className="px-4 py-2.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer disabled:opacity-50">Cancel</button>
+            <button onClick={onImport} disabled={importing} className="px-5 py-2.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl flex items-center gap-2 cursor-pointer disabled:opacity-50">
+              {importing && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+              {importing ? "Importing..." : `Import ${preview.rows.length} rows`}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // --- Lead Modal Component (Add / Edit) ---
 function LeadModal({
   mode,
   lead,
+  statusOptions,
+  industryOptions,
   onClose,
   onSave,
 }: {
   mode: "add" | "edit";
   lead?: Lead | null;
+  statusOptions: string[];
+  industryOptions: string[];
   onClose: () => void;
   onSave: (data: Record<string, string>) => Promise<void>;
 }) {
@@ -1340,7 +1730,7 @@ function LeadModal({
     linkedin: lead?.linkedin || "",
     source: lead?.source || "Website",
     service: lead?.service || "",
-    status: lead?.status || "New",
+    status: lead?.status || statusOptions[0] || "New",
     setter: lead?.setter || "",
     budget: lead?.budget || "",
     timeline: lead?.timeline || "",
@@ -1470,7 +1860,7 @@ function LeadModal({
               {selectField("service", "Service", SERVICES)}
             </div>
             <div className="grid grid-cols-2 gap-3">
-              {selectField("status", "Status", STATUSES)}
+              {selectField("status", "Status", statusOptions)}
               {selectField("setter", "Assigned Setter", SETTERS)}
             </div>
           </div>
@@ -1487,7 +1877,9 @@ function LeadModal({
             </div>
             <div className="grid grid-cols-2 gap-3">
               {field("companySize", "Company Size", "text", "50–200 employees")}
-              {field("industry", "Industry", "text", "Manufacturing")}
+              {industryOptions.length > 0
+                ? selectField("industry", "Industry", industryOptions)
+                : field("industry", "Industry", "text", "Manufacturing")}
             </div>
           </div>
 

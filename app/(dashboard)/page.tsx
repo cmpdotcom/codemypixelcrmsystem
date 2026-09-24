@@ -54,6 +54,7 @@ import {
   Check,
   CheckCircle2,
 } from "lucide-react";
+import { hasPermission, PermissionAction } from "@/lib/permissions";
 
 // --- Data Definitions ---
 
@@ -416,6 +417,24 @@ export default function Dashboard() {
   const firstName = session?.user?.name?.split(" ")[0] ?? "User";
   const [mounted, setMounted] = useState(false);
   const [tasks, setTasks] = useState(todayTasks);
+  const canView = (module: string) =>
+    !session?.user?.roleName ||
+    session.user.roleName === "Super Admin" ||
+    hasPermission(
+      session.user.permissions,
+      module,
+      "view" as PermissionAction
+    );
+  const hasDashboardWidgets = [
+    "Leads",
+    "Deals",
+    "Payments",
+    "Projects",
+    "Users",
+    "Tasks",
+    "Performance",
+    "Activities",
+  ].some(canView);
 
   useEffect(() => {
     setMounted(true);
@@ -462,7 +481,7 @@ export default function Dashboard() {
           {/* Row 1: KPI Cards (5 Columns) */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
             {/* Total Leads */}
-            <div className="bg-white p-4 rounded-2xl border border-slate-100/90 shadow-[0_1px_3px_rgba(0,0,0,0.02),0_6px_16px_rgba(0,0,0,0.02)] hover:shadow-md transition-all">
+            {canView("Leads") && <div className="bg-white p-4 rounded-2xl border border-slate-100/90 shadow-[0_1px_3px_rgba(0,0,0,0.02),0_6px_16px_rgba(0,0,0,0.02)] hover:shadow-md transition-all">
               <div className="flex justify-between items-start">
                 <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-600">
                   <Target className="w-5 h-5" />
@@ -482,10 +501,10 @@ export default function Dashboard() {
                   +134 this month
                 </span>
               </div>
-            </div>
+            </div>}
 
             {/* Active Deals */}
-            <div className="bg-white p-4 rounded-2xl border border-slate-100/90 shadow-[0_1px_3px_rgba(0,0,0,0.02),0_6px_16px_rgba(0,0,0,0.02)] hover:shadow-md transition-all">
+            {canView("Deals") && <div className="bg-white p-4 rounded-2xl border border-slate-100/90 shadow-[0_1px_3px_rgba(0,0,0,0.02),0_6px_16px_rgba(0,0,0,0.02)] hover:shadow-md transition-all">
               <div className="flex justify-between items-start">
                 <div className="w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center text-amber-500">
                   <Calendar className="w-5 h-5" />
@@ -503,10 +522,10 @@ export default function Dashboard() {
                   $320,000 pipeline
                 </span>
               </div>
-            </div>
+            </div>}
 
             {/* Won Revenue */}
-            <div className="bg-white p-4 rounded-2xl border border-slate-100/90 shadow-[0_1px_3px_rgba(0,0,0,0.02),0_6px_16px_rgba(0,0,0,0.02)] hover:shadow-md transition-all">
+            {canView("Payments") && <div className="bg-white p-4 rounded-2xl border border-slate-100/90 shadow-[0_1px_3px_rgba(0,0,0,0.02),0_6px_16px_rgba(0,0,0,0.02)] hover:shadow-md transition-all">
               <div className="flex justify-between items-start">
                 <div className="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600">
                   <DollarSign className="w-5 h-5" />
@@ -524,10 +543,10 @@ export default function Dashboard() {
                 </span>
                 <span className="text-slate-400 text-[11px]">This month</span>
               </div>
-            </div>
+            </div>}
 
             {/* Active Projects */}
-            <div className="bg-white p-4 rounded-2xl border border-slate-100/90 shadow-[0_1px_3px_rgba(0,0,0,0.02),0_6px_16px_rgba(0,0,0,0.02)] hover:shadow-md transition-all">
+            {canView("Projects") && <div className="bg-white p-4 rounded-2xl border border-slate-100/90 shadow-[0_1px_3px_rgba(0,0,0,0.02),0_6px_16px_rgba(0,0,0,0.02)] hover:shadow-md transition-all">
               <div className="flex justify-between items-start">
                 <div className="w-10 h-10 rounded-full bg-purple-50 flex items-center justify-center text-purple-600">
                   <Box className="w-5 h-5" />
@@ -545,10 +564,10 @@ export default function Dashboard() {
                 </span>
                 <span className="text-slate-400 text-[11px]">18 on track</span>
               </div>
-            </div>
+            </div>}
 
             {/* Team Members */}
-            <div className="bg-white p-4 rounded-2xl border border-slate-100/90 shadow-[0_1px_3px_rgba(0,0,0,0.02),0_6px_16px_rgba(0,0,0,0.02)] hover:shadow-md transition-all">
+            {canView("Users") && <div className="bg-white p-4 rounded-2xl border border-slate-100/90 shadow-[0_1px_3px_rgba(0,0,0,0.02),0_6px_16px_rgba(0,0,0,0.02)] hover:shadow-md transition-all">
               <div className="flex justify-between items-start">
                 <div className="w-10 h-10 rounded-full bg-sky-50 flex items-center justify-center text-sky-600">
                   <Users className="w-5 h-5" />
@@ -568,13 +587,13 @@ export default function Dashboard() {
                   Across all departments
                 </span>
               </div>
-            </div>
+            </div>}
           </div>
 
           {/* Row 2: Charts & Today's Tasks (3 Columns) */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
             {/* 1. Revenue Overview (5 cols) */}
-            <div className="bg-white rounded-2xl border border-slate-100/90 shadow-[0_1px_3px_rgba(0,0,0,0.02),0_6px_16px_rgba(0,0,0,0.02)] p-5 lg:col-span-5 flex flex-col justify-between">
+            {canView("Payments") && <div className="bg-white rounded-2xl border border-slate-100/90 shadow-[0_1px_3px_rgba(0,0,0,0.02),0_6px_16px_rgba(0,0,0,0.02)] p-5 lg:col-span-5 flex flex-col justify-between">
               <div className="flex justify-between items-start">
                 <div>
                   <h3 className="text-sm font-bold text-slate-900">
@@ -684,10 +703,10 @@ export default function Dashboard() {
                   <div className="h-full w-full bg-slate-50/50 rounded-xl" />
                 )}
               </div>
-            </div>
+            </div>}
 
             {/* 2. Lead Conversion Funnel (4 cols) */}
-            <div className="bg-white rounded-2xl border border-slate-100/90 shadow-[0_1px_3px_rgba(0,0,0,0.02),0_6px_16px_rgba(0,0,0,0.02)] p-5 lg:col-span-4 flex flex-col justify-between">
+            {canView("Leads") && <div className="bg-white rounded-2xl border border-slate-100/90 shadow-[0_1px_3px_rgba(0,0,0,0.02),0_6px_16px_rgba(0,0,0,0.02)] p-5 lg:col-span-4 flex flex-col justify-between">
               <div className="flex justify-between items-center mb-2">
                 <h3 className="text-sm font-bold text-slate-900">
                   Lead Conversion Funnel
@@ -730,10 +749,10 @@ export default function Dashboard() {
                   ))}
                 </div>
               </div>
-            </div>
+            </div>}
 
             {/* 3. Today's Tasks (3 cols) - Placed in Row 2 directly matching the design! */}
-            <div className="bg-white rounded-2xl border border-slate-100/90 shadow-[0_1px_3px_rgba(0,0,0,0.02),0_6px_16px_rgba(0,0,0,0.02)] p-5 lg:col-span-3 flex flex-col justify-between">
+            {canView("Tasks") && <div className="bg-white rounded-2xl border border-slate-100/90 shadow-[0_1px_3px_rgba(0,0,0,0.02),0_6px_16px_rgba(0,0,0,0.02)] p-5 lg:col-span-3 flex flex-col justify-between">
               <div className="flex justify-between items-center mb-3">
                 <h3 className="text-sm font-bold text-slate-900">
                   Today&apos;s Tasks
@@ -799,13 +818,13 @@ export default function Dashboard() {
                   );
                 })}
               </div>
-            </div>
+            </div>}
           </div>
 
           {/* Row 3: Recent Leads, Active Deals, Project Progress (3 Equal Columns) */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {/* 1. Recent Leads */}
-            <div className="bg-white rounded-2xl border border-slate-100/90 shadow-[0_1px_3px_rgba(0,0,0,0.02),0_6px_16px_rgba(0,0,0,0.02)] p-5">
+            {canView("Leads") && <div className="bg-white rounded-2xl border border-slate-100/90 shadow-[0_1px_3px_rgba(0,0,0,0.02),0_6px_16px_rgba(0,0,0,0.02)] p-5">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-sm font-bold text-slate-900">Recent Leads</h3>
                 <a
@@ -849,10 +868,10 @@ export default function Dashboard() {
                   </div>
                 ))}
               </div>
-            </div>
+            </div>}
 
             {/* 2. Active Deals */}
-            <div className="bg-white rounded-2xl border border-slate-100/90 shadow-[0_1px_3px_rgba(0,0,0,0.02),0_6px_16px_rgba(0,0,0,0.02)] p-5">
+            {canView("Deals") && <div className="bg-white rounded-2xl border border-slate-100/90 shadow-[0_1px_3px_rgba(0,0,0,0.02),0_6px_16px_rgba(0,0,0,0.02)] p-5">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-sm font-bold text-slate-900">Active Deals</h3>
                 <a
@@ -904,10 +923,10 @@ export default function Dashboard() {
                   );
                 })}
               </div>
-            </div>
+            </div>}
 
             {/* 3. Project Progress */}
-            <div className="bg-white rounded-2xl border border-slate-100/90 shadow-[0_1px_3px_rgba(0,0,0,0.02),0_6px_16px_rgba(0,0,0,0.02)] p-5">
+            {canView("Projects") && <div className="bg-white rounded-2xl border border-slate-100/90 shadow-[0_1px_3px_rgba(0,0,0,0.02),0_6px_16px_rgba(0,0,0,0.02)] p-5">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-sm font-bold text-slate-900">
                   Project Progress
@@ -955,13 +974,13 @@ export default function Dashboard() {
                   );
                 })}
               </div>
-            </div>
+            </div>}
           </div>
 
           {/* Row 4: Team Performance, Activity Timeline, Promotional Card */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
             {/* 1. Team Performance (5 cols) */}
-            <div className="bg-white rounded-2xl border border-slate-100/90 shadow-[0_1px_3px_rgba(0,0,0,0.02),0_6px_16px_rgba(0,0,0,0.02)] p-5 lg:col-span-5">
+            {canView("Performance") && <div className="bg-white rounded-2xl border border-slate-100/90 shadow-[0_1px_3px_rgba(0,0,0,0.02),0_6px_16px_rgba(0,0,0,0.02)] p-5 lg:col-span-5">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-sm font-bold text-slate-900">
                   Team Performance
@@ -1012,10 +1031,10 @@ export default function Dashboard() {
                   </tbody>
                 </table>
               </div>
-            </div>
+            </div>}
 
             {/* 2. Activity Timeline (4 cols) */}
-            <div className="bg-white rounded-2xl border border-slate-100/90 shadow-[0_1px_3px_rgba(0,0,0,0.02),0_6px_16px_rgba(0,0,0,0.02)] p-5 lg:col-span-4">
+            {canView("Activities") && <div className="bg-white rounded-2xl border border-slate-100/90 shadow-[0_1px_3px_rgba(0,0,0,0.02),0_6px_16px_rgba(0,0,0,0.02)] p-5 lg:col-span-4">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-sm font-bold text-slate-900">
                   Activity Timeline
@@ -1054,10 +1073,10 @@ export default function Dashboard() {
                   );
                 })}
               </div>
-            </div>
+            </div>}
 
             {/* 3. Promotional Card: Turn Opportunities Into Success (3 cols) */}
-            <div className="bg-gradient-to-br from-[#e8f1ff] via-[#f0f4ff] to-[#f5f0ff] rounded-2xl border border-blue-100/80 shadow-[0_1px_3px_rgba(0,0,0,0.02),0_6px_16px_rgba(0,0,0,0.02)] p-5 lg:col-span-3 flex flex-col justify-between relative overflow-hidden">
+            {canView("Reports") && <div className="bg-gradient-to-br from-[#e8f1ff] via-[#f0f4ff] to-[#f5f0ff] rounded-2xl border border-blue-100/80 shadow-[0_1px_3px_rgba(0,0,0,0.02),0_6px_16px_rgba(0,0,0,0.02)] p-5 lg:col-span-3 flex flex-col justify-between relative overflow-hidden">
               {/* 3D Isometric Pastel Cubes Graphic */}
               <div className="absolute top-3 right-3 pointer-events-none opacity-90">
                 <svg
@@ -1128,8 +1147,14 @@ export default function Dashboard() {
                   </p>
                 </div>
               </div>
-            </div>
+            </div>}
           </div>
+
+          {!hasDashboardWidgets && (
+            <div className="bg-white rounded-2xl border border-slate-100 p-8 text-center text-sm text-slate-500">
+              No dashboard widgets are enabled for your role. Ask an administrator to update your permissions.
+            </div>
+          )}
         </div>
     </>
   );

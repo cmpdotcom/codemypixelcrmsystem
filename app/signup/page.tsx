@@ -36,7 +36,7 @@ const FREE_EMAIL_DOMAINS = new Set([
 export default function SignupPage() {
   const router = useRouter();
   const [brandName, setBrandName] = useState("CMP CRM");
-  const [brandLogo, setBrandLogo] = useState("/logo.png");
+  const [brandLogo, setBrandLogo] = useState("/demo-logo-horizontal.svg");
   const [email, setEmail] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -66,7 +66,7 @@ export default function SignupPage() {
       .then((s) => {
         if (!s) return;
         if (s.company_name || s.companyName) setBrandName(s.company_name || s.companyName);
-        setBrandLogo(s.company_loginLogoUrl || s.company_logoUrl || "/logo.png");
+        setBrandLogo(s.company_loginLogoUrl || s.company_logoUrl || "/demo-logo-horizontal.svg");
       })
       .catch(() => {});
   }, []);

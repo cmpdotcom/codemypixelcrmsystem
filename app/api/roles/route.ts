@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { defaultPermissionsForRole } from "@/lib/permissions";
+import { ensureInvitableRoles } from "@/lib/invitations";
 
 // GET /api/roles - list all roles with user count
 export async function GET() {
+  await ensureInvitableRoles();
   const roles = await prisma.role.findMany({
     include: {
       _count: {
@@ -41,7 +44,7 @@ export async function POST(request: NextRequest) {
       name: body.name.trim(),
       description: body.description?.trim() || null,
       color: body.color || "blue",
-      permissions: body.permissions || {},
+      permissions: body.permissions || defaultPermissionsForRole(body.name.trim()),
     },
   });
 

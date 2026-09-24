@@ -10,7 +10,7 @@ interface SettingsContextValue {
   refresh: () => Promise<void>;
   /** Company display name (general or company settings) */
   companyName: string;
-  /** Logo URL (company settings) with /logo.png fallback */
+  /** Logo URL (company settings) with a branded demo fallback */
   logoUrl: string;
   /** ISO currency code parsed from the "currency" setting, e.g. "USD" */
   currencyCode: string;
@@ -26,7 +26,7 @@ interface SettingsContextValue {
   dealView: "kanban" | "list";
   /** Default pagination size */
   pageSize: number;
-  /** Login/auth page logo with fallbacks */
+  /** Login/auth page logo with branded fallbacks */
   loginLogoUrl: string;
   /** Resolved hex for the configured primary theme color */
   primaryHex: string;
@@ -114,7 +114,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!loaded) return;
     document.title = `${companyName} — CRM`;
-    const favicon = settings.company_faviconUrl || "/logo.png";
+    const favicon = settings.company_faviconUrl || "/demo-logo.svg";
     let link = document.querySelector<HTMLLinkElement>("link[rel~='icon']");
     if (!link) {
       link = document.createElement("link");
@@ -157,9 +157,9 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     loaded,
     refresh,
     companyName,
-    logoUrl: settings.company_logoUrl || "/logo.png",
+    logoUrl: settings.company_logoUrl || "/demo-logo-horizontal.svg",
     loginLogoUrl:
-      settings.company_loginLogoUrl || settings.company_logoUrl || "/logo.png",
+      settings.company_loginLogoUrl || settings.company_logoUrl || "/demo-logo-horizontal.svg",
     currencyCode,
     money,
     moneyCompact,
@@ -185,7 +185,7 @@ export function useSettings(): SettingsContextValue {
       loaded: false,
       refresh: async () => {},
       companyName: "CMP CRM",
-      logoUrl: "/logo.png",
+      logoUrl: "/demo-logo-horizontal.svg",
       currencyCode: "USD",
       money: (n) => `$${n.toLocaleString()}`,
       moneyCompact: (n) => (n >= 1000 ? `$${(n / 1000).toFixed(0)}k` : `$${n}`),
@@ -193,7 +193,7 @@ export function useSettings(): SettingsContextValue {
       landingRoute: "/",
       dealView: "kanban",
       pageSize: 10,
-      loginLogoUrl: "/logo.png",
+      loginLogoUrl: "/demo-logo-horizontal.svg",
       primaryHex: BRAND_COLORS.blue,
       secondaryHex: BRAND_COLORS.indigo,
       primaryBg: "#3b82f61a",

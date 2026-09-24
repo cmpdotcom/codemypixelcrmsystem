@@ -20,7 +20,7 @@ function VerifyEmailForm() {
   const searchParams = useSearchParams();
   const email = searchParams.get("email") || "";
   const [brandName, setBrandName] = useState("CMP CRM");
-  const [brandLogo, setBrandLogo] = useState("/logo.png");
+  const [brandLogo, setBrandLogo] = useState("/demo-logo-horizontal.svg");
   const [code, setCode] = useState("");
   const [cooldown, setCooldown] = useState(0);
   const [resent, setResent] = useState(false);
@@ -35,7 +35,7 @@ function VerifyEmailForm() {
       .then((s) => {
         if (!s) return;
         if (s.company_name || s.companyName) setBrandName(s.company_name || s.companyName);
-        setBrandLogo(s.company_loginLogoUrl || s.company_logoUrl || "/logo.png");
+        setBrandLogo(s.company_loginLogoUrl || s.company_logoUrl || "/demo-logo-horizontal.svg");
       })
       .catch(() => {});
   }, []);

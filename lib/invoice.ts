@@ -89,7 +89,7 @@ export async function downloadInvoicePdf(payment: InvoicePayment, branding: Invo
 
   // Logo (fallback to text wordmark)
   let logoDrawn = false;
-  const candidates = [branding.logoUrl, "/logo.png"].filter(Boolean) as string[];
+  const candidates = [branding.logoUrl, "/demo-logo-invoice.svg", "/logo.png"].filter(Boolean) as string[];
   for (const url of candidates) {
     const img = await loadImageDataUrl(url);
     if (img) {

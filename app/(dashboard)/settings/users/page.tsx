@@ -16,6 +16,7 @@ import {
   UserX,
   Shield,
   Users,
+  Mail,
 } from "lucide-react";
 
 interface UserItem {
@@ -46,6 +47,13 @@ interface TeamOption {
   department: string;
 }
 
+interface InviteRoleOption {
+  id: string;
+  name: string;
+  color: string;
+  description?: string | null;
+}
+
 const avatarColors = [
   "bg-blue-500",
   "bg-emerald-500",
@@ -68,6 +76,7 @@ export default function UsersSettingsPage() {
   const [users, setUsers] = useState<UserItem[]>([]);
   const [roles, setRoles] = useState<RoleOption[]>([]);
   const [teams, setTeams] = useState<TeamOption[]>([]);
+  const [inviteRoles, setInviteRoles] = useState<InviteRoleOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("All Roles");
@@ -90,6 +99,9 @@ export default function UsersSettingsPage() {
     status: "Active" as "Active" | "Inactive",
   });
   const [submitting, setSubmitting] = useState(false);
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [inviteForm, setInviteForm] = useState({ email: "", firstName: "", lastName: "", roleId: "", teamId: "" });
+  const [inviteLink, setInviteLink] = useState<string | null>(null);
 
   const fetchUsers = useCallback(async () => {
     try {
@@ -106,16 +118,53 @@ export default function UsersSettingsPage() {
 
   const fetchFilters = useCallback(async () => {
     try {
-      const [rolesRes, teamsRes] = await Promise.all([
+      const [rolesRes, teamsRes, inviteRolesRes] = await Promise.all([
         fetch("/api/roles"),
         fetch("/api/teams"),
+        fetch("/api/invitations/roles"),
       ]);
       if (rolesRes.ok) setRoles(await rolesRes.json());
       if (teamsRes.ok) setTeams(await teamsRes.json());
+      if (inviteRolesRes.ok) {
+        const data = await inviteRolesRes.json();
+        setInviteRoles(data);
+        setInviteForm((current) => ({ ...current, roleId: current.roleId || data[0]?.id || "" }));
+      }
     } catch {
       /* ignore */
     }
   }, []);
+
+  const handleOpenInviteModal = () => {
+    setInviteForm({ email: "", firstName: "", lastName: "", roleId: inviteRoles[0]?.id || "", teamId: "" });
+    setInviteLink(null);
+    setError(null);
+    setShowInviteModal(true);
+  };
+
+  const handleInvite = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setSubmitting(true);
+    setError(null);
+    setInviteLink(null);
+    try {
+      const res = await fetch("/api/invitations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(inviteForm),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Could not send invitation");
+      setInviteLink(data.devLink || null);
+      setSuccess(`Invitation sent to ${inviteForm.email}.`);
+      setTimeout(() => setSuccess(null), 5000);
+      if (!data.devLink) setShowInviteModal(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not send invitation");
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   useEffect(() => {
     fetchUsers();
@@ -327,13 +376,16 @@ export default function UsersSettingsPage() {
           </select>
         </div>
 
-        <button
-          onClick={handleOpenCreateModal}
-          className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm shadow-blue-500/20 transition-colors cursor-pointer self-start lg:self-auto"
-        >
-          <Plus className="w-3.5 h-3.5" />
-          Add User
-        </button>
+        <div className="flex items-center gap-2 self-start lg:self-auto">
+          <button onClick={handleOpenInviteModal} className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition-colors cursor-pointer">
+            <Mail className="w-3.5 h-3.5" />
+            Invite User
+          </button>
+          <button onClick={handleOpenCreateModal} className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm shadow-blue-500/20 transition-colors cursor-pointer">
+            <Plus className="w-3.5 h-3.5" />
+            Add User
+          </button>
+        </div>
       </div>
 
       {/* Users Table */}
@@ -440,6 +492,37 @@ export default function UsersSettingsPage() {
           </table>
         </div>
       </FormCard>
+
+      {showInviteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs" onClick={() => setShowInviteModal(false)}>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 space-y-4" onClick={(event) => event.stopPropagation()}>
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div><h3 className="text-sm font-bold text-slate-900">Invite a team member</h3><p className="text-[11px] text-slate-500 mt-1">They’ll receive a secure link to create their own password.</p></div>
+              <button onClick={() => setShowInviteModal(false)} className="p-1 rounded-lg hover:bg-slate-100 text-slate-400"><X className="w-4 h-4" /></button>
+            </div>
+            {inviteLink ? (
+              <div className="rounded-xl bg-amber-50 border border-amber-200 p-4 space-y-2">
+                <p className="text-xs font-semibold text-amber-800">Email is not configured, so use this local invite link:</p>
+                <a href={inviteLink} className="block text-xs text-blue-700 break-all underline">{inviteLink}</a>
+                <button onClick={() => navigator.clipboard?.writeText(inviteLink)} className="text-xs font-semibold text-amber-800">Copy link</button>
+              </div>
+            ) : (
+              <form onSubmit={handleInvite} className="space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <label className="text-xs font-semibold text-slate-700">First name<input value={inviteForm.firstName} onChange={(e) => setInviteForm({ ...inviteForm, firstName: e.target.value })} placeholder="Optional" className="mt-1.5 w-full px-3 py-2 text-xs border border-slate-200 rounded-lg" /></label>
+                  <label className="text-xs font-semibold text-slate-700">Last name<input value={inviteForm.lastName} onChange={(e) => setInviteForm({ ...inviteForm, lastName: e.target.value })} placeholder="Optional" className="mt-1.5 w-full px-3 py-2 text-xs border border-slate-200 rounded-lg" /></label>
+                </div>
+                <label className="block text-xs font-semibold text-slate-700">Email address<input required type="email" value={inviteForm.email} onChange={(e) => setInviteForm({ ...inviteForm, email: e.target.value })} placeholder="name@company.com" className="mt-1.5 w-full px-3 py-2 text-xs border border-slate-200 rounded-lg" /></label>
+                <div className="grid grid-cols-2 gap-3">
+                  <label className="text-xs font-semibold text-slate-700">Role<select required value={inviteForm.roleId} onChange={(e) => setInviteForm({ ...inviteForm, roleId: e.target.value })} className="mt-1.5 w-full px-3 py-2 text-xs border border-slate-200 rounded-lg bg-white">{inviteRoles.map((role) => <option key={role.id} value={role.id}>{role.name}</option>)}</select></label>
+                  <label className="text-xs font-semibold text-slate-700">Team<select value={inviteForm.teamId} onChange={(e) => setInviteForm({ ...inviteForm, teamId: e.target.value })} className="mt-1.5 w-full px-3 py-2 text-xs border border-slate-200 rounded-lg bg-white"><option value="">No team yet</option>{teams.map((team) => <option key={team.id} value={team.id}>{team.name}</option>)}</select></label>
+                </div>
+                <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100"><button type="button" onClick={() => setShowInviteModal(false)} className="px-4 py-2 text-xs font-semibold text-slate-600 border border-slate-200 rounded-lg">Cancel</button><button type="submit" disabled={submitting || !inviteForm.roleId} className="px-4 py-2 text-xs font-semibold text-white bg-blue-600 rounded-lg disabled:opacity-50 flex items-center gap-1.5">{submitting && <Loader2 className="w-3 h-3 animate-spin" />}Send invitation</button></div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Add / Edit User Modal */}
       {showModal && (
