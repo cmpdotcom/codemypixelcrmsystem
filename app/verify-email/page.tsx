@@ -6,6 +6,7 @@ import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useActionState } from "react";
 import { verifyEmail, resendVerification } from "@/app/actions/auth";
+import { DEFAULT_LOGO } from "@/lib/brand";
 import {
   Mail,
   ShieldCheck,
@@ -20,7 +21,7 @@ function VerifyEmailForm() {
   const searchParams = useSearchParams();
   const email = searchParams.get("email") || "";
   const [brandName, setBrandName] = useState("CMP CRM");
-  const [brandLogo, setBrandLogo] = useState("/demo-logo-horizontal.svg");
+  const [brandLogo, setBrandLogo] = useState(DEFAULT_LOGO);
   const [code, setCode] = useState("");
   const [cooldown, setCooldown] = useState(0);
   const [resent, setResent] = useState(false);
@@ -35,7 +36,7 @@ function VerifyEmailForm() {
       .then((s) => {
         if (!s) return;
         if (s.company_name || s.companyName) setBrandName(s.company_name || s.companyName);
-        setBrandLogo(s.company_loginLogoUrl || s.company_logoUrl || "/demo-logo-horizontal.svg");
+        setBrandLogo(s.company_loginLogoUrl || s.company_logoUrl || DEFAULT_LOGO);
       })
       .catch(() => {});
   }, []);

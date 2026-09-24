@@ -1,5 +1,6 @@
 import { jsPDF } from "jspdf";
 import { toAbsoluteUrl } from "@/lib/app-url";
+import { DEFAULT_LOGO } from "@/lib/brand";
 
 export interface InvoicePayment {
   invoiceNumber: string;
@@ -99,7 +100,7 @@ export async function downloadInvoicePdf(payment: InvoicePayment, branding: Invo
 
   // Logo (fallback to text wordmark)
   let logoDrawn = false;
-  const candidates = [branding.logoUrl, "/demo-logo-invoice.svg", "/logo.png"].filter(Boolean) as string[];
+  const candidates = [branding.logoUrl, DEFAULT_LOGO].filter(Boolean) as string[];
   for (const url of candidates) {
     const img = await loadImageDataUrl(resolveAssetUrl(url));
     if (img) {

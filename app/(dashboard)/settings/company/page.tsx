@@ -11,6 +11,7 @@ import {
   SaveBar,
 } from "@/components/SettingsUI";
 import { useUploadThing } from "@/lib/uploadthing";
+import { DEFAULT_LOGO } from "@/lib/brand";
 import { Loader2, Upload, Trash2, CheckCircle2, Image as ImageIcon } from "lucide-react";
 
 const INDUSTRIES = [
@@ -68,11 +69,11 @@ const DEFAULTS: Record<string, string> = {
   company_country: "Bangladesh",
   company_primaryColor: "blue",
   company_secondaryColor: "indigo",
-  company_logoUrl: "/demo-logo-horizontal.svg",
-  company_faviconUrl: "/demo-logo.svg",
-  company_emailLogoUrl: "/demo-logo-email.svg",
-  company_loginLogoUrl: "/demo-logo-horizontal.svg",
-  company_invoiceLogoUrl: "/demo-logo-invoice.svg",
+  company_logoUrl: DEFAULT_LOGO,
+  company_faviconUrl: DEFAULT_LOGO,
+  company_emailLogoUrl: DEFAULT_LOGO,
+  company_loginLogoUrl: DEFAULT_LOGO,
+  company_invoiceLogoUrl: DEFAULT_LOGO,
 };
 
 function ColorPicker({
@@ -337,7 +338,7 @@ export default function CompanyProfilePage() {
               label="Logo"
               value={formData.company_logoUrl}
               onChange={set("company_logoUrl")}
-              fallback="/demo-logo-horizontal.svg"
+              fallback={DEFAULT_LOGO}
             />
           </FormField>
 
@@ -346,7 +347,7 @@ export default function CompanyProfilePage() {
               label="Favicon"
               value={formData.company_faviconUrl}
               onChange={set("company_faviconUrl")}
-              fallback="/demo-logo.svg"
+              fallback={DEFAULT_LOGO}
             />
           </FormField>
 
@@ -525,7 +526,7 @@ export default function CompanyProfilePage() {
               aspect="wide"
               value={formData.company_logoUrl}
               onChange={set("company_logoUrl")}
-              fallback="/demo-logo-horizontal.svg"
+              fallback={DEFAULT_LOGO}
             />
           </div>
 
@@ -541,7 +542,7 @@ export default function CompanyProfilePage() {
               aspect="wide"
               value={formData.company_emailLogoUrl}
               onChange={set("company_emailLogoUrl")}
-              fallback="/demo-logo-email.svg"
+              fallback={DEFAULT_LOGO}
             />
           </div>
 
@@ -557,7 +558,7 @@ export default function CompanyProfilePage() {
               aspect="wide"
               value={formData.company_loginLogoUrl}
               onChange={set("company_loginLogoUrl")}
-              fallback="/demo-logo-horizontal.svg"
+              fallback={DEFAULT_LOGO}
             />
           </div>
 
@@ -573,7 +574,7 @@ export default function CompanyProfilePage() {
               aspect="wide"
               value={formData.company_invoiceLogoUrl}
               onChange={set("company_invoiceLogoUrl")}
-              fallback="/demo-logo-invoice.svg"
+              fallback={DEFAULT_LOGO}
             />
           </div>
         </div>

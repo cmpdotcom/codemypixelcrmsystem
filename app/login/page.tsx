@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
+import { DEFAULT_LOGO } from "@/lib/brand";
 import {
   Mail,
   Lock,
@@ -21,7 +22,7 @@ import {
 export default function LoginPage() {
   const router = useRouter();
   const [brandName, setBrandName] = useState("CMP CRM");
-  const [brandLogo, setBrandLogo] = useState("/demo-logo-horizontal.svg");
+  const [brandLogo, setBrandLogo] = useState(DEFAULT_LOGO);
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [email, setEmail] = useState("");
@@ -38,7 +39,7 @@ export default function LoginPage() {
       .then((s) => {
         if (!s) return;
         if (s.company_name || s.companyName) setBrandName(s.company_name || s.companyName);
-        setBrandLogo(s.company_loginLogoUrl || s.company_logoUrl || "/demo-logo-horizontal.svg");
+        setBrandLogo(s.company_loginLogoUrl || s.company_logoUrl || DEFAULT_LOGO);
       })
       .catch(() => {});
     // Show confirmation when arriving from the verify page

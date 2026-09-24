@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
+import { DEFAULT_LOGO } from "@/lib/brand";
 
 export type SettingsMap = Record<string, string>;
 
@@ -114,7 +115,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!loaded) return;
     document.title = `${companyName} — CRM`;
-    const favicon = settings.company_faviconUrl || "/demo-logo.svg";
+    const favicon = settings.company_faviconUrl || DEFAULT_LOGO;
     let link = document.querySelector<HTMLLinkElement>("link[rel~='icon']");
     if (!link) {
       link = document.createElement("link");
@@ -157,9 +158,9 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     loaded,
     refresh,
     companyName,
-    logoUrl: settings.company_logoUrl || "/demo-logo-horizontal.svg",
+    logoUrl: settings.company_logoUrl || DEFAULT_LOGO,
     loginLogoUrl:
-      settings.company_loginLogoUrl || settings.company_logoUrl || "/demo-logo-horizontal.svg",
+      settings.company_loginLogoUrl || settings.company_logoUrl || DEFAULT_LOGO,
     currencyCode,
     money,
     moneyCompact,
@@ -185,7 +186,7 @@ export function useSettings(): SettingsContextValue {
       loaded: false,
       refresh: async () => {},
       companyName: "CMP CRM",
-      logoUrl: "/demo-logo-horizontal.svg",
+      logoUrl: DEFAULT_LOGO,
       currencyCode: "USD",
       money: (n) => `$${n.toLocaleString()}`,
       moneyCompact: (n) => (n >= 1000 ? `$${(n / 1000).toFixed(0)}k` : `$${n}`),
@@ -193,7 +194,7 @@ export function useSettings(): SettingsContextValue {
       landingRoute: "/",
       dealView: "kanban",
       pageSize: 10,
-      loginLogoUrl: "/demo-logo-horizontal.svg",
+      loginLogoUrl: DEFAULT_LOGO,
       primaryHex: BRAND_COLORS.blue,
       secondaryHex: BRAND_COLORS.indigo,
       primaryBg: "#3b82f61a",

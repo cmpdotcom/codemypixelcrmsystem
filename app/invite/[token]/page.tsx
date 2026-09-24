@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { CheckCircle2, Loader2, ShieldCheck } from "lucide-react";
+import { DEFAULT_LOGO } from "@/lib/brand";
 
 interface InvitationDetails {
   email: string;
@@ -62,7 +63,7 @@ export default function InvitationPage() {
     <main className="min-h-screen flex items-center justify-center bg-[#f4f7fc] px-5 py-10">
       <div className="w-full max-w-md">
         <div className="flex items-center justify-center gap-2.5 mb-6">
-          <Image src="/demo-logo.svg" alt="CMP CRM" width={42} height={42} className="rounded-xl" />
+          <Image src={DEFAULT_LOGO} alt="CMP CRM" width={42} height={42} className="rounded-xl" />
           <span className="text-xl font-bold text-slate-900">CMP CRM</span>
         </div>
         <div className="bg-white rounded-3xl border border-slate-200 shadow-xl p-7 sm:p-9">

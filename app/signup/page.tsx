@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { signup } from "@/app/actions/auth";
+import { DEFAULT_LOGO } from "@/lib/brand";
 import { Turnstile } from "@/components/Turnstile";
 import {
   User,
@@ -36,7 +37,7 @@ const FREE_EMAIL_DOMAINS = new Set([
 export default function SignupPage() {
   const router = useRouter();
   const [brandName, setBrandName] = useState("CMP CRM");
-  const [brandLogo, setBrandLogo] = useState("/demo-logo-horizontal.svg");
+  const [brandLogo, setBrandLogo] = useState(DEFAULT_LOGO);
   const [email, setEmail] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -66,7 +67,7 @@ export default function SignupPage() {
       .then((s) => {
         if (!s) return;
         if (s.company_name || s.companyName) setBrandName(s.company_name || s.companyName);
-        setBrandLogo(s.company_loginLogoUrl || s.company_logoUrl || "/demo-logo-horizontal.svg");
+        setBrandLogo(s.company_loginLogoUrl || s.company_logoUrl || DEFAULT_LOGO);
       })
       .catch(() => {});
   }, []);
