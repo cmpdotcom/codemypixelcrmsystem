@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
 // GET /api/leads/[id] - Get a single lead
@@ -30,6 +31,13 @@ export async function PATCH(
   const existing = await prisma.lead.findUnique({ where: { id } });
   if (!existing) {
     return NextResponse.json({ error: "Lead not found" }, { status: 404 });
+  }
+
+  if (body.setter !== undefined) {
+    const session = await auth();
+    if (!session?.user?.roleName || !["Super Admin", "Executive", "Sales Manager"].includes(session.user.roleName)) {
+      return NextResponse.json({ error: "Only workspace managers can assign leads" }, { status: 403 });
+    }
   }
 
   if (body.email !== undefined && (typeof body.email !== "string" || !/^\S+@\S+\.\S+$/.test(body.email.trim()))) {

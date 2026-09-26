@@ -99,6 +99,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "A valid email is required" }, { status: 400 });
   }
 
+  if (body.setter !== undefined) {
+    const session = await auth();
+    if (!session?.user?.roleName || !["Super Admin", "Executive", "Sales Manager"].includes(session.user.roleName)) {
+      return NextResponse.json({ error: "Only workspace managers can assign leads" }, { status: 403 });
+    }
+  }
+
   const optionalString = (value: unknown) => typeof value === "string" && value.trim() ? value.trim() : null;
   const optionalDate = (value: unknown) => {
     if (!value) return null;

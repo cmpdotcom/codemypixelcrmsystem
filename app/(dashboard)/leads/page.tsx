@@ -303,8 +303,6 @@ interface LeadSettings {
 const SOURCES = ["LinkedIn", "Website", "Referral", "Instagram", "Cold Call", "Google Ads", "Facebook", "WhatsApp"];
 const STATUSES = ["New", "Contacted", "Qualified", "Meeting", "Proposal", "Not Interested", "Nurture", "Converted", "Lost"];
 const SERVICES = ["Custom ERP", "Website", "Mobile App", "CRM", "ERP", "Dashboard", "E-commerce", "Other"];
-const SETTERS = ["Ali Khan", "Fatima Noor", "Usman Tariq", "Sara Ahmed"];
-
 export default function LeadsPageWrapper() {
   return (
     <React.Suspense fallback={<div className="p-8 text-sm text-slate-500">Loading...</div>}>
@@ -318,6 +316,8 @@ function LeadsPage() {
   const roleName = session?.user?.roleName || "";
   const canImportLeads = ["Super Admin", "Executive", "Sales Manager"].includes(roleName);
   const canAssignLeads = canImportLeads;
+  const canEditLeadStatus = roleName === "Super Admin"
+    || (session?.user?.permissions as Record<string, { edit?: boolean }> | undefined)?.Leads?.edit === true;
   const [activeTab, setActiveTab] = useState("All Leads");
   const [searchQuery, setSearchQuery] = useState("");
   const [sourceFilter, setSourceFilter] = useState("");
@@ -342,6 +342,7 @@ function LeadsPage() {
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [selectAll, setSelectAll] = useState(false);
   const [detailsTab, setDetailsTab] = useState("Overview");
+  const [statusUpdating, setStatusUpdating] = useState(false);
 
   // Data state
   const [leads, setLeads] = useState<Lead[]>([]);
@@ -361,6 +362,7 @@ function LeadsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [leadSettings, setLeadSettings] = useState<LeadSettings>({ statuses: [], industries: [] });
+  const [assignees, setAssignees] = useState<{ id: string; name: string; image: string | null; role: string }[]>([]);
 
   useEffect(() => {
     fetch("/api/leads/options")
@@ -385,8 +387,6 @@ function LeadsPage() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
   const [showBulkActions, setShowBulkActions] = useState(false);
-  const [assignees, setAssignees] = useState<{ id: string; name: string; image: string | null; role: string }[]>([]);
-
   // Inline edit state
   const [inlineEdit, setInlineEdit] = useState<{ id: string; field: string; value: string } | null>(null);
 
@@ -729,6 +729,20 @@ function LeadsPage() {
     }
   };
 
+  const handleStatusChange = async (status: string) => {
+    if (!selectedLead || !canEditLeadStatus || status === selectedLead.status) return;
+    setStatusUpdating(true);
+    try {
+      const updatedLead = await updateLead(selectedLead.id, { status });
+      setSelectedLead((current) => current?.id === selectedLead.id ? { ...current, ...updatedLead } : current);
+      await fetchLeads();
+    } catch {
+      setError("Failed to update lead status");
+    } finally {
+      setStatusUpdating(false);
+    }
+  };
+
   const handleBulkDelete = async () => {
     if (!confirm(`Delete ${selectedRows.length} selected leads? This cannot be undone.`)) return;
     try {
@@ -1014,7 +1028,7 @@ function LeadsPage() {
                 </select>
                 <select value={setterFilter} onChange={(event) => setSetterFilter(event.target.value)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700">
                   <option value="">All Setters</option>
-                  {SETTERS.map((setter) => <option key={setter} value={setter}>{setter}</option>)}
+                  {assignees.map((assignee) => <option key={assignee.name} value={assignee.name}>{assignee.name}</option>)}
                 </select>
                 {(sourceFilter || setterFilter) && (
                   <button onClick={() => { setSourceFilter(""); setSetterFilter(""); }} className="text-xs font-semibold text-blue-600 hover:text-blue-700">Clear filters</button>
@@ -1259,9 +1273,17 @@ function LeadsPage() {
                       <span className="text-xs font-bold text-slate-900">
                         LD-{String(selectedLead.leadNumber).padStart(5, "0")}
                       </span>
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${getStatusStyle(selectedLead.status)}`}>
-                        {selectedLead.status}
-                      </span>
+                      <select
+                        value={selectedLead.status}
+                        onChange={(event) => handleStatusChange(event.target.value)}
+                        disabled={!canEditLeadStatus || statusUpdating}
+                        aria-label="Change lead status"
+                        className={`px-2 py-0.5 rounded text-[10px] font-bold cursor-pointer outline-none ${getStatusStyle(selectedLead.status)} disabled:cursor-not-allowed disabled:opacity-70`}
+                      >
+                        {Array.from(new Set([selectedLead.status, ...statusOptions])).map((status) => (
+                          <option key={status} value={status}>{status}</option>
+                        ))}
+                      </select>
                     </div>
                   </div>
 
@@ -1697,6 +1719,8 @@ function LeadsPage() {
           mode="add"
           statusOptions={statusOptions}
           industryOptions={industryOptions}
+          setterOptions={assignees.map((assignee) => assignee.name)}
+          canAssign={canAssignLeads}
           onClose={() => setShowAddModal(false)}
           onSave={async (data) => {
             await createLead(data);
@@ -1713,6 +1737,8 @@ function LeadsPage() {
           lead={editingLead}
           statusOptions={statusOptions}
           industryOptions={industryOptions}
+          setterOptions={assignees.map((assignee) => assignee.name)}
+          canAssign={canAssignLeads}
           onClose={() => { setShowEditModal(false); setEditingLead(null); }}
           onSave={async (data) => {
             await updateLead(editingLead.id, data);
@@ -1902,6 +1928,8 @@ function LeadModal({
   lead,
   statusOptions,
   industryOptions,
+  setterOptions,
+  canAssign,
   onClose,
   onSave,
 }: {
@@ -1909,6 +1937,8 @@ function LeadModal({
   lead?: Lead | null;
   statusOptions: string[];
   industryOptions: string[];
+  setterOptions: string[];
+  canAssign: boolean;
   onClose: () => void;
   onSave: (data: Record<string, string>) => Promise<void>;
 }) {
@@ -2052,7 +2082,23 @@ function LeadModal({
             </div>
             <div className="grid grid-cols-2 gap-3">
               {selectField("status", "Status", statusOptions)}
-              {selectField("setter", "Assigned Setter", SETTERS)}
+              {canAssign ? selectField(
+                "setter",
+                "Assigned Setter",
+                Array.from(new Set([...(lead?.setter ? [lead.setter] : []), ...setterOptions])),
+              ) : (
+                <div>
+                  <label className="text-[11px] font-semibold text-slate-600 mb-1.5 block">Assigned Setter</label>
+                  <input
+                    type="text"
+                    value={formData.setter}
+                    readOnly
+                    disabled
+                    placeholder="Only managers can assign leads"
+                    className="w-full text-xs border border-slate-200 rounded-xl px-3 py-2.5 bg-slate-100 text-slate-500 cursor-not-allowed"
+                  />
+                </div>
+              )}
             </div>
           </div>
 
