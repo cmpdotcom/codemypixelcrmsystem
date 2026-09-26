@@ -42,6 +42,26 @@ import {
   Check as CheckIcon,
 } from "lucide-react";
 import { useSettings } from "@/components/SettingsProvider";
+import { useAppDispatch, useAppSelector } from "@/lib/store/hooks";
+import {
+  fetchLeads as fetchLeadsThunk,
+  fetchLeadOptions as fetchLeadOptionsThunk,
+  fetchAssignees as fetchAssigneesThunk,
+  createLead as createLeadThunk,
+  updateLead as updateLeadThunk,
+  deleteLead as deleteLeadThunk,
+  bulkAction as bulkActionThunk,
+  setPage as setPageAction,
+  setPageSize as setPageSizeAction,
+  setSearchQuery as setSearchQueryAction,
+  setActiveTab as setActiveTabAction,
+  setSourceFilter as setSourceFilterAction,
+  setSetterFilter as setSetterFilterAction,
+  clearLeadFilters,
+  setSelectedLead as setSelectedLeadAction,
+  clearLeadsError,
+  type Lead,
+} from "@/lib/store";
 
 function LinkedinIcon({ className = "w-3.5 h-3.5" }: { className?: string }) {
   return (
@@ -229,37 +249,6 @@ function formatDateTime(date: Date | string | null) {
     ", " + d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
 }
 
-interface Lead {
-  id: string;
-  leadNumber: number;
-  name: string;
-  company: string;
-  email: string;
-  phone: string | null;
-  location: string | null;
-  linkedin: string | null;
-  source: string;
-  service: string | null;
-  status: string;
-  setter: string | null;
-  setterImg: string | null;
-  setterId?: string | null;
-  closer?: string | null;
-  closerId?: string | null;
-  interestedAt?: string | null;
-  interestedNote?: string | null;
-  budget: string | null;
-  timeline: string | null;
-  companySize: string | null;
-  industry: string | null;
-  lastContact: Date | null;
-  nextFollowUp: Date | null;
-  notes: string | null;
-  customData: Record<string, string> | null;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
 interface LeadActivity {
   id: string;
   activityNumber: number;
@@ -288,24 +277,6 @@ interface LeadFile {
   createdAt: string;
 }
 
-interface LeadStats {
-  total: number;
-  new: number;
-  contacted: number;
-  qualified: number;
-  notInterested: number;
-  lost: number;
-  nurture: number;
-  meeting: number;
-  proposal: number;
-  converted: number;
-}
-
-interface LeadSettings {
-  statuses: { name: string; color: string; count: number }[];
-  industries: string[];
-}
-
 const SOURCES = ["LinkedIn", "Website", "Referral", "Instagram", "Cold Call", "Google Ads", "Facebook", "WhatsApp"];
 const STATUSES = ["New", "Contacted", "Qualified", "Meeting", "Proposal", "Not Interested", "Nurture", "Converted", "Lost"];
 const SERVICES = ["Custom ERP", "Website", "Mobile App", "CRM", "ERP", "Dashboard", "E-commerce", "Other"];
@@ -328,10 +299,19 @@ function LeadsPage() {
   const canAssignLeads = !!isLeadManager;
   const canEditLeadStatus = roleName === "Super Admin"
     || (session?.user?.permissions as Record<string, { edit?: boolean }> | undefined)?.Leads?.edit === true;
-  const [activeTab, setActiveTab] = useState("All Leads");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [sourceFilter, setSourceFilter] = useState("");
-  const [setterFilter, setSetterFilter] = useState("");
+  const dispatch = useAppDispatch();
+  const {
+    leads,
+    total,
+    totalPages,
+    stats,
+    leadSettings,
+    assignees,
+    selectedLead,
+    loading,
+    error: leadsError,
+    filters: { page, pageSize, searchQuery, activeTab, sourceFilter, setterFilter },
+  } = useAppSelector((state) => state.leads);
   const [showFilters, setShowFilters] = useState(false);
   const [showColumns, setShowColumns] = useState(false);
   const [importing, setImporting] = useState(false);
@@ -348,57 +328,36 @@ function LeadsPage() {
     setter: true,
     created: true,
   });
-  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [selectAll, setSelectAll] = useState(false);
   const [detailsTab, setDetailsTab] = useState("Overview");
   const [statusUpdating, setStatusUpdating] = useState(false);
+  const [localError, setError] = useState<string | null>(null);
+  // Combine local, non-Redux errors (activities, files, CSV import) with
+  // Redux data-layer errors (fetch/mutation failures) for a single banner.
+  const error = localError || leadsError;
 
-  // Data state
-  const [leads, setLeads] = useState<Lead[]>([]);
-  const [total, setTotal] = useState(0);
-  const [stats, setStats] = useState<LeadStats | null>(null);
   const { pageSize: defaultPageSize, loaded: settingsLoaded } = useSettings();
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(Math.min(500, Math.max(50, defaultPageSize || 50)));
   const pageSizeInitialized = React.useRef(false);
   useEffect(() => {
     if (!pageSizeInitialized.current && settingsLoaded) {
-      setPageSize(Math.min(500, Math.max(50, defaultPageSize || 50)));
+      dispatch(setPageSizeAction(Math.min(500, Math.max(50, defaultPageSize || 50))));
       pageSizeInitialized.current = true;
     }
-  }, [defaultPageSize, settingsLoaded]);
-  const [totalPages, setTotalPages] = useState(1);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [leadSettings, setLeadSettings] = useState<LeadSettings>({ statuses: [], industries: [] });
-  const [assignees, setAssignees] = useState<{ id: string; name: string; image: string | null; role: string }[]>([]);
-
-  const fetchLeadOptions = useCallback(async () => {
-    try {
-      const res = await fetch("/api/leads/options");
-      if (!res.ok) throw new Error("Failed to load lead options");
-      const data: LeadSettings = await res.json();
-      setLeadSettings({
-        statuses: Array.isArray(data.statuses) ? data.statuses : [],
-        industries: Array.isArray(data.industries) ? data.industries : [],
-      });
-    } catch {
-      setError("Lead options could not be loaded. Default options are being used.");
-    }
-  }, []);
+  }, [defaultPageSize, settingsLoaded, dispatch]);
 
   useEffect(() => {
-    fetchLeadOptions();
-  }, [fetchLeadOptions]);
+    dispatch(fetchLeadOptionsThunk());
+  }, [dispatch]);
 
   useEffect(() => {
     if (!canAssignLeads) return;
-    fetch("/api/leads/assignees")
-      .then((res) => (res.ok ? res.json() : Promise.reject(new Error("Failed to load assignees"))))
-      .then((data) => setAssignees(Array.isArray(data) ? data : []))
-      .catch(() => setError("Lead assignees could not be loaded."));
-  }, [canAssignLeads]);
+    dispatch(fetchAssigneesThunk());
+  }, [canAssignLeads, dispatch]);
+
+  useEffect(() => {
+    dispatch(fetchLeadsThunk());
+  }, [dispatch, page, pageSize, searchQuery, activeTab, sourceFilter, setterFilter]);
 
   // Modal state
   const [showAddModal, setShowAddModal] = useState(false);
@@ -515,45 +474,6 @@ function LeadsPage() {
     } catch { /* ignore */ }
   };
 
-  const fetchLeads = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const params = new URLSearchParams({
-        page: String(page),
-        pageSize: String(pageSize),
-      });
-      if (searchQuery) params.set("search", searchQuery);
-      if (activeTab !== "All Leads") params.set("status", activeTab);
-      if (sourceFilter) params.set("source", sourceFilter);
-      if (setterFilter) params.set("setter", setterFilter);
-      const res = await fetch(`/api/leads?${params}`);
-      if (!res.ok) {
-        const payload = await res.json().catch(() => null);
-        throw new Error(payload?.error || `Failed to fetch leads (${res.status})`);
-      }
-      const data = await res.json();
-      setLeads(data.leads);
-      setTotal(data.total);
-      setTotalPages(data.totalPages);
-      setStats(data.stats);
-      setSelectedLead((current) => {
-        if (data.leads.length === 0) return null;
-        const refreshedSelection = current && data.leads.find((lead: Lead) => lead.id === current.id);
-        return refreshedSelection || data.leads[0];
-      });
-      fetchLeadOptions();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "An error occurred");
-    } finally {
-      setLoading(false);
-    }
-  }, [page, pageSize, searchQuery, activeTab, sourceFilter, setterFilter, fetchLeadOptions]);
-
-  useEffect(() => {
-    fetchLeads();
-  }, [fetchLeads]);
-
   // Auto-select lead from URL query param (e.g. /leads?lead=xxx)
   const searchParams = useSearchParams();
   useEffect(() => {
@@ -561,22 +481,17 @@ function LeadsPage() {
     if (leadId && leads.length > 0 && selectedLead?.id !== leadId) {
       const lead = leads.find((l) => l.id === leadId);
       if (lead) {
-        setSelectedLead(lead);
+        dispatch(setSelectedLeadAction(lead));
         setDetailsTab("Activities");
       } else {
         // Lead might be on another page — fetch it directly
         fetch(`/api/leads/${leadId}`)
           .then((res) => res.ok ? res.json() : null)
-          .then((data) => { if (data) { setSelectedLead(data); setDetailsTab("Activities"); } })
+          .then((data) => { if (data) { dispatch(setSelectedLeadAction(data)); setDetailsTab("Activities"); } })
           .catch(() => {});
       }
     }
-  }, [searchParams, leads, selectedLead]);
-
-  // Reset to page 1 when search/tab changes
-  useEffect(() => {
-    setPage(1);
-  }, [searchQuery, activeTab, sourceFilter, setterFilter]);
+  }, [searchParams, leads, selectedLead, dispatch]);
 
   const toggleSelectRow = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -602,19 +517,6 @@ function LeadsPage() {
   }, [page]);
 
   // --- CRUD operations ---
-  const createLead = async (formData: Record<string, unknown>) => {
-    const res = await fetch("/api/leads", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(formData),
-    });
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.error || "Failed to create lead");
-    }
-    return res.json();
-  };
-
   const importLeads = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     event.target.value = "";
@@ -698,7 +600,8 @@ function LeadsPage() {
         completed += result.inserted || 0;
         setImportProgress({ completed, total: validRows.length });
       }
-      await fetchLeads();
+      dispatch(fetchLeadsThunk());
+      dispatch(fetchLeadOptionsThunk());
       setImportResult(`Imported ${validRows.length} of ${importPreview.rows.length} rows successfully${validRows.length < importPreview.rows.length ? `; skipped ${importPreview.rows.length - validRows.length} invalid rows` : ""}.`);
       setImportPreview(null);
       setImportMapping({});
@@ -711,38 +614,10 @@ function LeadsPage() {
     }
   };
 
-  const updateLead = async (id: string, data: Record<string, unknown>) => {
-    const res = await fetch(`/api/leads/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
-    if (!res.ok) throw new Error("Failed to update lead");
-    return res.json();
-  };
-
-  const deleteLead = async (id: string) => {
-    const res = await fetch(`/api/leads/${id}`, { method: "DELETE" });
-    if (!res.ok) throw new Error("Failed to delete lead");
-    return res.json();
-  };
-
-  const bulkAction = async (action: string, ids: string[], status?: string, setterId?: string) => {
-    const res = await fetch("/api/leads/bulk", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action, ids, status, setterId }),
-    });
-    if (!res.ok) throw new Error("Bulk action failed");
-    return res.json();
-  };
-
   const handleInlineSave = async (id: string, field: string, value: string) => {
     setInlineEdit(null);
     try {
-      const updatedLead = await updateLead(id, { [field]: value });
-      setSelectedLead((current) => current?.id === id ? { ...current, ...updatedLead } : current);
-      await fetchLeads();
+      await dispatch(updateLeadThunk({ id, data: { [field]: value } })).unwrap();
     } catch {
       setError("Failed to save changes");
     }
@@ -752,9 +627,7 @@ function LeadsPage() {
     if (!selectedLead || !canEditLeadStatus || status === selectedLead.status) return;
     setStatusUpdating(true);
     try {
-      const updatedLead = await updateLead(selectedLead.id, { status });
-      setSelectedLead((current) => current?.id === selectedLead.id ? { ...current, ...updatedLead } : current);
-      await fetchLeads();
+      await dispatch(updateLeadThunk({ id: selectedLead.id, data: { status } })).unwrap();
     } catch {
       setError("Failed to update lead status");
     } finally {
@@ -765,10 +638,9 @@ function LeadsPage() {
   const handleBulkDelete = async () => {
     if (!confirm(`Delete ${selectedRows.length} selected leads? This cannot be undone.`)) return;
     try {
-      await bulkAction("delete", selectedRows);
+      await dispatch(bulkActionThunk({ action: "delete", ids: selectedRows })).unwrap();
       setSelectedRows([]);
       setShowBulkActions(false);
-      await fetchLeads();
     } catch {
       setError("Failed to delete leads");
     }
@@ -776,10 +648,9 @@ function LeadsPage() {
 
   const handleBulkStatus = async (status: string) => {
     try {
-      await bulkAction("updateStatus", selectedRows, status);
+      await dispatch(bulkActionThunk({ action: "updateStatus", ids: selectedRows, status })).unwrap();
       setSelectedRows([]);
       setShowBulkActions(false);
-      await fetchLeads();
     } catch {
       setError("Failed to update leads");
     }
@@ -789,11 +660,10 @@ function LeadsPage() {
     const assignee = assignees.find((user) => user.id === userId);
     if (!assignee) return;
     try {
-      await bulkAction("updateSetter", selectedRows, undefined, assignee.id);
+      await dispatch(bulkActionThunk({ action: "updateSetter", ids: selectedRows, setterId: assignee.id })).unwrap();
       setSelectedRows([]);
       setSelectAll(false);
       setShowBulkActions(false);
-      await fetchLeads();
     } catch {
       setError("Failed to assign leads");
     }
@@ -802,9 +672,7 @@ function LeadsPage() {
   const handleDeleteLead = async (id: string) => {
     if (!confirm("Delete this lead? This cannot be undone.")) return;
     try {
-      await deleteLead(id);
-      if (selectedLead?.id === id) setSelectedLead(null);
-      await fetchLeads();
+      await dispatch(deleteLeadThunk(id)).unwrap();
     } catch {
       setError("Failed to delete lead");
     }
@@ -828,9 +696,9 @@ function LeadsPage() {
       });
       const payload = await res.json().catch(() => null);
       if (!res.ok) throw new Error(payload?.error || "Could not update the hand-off");
-      setSelectedLead(payload);
+      dispatch(setSelectedLeadAction(payload));
       setHandoffForm({ leadId: null, note: "", meetingAt: "", saving: false });
-      await fetchLeads();
+      dispatch(fetchLeadsThunk());
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not update the hand-off");
       setHandoffForm((form) => ({ ...form, saving: false }));
@@ -868,12 +736,12 @@ function LeadsPage() {
             <AlertCircle className="w-4 h-4 shrink-0" />
             <span className="flex-1">{error}</span>
             <button
-              onClick={() => { setError(null); fetchLeads(); }}
+              onClick={() => { setError(null); dispatch(clearLeadsError()); dispatch(fetchLeadsThunk()); }}
               className="text-red-700 hover:text-red-900 font-semibold underline underline-offset-2 cursor-pointer"
             >
               Retry
             </button>
-            <button onClick={() => setError(null)} className="text-red-500 hover:text-red-700 cursor-pointer">
+            <button onClick={() => { setError(null); dispatch(clearLeadsError()); }} className="text-red-500 hover:text-red-700 cursor-pointer">
               <X className="w-4 h-4" />
             </button>
           </div>
@@ -1004,7 +872,7 @@ function LeadsPage() {
                 {tabs.map((tab, i) => (
                   <button
                     key={i}
-                    onClick={() => setActiveTab(tab.label)}
+                    onClick={() => dispatch(setActiveTabAction(tab.label))}
                     className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-2 whitespace-nowrap transition-all cursor-pointer ${
                       activeTab === tab.label
                         ? "bg-blue-50 text-blue-600 border border-blue-100 shadow-2xs"
@@ -1031,7 +899,7 @@ function LeadsPage() {
                 <input
                   type="text"
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={(e) => dispatch(setSearchQueryAction(e.target.value))}
                   placeholder="Search leads by name, company, email or phone..."
                   className="block w-full pl-9 pr-4 py-2 bg-slate-50/70 border border-slate-200/80 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all"
                 />
@@ -1068,16 +936,16 @@ function LeadsPage() {
 
             {showFilters && (
               <div className="flex flex-wrap items-center gap-2 rounded-xl border border-blue-100 bg-blue-50/50 p-3">
-                <select value={sourceFilter} onChange={(event) => setSourceFilter(event.target.value)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700">
+                <select value={sourceFilter} onChange={(event) => dispatch(setSourceFilterAction(event.target.value))} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700">
                   <option value="">All Sources</option>
                   {SOURCES.map((source) => <option key={source} value={source}>{source}</option>)}
                 </select>
-                {canAssignLeads && <select value={setterFilter} onChange={(event) => setSetterFilter(event.target.value)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700">
+                {canAssignLeads && <select value={setterFilter} onChange={(event) => dispatch(setSetterFilterAction(event.target.value))} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700">
                   <option value="">All Setters</option>
                   {assignees.map((assignee) => <option key={assignee.id} value={assignee.name}>{assignee.name}</option>)}
                 </select>}
                 {(sourceFilter || setterFilter) && (
-                  <button onClick={() => { setSourceFilter(""); setSetterFilter(""); }} className="text-xs font-semibold text-blue-600 hover:text-blue-700">Clear filters</button>
+                  <button onClick={() => dispatch(clearLeadFilters())} className="text-xs font-semibold text-blue-600 hover:text-blue-700">Clear filters</button>
                 )}
               </div>
             )}
@@ -1133,7 +1001,7 @@ function LeadsPage() {
                       return (
                         <tr
                           key={lead.id}
-                          onClick={() => setSelectedLead(lead)}
+                          onClick={() => dispatch(setSelectedLeadAction(lead))}
                           className={`hover:bg-slate-50/80 transition-colors cursor-pointer ${
                             isDetailActive ? "bg-blue-50/40" : isSelected ? "bg-blue-50/20" : ""
                           }`}
@@ -1245,7 +1113,7 @@ function LeadsPage() {
 
               <div className="flex items-center gap-1">
                 <button
-                  onClick={() => setPage(Math.max(1, page - 1))}
+                  onClick={() => dispatch(setPageAction(Math.max(1, page - 1)))}
                   disabled={page === 1}
                   className="p-1.5 rounded-lg border border-slate-200/80 text-slate-400 hover:text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                 >
@@ -1260,7 +1128,7 @@ function LeadsPage() {
                   return (
                     <button
                       key={pageNum}
-                      onClick={() => setPage(pageNum)}
+                      onClick={() => dispatch(setPageAction(pageNum))}
                       className={`w-7 h-7 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
                         page === pageNum ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-100"
                       }`}
@@ -1270,7 +1138,7 @@ function LeadsPage() {
                   );
                 })}
                 <button
-                  onClick={() => setPage(Math.min(totalPages, page + 1))}
+                  onClick={() => dispatch(setPageAction(Math.min(totalPages, page + 1)))}
                   disabled={page === totalPages}
                   className="p-1.5 rounded-lg border border-slate-200/80 text-slate-400 hover:text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                 >
@@ -1281,7 +1149,7 @@ function LeadsPage() {
               <div className="flex items-center gap-2">
                 <select
                   value={pageSize}
-                  onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}
+                  onChange={(e) => dispatch(setPageSizeAction(Number(e.target.value)))}
                   className="bg-white border border-slate-200/80 rounded-lg px-2.5 py-1 text-xs font-medium text-slate-700 cursor-pointer shadow-2xs"
                 >
                   <option value={50}>50 / page</option>
@@ -1310,7 +1178,7 @@ function LeadsPage() {
                   <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                     <div className="flex items-center gap-2">
                       <button
-                        onClick={() => setSelectedLead(null)}
+                        onClick={() => dispatch(setSelectedLeadAction(null))}
                         className="text-slate-400 hover:text-slate-600 p-1 rounded-md hover:bg-slate-50 transition-colors"
                         title="Close"
                       >
@@ -1714,8 +1582,8 @@ function LeadsPage() {
                   <textarea
                     key={selectedLead.id}
                     defaultValue={selectedLead.notes || ""}
-                    onBlur={(e) => updateLead(selectedLead.id, { notes: e.target.value })
-                      .then((updatedLead) => setSelectedLead((current) => current?.id === selectedLead.id ? { ...current, ...updatedLead } : current))
+                    onBlur={(e) => dispatch(updateLeadThunk({ id: selectedLead.id, data: { notes: e.target.value } }))
+                      .unwrap()
                       .catch(() => setError("Failed to save notes"))}
                     placeholder="Add notes about this lead..."
                     className="w-full text-xs border border-slate-200 rounded-xl p-3 min-h-[120px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 resize-none"
@@ -1839,9 +1707,8 @@ function LeadsPage() {
           industryOptions={industryOptions}
           onClose={() => setShowAddModal(false)}
           onSave={async (data) => {
-            await createLead(data);
+            await dispatch(createLeadThunk(data)).unwrap();
             setShowAddModal(false);
-            await fetchLeads();
           }}
         />
       )}
@@ -1857,10 +1724,9 @@ function LeadsPage() {
           industryOptions={industryOptions}
           onClose={() => { setShowEditModal(false); setEditingLead(null); }}
           onSave={async (data) => {
-            await updateLead(editingLead.id, data);
+            await dispatch(updateLeadThunk({ id: editingLead.id, data })).unwrap();
             setShowEditModal(false);
             setEditingLead(null);
-            await fetchLeads();
           }}
         />
       )}
