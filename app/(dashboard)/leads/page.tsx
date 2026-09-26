@@ -374,15 +374,23 @@ function LeadsPage() {
   const [leadSettings, setLeadSettings] = useState<LeadSettings>({ statuses: [], industries: [] });
   const [assignees, setAssignees] = useState<{ id: string; name: string; image: string | null; role: string }[]>([]);
 
-  useEffect(() => {
-    fetch("/api/leads/options")
-      .then((res) => (res.ok ? res.json() : Promise.reject(new Error("Failed to load lead options"))))
-      .then((data: LeadSettings) => setLeadSettings({
+  const fetchLeadOptions = useCallback(async () => {
+    try {
+      const res = await fetch("/api/leads/options");
+      if (!res.ok) throw new Error("Failed to load lead options");
+      const data: LeadSettings = await res.json();
+      setLeadSettings({
         statuses: Array.isArray(data.statuses) ? data.statuses : [],
         industries: Array.isArray(data.industries) ? data.industries : [],
-      }))
-      .catch(() => setError("Lead options could not be loaded. Default options are being used."));
+      });
+    } catch {
+      setError("Lead options could not be loaded. Default options are being used.");
+    }
   }, []);
+
+  useEffect(() => {
+    fetchLeadOptions();
+  }, [fetchLeadOptions]);
 
   useEffect(() => {
     if (!canAssignLeads) return;
@@ -534,12 +542,13 @@ function LeadsPage() {
         const refreshedSelection = current && data.leads.find((lead: Lead) => lead.id === current.id);
         return refreshedSelection || data.leads[0];
       });
+      fetchLeadOptions();
     } catch (e) {
       setError(e instanceof Error ? e.message : "An error occurred");
     } finally {
       setLoading(false);
     }
-  }, [page, pageSize, searchQuery, activeTab, sourceFilter, setterFilter]);
+  }, [page, pageSize, searchQuery, activeTab, sourceFilter, setterFilter, fetchLeadOptions]);
 
   useEffect(() => {
     fetchLeads();
