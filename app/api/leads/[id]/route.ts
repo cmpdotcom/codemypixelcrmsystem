@@ -1,14 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { canAccessLead, findActiveUser, fullName, getActor, notify, resolveUserIdByName } from "@/lib/workflow";
 
 // GET /api/leads/[id] - Get a single lead
 export async function GET(
   _request: NextRequest,
   ctx: RouteContext<"/api/leads/[id]">,
 ) {
+  const actor = await getActor();
+  if (!actor) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { id } = await ctx.params;
   const lead = await prisma.lead.findUnique({ where: { id } });
-  if (!lead) {
+  if (!lead || !canAccessLead(actor, lead)) {
     return NextResponse.json({ error: "Lead not found" }, { status: 404 });
   }
   return NextResponse.json(lead);
@@ -19,6 +22,8 @@ export async function PATCH(
   request: NextRequest,
   ctx: RouteContext<"/api/leads/[id]">,
 ) {
+  const actor = await getActor();
+  if (!actor) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { id } = await ctx.params;
   let body: Record<string, unknown>;
   try {
@@ -28,8 +33,25 @@ export async function PATCH(
   }
 
   const existing = await prisma.lead.findUnique({ where: { id } });
-  if (!existing) {
+  if (!existing || !canAccessLead(actor, existing)) {
     return NextResponse.json({ error: "Lead not found" }, { status: 404 });
+  }
+
+  // Only managers can move a lead to another setter; everyone else keeps the current owner.
+  let setterChange: { setter: string | null; setterId: string | null; setterImg: string | null } | null = null;
+  if (actor.isManager && typeof body.setterId === "string" && body.setterId !== (existing.setterId || "")) {
+    if (body.setterId) {
+      const user = await findActiveUser(body.setterId);
+      if (!user) return NextResponse.json({ error: "Selected setter was not found" }, { status: 400 });
+      setterChange = { setter: fullName(user), setterId: user.id, setterImg: user.image };
+    } else {
+      setterChange = { setter: null, setterId: null, setterImg: null };
+    }
+  } else if (actor.isManager && body.setterId === undefined && body.setter !== undefined) {
+    const name = typeof body.setter === "string" ? body.setter.trim() : "";
+    if (name !== (existing.setter || "")) {
+      setterChange = { setter: name || null, setterId: await resolveUserIdByName(name), setterImg: null };
+    }
   }
 
   if (body.email !== undefined && (typeof body.email !== "string" || !/^\S+@\S+\.\S+$/.test(body.email.trim()))) {
@@ -55,8 +77,7 @@ export async function PATCH(
       ...(body.source !== undefined && { source: updateString(body.source) || existing.source }),
       ...(body.service !== undefined && { service: updateString(body.service) }),
       ...(body.status !== undefined && { status: updateString(body.status) || existing.status }),
-      ...(body.setter !== undefined && { setter: updateString(body.setter) }),
-      ...(body.setterImg !== undefined && { setterImg: updateString(body.setterImg) }),
+      ...(setterChange || {}),
       ...(body.budget !== undefined && { budget: updateString(body.budget) }),
       ...(body.timeline !== undefined && { timeline: updateString(body.timeline) }),
       ...(body.companySize !== undefined && { companySize: updateString(body.companySize) }),
@@ -72,6 +93,15 @@ export async function PATCH(
     },
   });
 
+  if (setterChange?.setterId && setterChange.setterId !== existing.setterId) {
+    await notify([setterChange.setterId], {
+      type: "lead_assigned",
+      title: `New lead assigned: ${lead.name}`,
+      body: `${lead.company} was assigned to you by ${actor.name}.`,
+      link: `/leads?lead=${lead.id}`,
+    }, actor.id);
+  }
+
   return NextResponse.json(lead);
 }
 
@@ -80,9 +110,11 @@ export async function DELETE(
   _request: NextRequest,
   ctx: RouteContext<"/api/leads/[id]">,
 ) {
+  const actor = await getActor();
+  if (!actor) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { id } = await ctx.params;
-  const existing = await prisma.lead.findUnique({ where: { id }, select: { id: true } });
-  if (!existing) return NextResponse.json({ error: "Lead not found" }, { status: 404 });
+  const existing = await prisma.lead.findUnique({ where: { id }, select: { id: true, setterId: true, setter: true, closerId: true } });
+  if (!existing || !canAccessLead(actor, existing)) return NextResponse.json({ error: "Lead not found" }, { status: 404 });
   await prisma.lead.delete({ where: { id } });
   return NextResponse.json({ success: true });
 }

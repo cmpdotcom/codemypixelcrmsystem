@@ -1,7 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
+import { useParams, useSearchParams } from "next/navigation";
+import { ProjectAssignmentsPanel } from "@/components/workflow/ProjectAssignmentsPanel";
 import {
   ArrowLeft,
   FolderKanban,
@@ -36,16 +38,6 @@ import {
   GitPullRequest,
   Zap,
 } from "lucide-react";
-
-// --- Project Header Data ---
-const project = {
-  name: "ABC ERP Implementation",
-  client: "ABC Technologies",
-  status: "Development",
-  progress: 78,
-  health: "On Track",
-  deadline: "Sep 25, 2026",
-};
 
 // --- Tab Definitions ---
 const tabs = [
@@ -208,52 +200,6 @@ const requirementGroups = [
   },
 ];
 
-// --- Team Tab Data ---
-const projectManager = {
-  name: "Ali Khan",
-  role: "Project Manager",
-  img: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80",
-  activeTasks: 3,
-};
-
-const teamRoles = [
-  {
-    role: "Frontend",
-    members: [
-      { name: "Fatima Noor", role: "Frontend Developer", initials: "FN", bg: "bg-sky-100 text-sky-700", activeTasks: 4, workload: 80 },
-      { name: "Sara Ahmed", role: "Frontend Developer", initials: "SA", bg: "bg-purple-100 text-purple-700", activeTasks: 3, workload: 60 },
-    ],
-  },
-  {
-    role: "Backend",
-    members: [
-      { name: "Ali Khan", role: "Backend Developer", initials: "AK", bg: "bg-blue-100 text-blue-700", activeTasks: 5, workload: 100 },
-      { name: "Usman Tariq", role: "Backend Developer", initials: "UT", bg: "bg-indigo-100 text-indigo-700", activeTasks: 6, workload: 120 },
-    ],
-  },
-  {
-    role: "Mobile",
-    members: [
-      { name: "Bilal Raza", role: "Mobile Developer", initials: "BR", bg: "bg-emerald-100 text-emerald-700", activeTasks: 2, workload: 40 },
-    ],
-  },
-  {
-    role: "QA",
-    members: [
-      { name: "Hina Ali", role: "QA Tester", initials: "HA", bg: "bg-rose-100 text-rose-700", activeTasks: 3, workload: 70 },
-    ],
-  },
-];
-
-const workloadTable = [
-  { name: "Ali Khan", role: "Backend", activeTasks: 5, hours: 38, capacity: 100, barColor: "bg-blue-500" },
-  { name: "Usman Tariq", role: "Backend", activeTasks: 6, hours: 46, capacity: 120, barColor: "bg-rose-500" },
-  { name: "Fatima Noor", role: "Frontend", activeTasks: 4, hours: 32, capacity: 80, barColor: "bg-emerald-500" },
-  { name: "Sara Ahmed", role: "Frontend", activeTasks: 3, hours: 24, capacity: 60, barColor: "bg-emerald-500" },
-  { name: "Bilal Raza", role: "Mobile", activeTasks: 2, hours: 16, capacity: 40, barColor: "bg-emerald-500" },
-  { name: "Hina Ali", role: "QA", activeTasks: 3, hours: 28, capacity: 70, barColor: "bg-emerald-500" },
-];
-
 // --- QA Tab Data ---
 const qaStats = [
   { label: "Total Bugs", value: 42, icon: Bug, iconColor: "text-slate-600", iconBg: "bg-slate-100" },
@@ -327,14 +273,65 @@ const payments = [
 const statusOptions = ["Planning", "Requirements", "Design", "Development", "QA", "UAT", "Deployment", "Completed"];
 const priorityOptions = ["Low", "Medium", "High", "Critical"];
 
+interface ProjectHeader {
+  name: string;
+  clientName: string;
+  status: string;
+  progress: number;
+  health: string;
+  deadline: string;
+}
+
+const healthLabel: Record<string, string> = { "on-track": "On Track", "at-risk": "At Risk", critical: "Critical" };
+
 export default function ProjectDetailPage() {
-  const [activeTab, setActiveTab] = useState("overview");
+  const { id } = useParams<{ id: string }>();
+  const searchParams = useSearchParams();
+  const [activeTab, setActiveTab] = useState(() => (tabs.some((tab) => tab.id === searchParams.get("tab")) ? searchParams.get("tab")! : "overview"));
+  const [header, setHeader] = useState<ProjectHeader | null>(null);
+  const [notFound, setNotFound] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`/api/projects/${id}`)
+      .then(async (res) => {
+        if (cancelled) return;
+        if (!res.ok) {
+          setNotFound(true);
+          return;
+        }
+        setHeader(await res.json());
+      })
+      .catch(() => !cancelled && setNotFound(true));
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
+
+  const project = {
+    name: header?.name || "Loading…",
+    client: header?.clientName || "",
+    status: header?.status || "—",
+    progress: header?.progress ?? 0,
+    health: header ? healthLabel[header.health] || header.health : "—",
+    deadline: header ? new Date(header.deadline).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—",
+  };
   const [taskView, setTaskView] = useState<"board" | "list">("board");
   const [checkedReqs, setCheckedReqs] = useState<Record<string, boolean>>({});
 
   const toggleReq = (key: string, current: boolean) => {
     setCheckedReqs((prev) => ({ ...prev, [key]: !current }));
   };
+
+  if (notFound) {
+    return (
+      <div className="p-8 max-w-xl mx-auto text-center space-y-3">
+        <h1 className="text-lg font-bold text-slate-900">Project not found</h1>
+        <p className="text-xs text-slate-500">It may have been deleted, or you are not assigned to it.</p>
+        <Link href="/projects" className="text-xs font-semibold text-blue-600 hover:underline">Back to Projects</Link>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 sm:p-5 xl:p-6 max-w-[1600px] mx-auto w-full pb-12 space-y-5">
@@ -701,95 +698,7 @@ export default function ProjectDetailPage() {
         </div>
       )}
 
-      {activeTab === "team" && (
-        <div className="space-y-5">
-          {/* Project Manager */}
-          <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-5">
-            <h3 className="text-sm font-bold text-slate-900 mb-4">Project Manager</h3>
-            <div className="flex items-center gap-4">
-              <img src={projectManager.img} alt={projectManager.name} className="w-14 h-14 rounded-2xl object-cover" />
-              <div>
-                <p className="text-sm font-bold text-slate-900">{projectManager.name}</p>
-                <p className="text-xs text-slate-500">{projectManager.role}</p>
-                <span className="inline-flex items-center gap-1 text-[11px] text-blue-600 font-medium mt-1">
-                  <ListChecks className="w-3 h-3" />{projectManager.activeTasks} active tasks
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Team by Role */}
-          {teamRoles.map((role, idx) => (
-            <div key={idx} className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-5">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-bold text-slate-900">{role.role}</h3>
-                <span className="text-xs text-slate-400">{role.members.length} {role.members.length === 1 ? "member" : "members"}</span>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {role.members.map((m, mIdx) => (
-                  <div key={mIdx} className="border border-slate-200/80 rounded-xl p-3.5 hover:shadow-sm transition-all">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold ${m.bg}`}>
-                        {m.initials}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold text-slate-900 truncate">{m.name}</p>
-                        <p className="text-xs text-slate-500">{m.role}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-[11px] text-slate-500">{m.activeTasks} active tasks</span>
-                      <span className={`text-[11px] font-bold ${m.workload > 100 ? "text-rose-600" : "text-slate-700"}`}>{m.workload}%</span>
-                    </div>
-                    <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                      <div className={`h-full rounded-full ${m.workload > 100 ? "bg-rose-500" : "bg-emerald-500"}`} style={{ width: `${Math.min(m.workload, 100)}%` }} />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
-
-          {/* Workload Table */}
-          <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
-            <div className="p-5 pb-3">
-              <h3 className="text-sm font-bold text-slate-900">Team Workload</h3>
-            </div>
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-slate-100 bg-slate-50/50">
-                  <th className="text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wider px-5 py-3">Developer</th>
-                  <th className="text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wider px-4 py-3">Active Tasks</th>
-                  <th className="text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wider px-4 py-3">Hours</th>
-                  <th className="text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wider px-4 py-3">Capacity</th>
-                </tr>
-              </thead>
-              <tbody>
-                {workloadTable.map((row, idx) => (
-                  <tr key={idx} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
-                    <td className="px-5 py-3">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-semibold text-slate-900">{row.name}</span>
-                        <span className="text-[10px] font-medium text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded-md">{row.role}</span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-xs text-slate-600">{row.activeTasks}</td>
-                    <td className="px-4 py-3 text-xs text-slate-600">{row.hours}h</td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <div className="w-24 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                          <div className={`h-full rounded-full ${row.barColor}`} style={{ width: `${Math.min(row.capacity, 100)}%` }} />
-                        </div>
-                        <span className={`text-xs font-bold ${row.capacity > 100 ? "text-rose-600" : "text-slate-700"}`}>{row.capacity}%</span>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+      {activeTab === "team" && <ProjectAssignmentsPanel projectId={id} />}
 
       {activeTab === "qa" && (
         <div className="space-y-5">

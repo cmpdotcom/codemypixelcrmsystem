@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useSession, signOut } from "next-auth/react";
-import { Search, Bell, Grid, ChevronDown, Settings, LogOut } from "lucide-react";
+import { Search, Grid, ChevronDown, Settings, LogOut } from "lucide-react";
+import { NotificationBell } from "@/components/NotificationBell";
 
 export function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -31,10 +32,7 @@ export function Header() {
 
       {/* Right Controls */}
       <div className="flex items-center gap-3">
-        <button className="relative p-2 text-slate-500 hover:text-slate-700 bg-white rounded-full border border-slate-200/60 shadow-sm hover:shadow transition-all">
-          <Bell className="h-4 w-4" />
-          <span className="absolute top-1.5 right-1.5 block h-2 w-2 rounded-full bg-rose-500 ring-2 ring-white" />
-        </button>
+        <NotificationBell />
 
         <button className="p-2 text-slate-500 hover:text-slate-700 bg-white rounded-full border border-slate-200/60 shadow-sm hover:shadow transition-all">
           <Grid className="h-4 w-4" />
@@ -52,7 +50,7 @@ export function Header() {
             />
             <div className="hidden sm:block text-left leading-tight">
               <p className="text-xs font-bold text-slate-900">{userName}</p>
-              <p className="text-[10px] text-slate-400 font-medium">Admin</p>
+              <p className="text-[10px] text-slate-400 font-medium">{session?.user?.roleName || ""}</p>
             </div>
             <ChevronDown
               className={`h-3.5 w-3.5 text-slate-400 transition-transform ${

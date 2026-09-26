@@ -1,5 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getActor, projectScope } from "@/lib/workflow";
+
+async function findVisibleProject(id: string) {
+  const actor = await getActor();
+  if (!actor) return null;
+  return prisma.project.findFirst({ where: { AND: [{ id }, projectScope(actor)] }, select: { id: true } });
+}
 
 // GET /api/projects/[id]
 export async function GET(
@@ -7,6 +14,9 @@ export async function GET(
   ctx: RouteContext<"/api/projects/[id]">
 ) {
   const { id } = await ctx.params;
+  if (!(await findVisibleProject(id))) {
+    return NextResponse.json({ error: "Project not found" }, { status: 404 });
+  }
   const project = await prisma.project.findUnique({
     where: { id },
     include: {
@@ -27,6 +37,9 @@ export async function PATCH(
   ctx: RouteContext<"/api/projects/[id]">
 ) {
   const { id } = await ctx.params;
+  if (!(await findVisibleProject(id))) {
+    return NextResponse.json({ error: "Project not found" }, { status: 404 });
+  }
   const body = await request.json();
 
   const updateData: Record<string, unknown> = {};
@@ -63,6 +76,9 @@ export async function DELETE(
   ctx: RouteContext<"/api/projects/[id]">
 ) {
   const { id } = await ctx.params;
+  if (!(await findVisibleProject(id))) {
+    return NextResponse.json({ error: "Project not found" }, { status: 404 });
+  }
   await prisma.project.delete({ where: { id } });
   return NextResponse.json({ success: true });
 }

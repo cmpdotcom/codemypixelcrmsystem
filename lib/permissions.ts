@@ -12,6 +12,7 @@ export type PermissionsMap = Record<string, PermissionSet>;
 
 export const CRM_MODULES = [
   "Dashboard",
+  "Workflow",
   "Leads",
   "Activities",
   "Deals",
@@ -94,6 +95,12 @@ export function defaultPermissionsForRole(roleName: string): PermissionsMap {
   } else if (roleName === "QA" || roleName === "Tester") {
     grant(["QA"], STANDARD_PERMISSIONS);
     grant(["Projects", "Tasks", "Milestones", "Deployments", "Activities"], READ_PERMISSIONS);
+  } else if (roleName === "DevOps") {
+    grant(["Deployments"], STANDARD_PERMISSIONS);
+    grant(["Projects", "Tasks", "Milestones", "QA", "Activities"], READ_PERMISSIONS);
+  } else if (roleName === "Marketing") {
+    grant(["Leads"], { view: true, create: true, edit: true, del: false, assign: false });
+    grant(["Reports", "Clients"], READ_PERMISSIONS);
   }
 
   return permissions;
@@ -124,6 +131,7 @@ export function canPerform(permissions: unknown, module: string, action: Permiss
 
 export function pageModule(pathname: string): string | null {
   if (pathname === "/") return "Dashboard";
+  if (pathname.startsWith("/workflow")) return "Workflow";
   if (pathname.startsWith("/leads")) return "Leads";
   if (pathname.startsWith("/activities")) return "Activities";
   if (pathname.startsWith("/deals")) return "Deals";
@@ -149,6 +157,7 @@ export function pageModule(pathname: string): string | null {
 }
 
 export function apiModule(pathname: string): string | null {
+  if (pathname.startsWith("/api/workflow")) return "Workflow";
   if (pathname.startsWith("/api/leads")) return "Leads";
   if (pathname.startsWith("/api/activities")) return "Activities";
   if (pathname.startsWith("/api/deals")) return "Deals";

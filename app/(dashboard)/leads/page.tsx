@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
+import NextLink from "next/link";
 import {
   FileText,
   Link as LinkIcon,
@@ -242,6 +243,11 @@ interface Lead {
   status: string;
   setter: string | null;
   setterImg: string | null;
+  setterId?: string | null;
+  closer?: string | null;
+  closerId?: string | null;
+  interestedAt?: string | null;
+  interestedNote?: string | null;
   budget: string | null;
   timeline: string | null;
   companySize: string | null;
@@ -303,7 +309,7 @@ interface LeadSettings {
 const SOURCES = ["LinkedIn", "Website", "Referral", "Instagram", "Cold Call", "Google Ads", "Facebook", "WhatsApp"];
 const STATUSES = ["New", "Contacted", "Qualified", "Meeting", "Proposal", "Not Interested", "Nurture", "Converted", "Lost"];
 const SERVICES = ["Custom ERP", "Website", "Mobile App", "CRM", "ERP", "Dashboard", "E-commerce", "Other"];
-const SETTERS = ["Ali Khan", "Fatima Noor", "Usman Tariq", "Sara Ahmed"];
+const CLOSED_LEAD_STATUSES = ["Converted", "Lost", "Not Interested"];
 
 export default function LeadsPageWrapper() {
   return (
@@ -316,8 +322,10 @@ export default function LeadsPageWrapper() {
 function LeadsPage() {
   const { data: session } = useSession();
   const roleName = session?.user?.roleName || "";
-  const canImportLeads = ["Super Admin", "Executive", "Sales Manager"].includes(roleName);
-  const canAssignLeads = canImportLeads;
+  const isLeadManager = ["Super Admin", "Executive", "Sales Manager"].includes(roleName)
+    || session?.user?.permissions?.Workflow && (session.user.permissions.Workflow as { assign?: boolean }).assign === true;
+  const canImportLeads = isLeadManager || roleName === "Marketing";
+  const canAssignLeads = !!isLeadManager;
   const [activeTab, setActiveTab] = useState("All Leads");
   const [searchQuery, setSearchQuery] = useState("");
   const [sourceFilter, setSourceFilter] = useState("");
@@ -708,11 +716,11 @@ function LeadsPage() {
     return res.json();
   };
 
-  const bulkAction = async (action: string, ids: string[], status?: string, setter?: string) => {
+  const bulkAction = async (action: string, ids: string[], status?: string, setterId?: string) => {
     const res = await fetch("/api/leads/bulk", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action, ids, status, setter }),
+      body: JSON.stringify({ action, ids, status, setterId }),
     });
     if (!res.ok) throw new Error("Bulk action failed");
     return res.json();
@@ -756,7 +764,7 @@ function LeadsPage() {
     const assignee = assignees.find((user) => user.id === userId);
     if (!assignee) return;
     try {
-      await bulkAction("updateSetter", selectedRows, undefined, assignee.name);
+      await bulkAction("updateSetter", selectedRows, undefined, assignee.id);
       setSelectedRows([]);
       setSelectAll(false);
       setShowBulkActions(false);
@@ -774,6 +782,33 @@ function LeadsPage() {
       await fetchLeads();
     } catch {
       setError("Failed to delete lead");
+    }
+  };
+
+  const [handoffForm, setHandoffForm] = useState<{ leadId: string | null; note: string; meetingAt: string; saving: boolean }>({
+    leadId: null, note: "", meetingAt: "", saving: false,
+  });
+  const handoffOpen = !!selectedLead && handoffForm.leadId === selectedLead.id;
+
+  const submitHandoff = async (method: "POST" | "DELETE") => {
+    if (!selectedLead) return;
+    setHandoffForm((form) => ({ ...form, saving: true }));
+    try {
+      const res = await fetch(`/api/leads/${selectedLead.id}/handoff`, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: method === "POST"
+          ? JSON.stringify({ note: handoffForm.note, meetingAt: handoffForm.meetingAt ? new Date(handoffForm.meetingAt).toISOString() : "" })
+          : undefined,
+      });
+      const payload = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(payload?.error || "Could not update the hand-off");
+      setSelectedLead(payload);
+      setHandoffForm({ leadId: null, note: "", meetingAt: "", saving: false });
+      await fetchLeads();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not update the hand-off");
+      setHandoffForm((form) => ({ ...form, saving: false }));
     }
   };
 
@@ -1012,10 +1047,10 @@ function LeadsPage() {
                   <option value="">All Sources</option>
                   {SOURCES.map((source) => <option key={source} value={source}>{source}</option>)}
                 </select>
-                <select value={setterFilter} onChange={(event) => setSetterFilter(event.target.value)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700">
+                {canAssignLeads && <select value={setterFilter} onChange={(event) => setSetterFilter(event.target.value)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700">
                   <option value="">All Setters</option>
-                  {SETTERS.map((setter) => <option key={setter} value={setter}>{setter}</option>)}
-                </select>
+                  {assignees.map((assignee) => <option key={assignee.id} value={assignee.name}>{assignee.name}</option>)}
+                </select>}
                 {(sourceFilter || setterFilter) && (
                   <button onClick={() => { setSourceFilter(""); setSetterFilter(""); }} className="text-xs font-semibold text-blue-600 hover:text-blue-700">Clear filters</button>
                 )}
@@ -1372,6 +1407,72 @@ function LeadsPage() {
               {/* ============ OVERVIEW TAB ============ */}
               {detailsTab === "Overview" && (
                 <div className="space-y-2 pt-2 border-t border-slate-100 text-xs overflow-y-auto flex-1 custom-scrollbar pr-1">
+                  {selectedLead.closerId ? (
+                    <div className="rounded-xl border border-indigo-100 bg-indigo-50/60 px-3 py-2.5">
+                      <p className="text-[10px] font-bold uppercase tracking-wide text-indigo-500">With closer</p>
+                      <p className="mt-0.5 font-bold text-indigo-900">{selectedLead.closer}</p>
+                      <p className="mt-0.5 text-[11px] text-indigo-700/80">The meeting and deal are handled on the Deals page.</p>
+                    </div>
+                  ) : selectedLead.interestedAt ? (
+                    <div className="rounded-xl border border-amber-200 bg-amber-50/70 px-3 py-2.5 space-y-1.5">
+                      <p className="text-[10px] font-bold uppercase tracking-wide text-amber-600">Interested — waiting for a closer</p>
+                      <p className="text-[11px] text-amber-800">Marked {formatDateTime(selectedLead.interestedAt)}. An executive will assign a closer.</p>
+                      {selectedLead.interestedNote && <p className="text-[11px] text-amber-900 bg-white/70 rounded-lg px-2 py-1.5">“{selectedLead.interestedNote}”</p>}
+                      {canAssignLeads && (
+                        <div className="flex gap-2 pt-0.5">
+                          <NextLink href="/workflow" className="text-[11px] font-bold text-blue-600 hover:underline">Assign closer →</NextLink>
+                          <button
+                            onClick={() => submitHandoff("DELETE")}
+                            disabled={handoffForm.saving}
+                            className="ml-auto text-[11px] font-semibold text-slate-500 hover:text-slate-800 cursor-pointer disabled:opacity-50"
+                          >
+                            Send back to setter
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ) : !CLOSED_LEAD_STATUSES.includes(selectedLead.status) && (
+                    handoffOpen ? (
+                      <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 px-3 py-2.5 space-y-2">
+                        <p className="text-[11px] font-bold text-emerald-800">Lead is interested — request a meeting</p>
+                        <textarea
+                          value={handoffForm.note}
+                          onChange={(e) => setHandoffForm({ ...handoffForm, note: e.target.value })}
+                          rows={3}
+                          placeholder="What does the client need? Best time to meet, budget, decision maker..."
+                          className="w-full text-[11px] border border-emerald-200 rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                        />
+                        <label className="block text-[10px] font-semibold text-emerald-800">
+                          Preferred meeting time (optional)
+                          <input
+                            type="datetime-local"
+                            value={handoffForm.meetingAt}
+                            onChange={(e) => setHandoffForm({ ...handoffForm, meetingAt: e.target.value })}
+                            className="mt-1 w-full text-[11px] border border-emerald-200 rounded-lg px-2 py-1.5 bg-white"
+                          />
+                        </label>
+                        <div className="flex justify-end gap-2">
+                          <button onClick={() => setHandoffForm({ ...handoffForm, leadId: null })} className="text-[11px] font-semibold text-slate-500 hover:text-slate-800 px-2 cursor-pointer">Cancel</button>
+                          <button
+                            onClick={() => submitHandoff("POST")}
+                            disabled={handoffForm.saving}
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                          >
+                            {handoffForm.saving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
+                            Send to executives
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setHandoffForm({ leadId: selectedLead.id, note: "", meetingAt: "", saving: false })}
+                        className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2 rounded-xl flex items-center justify-center gap-1.5 cursor-pointer shadow-sm shadow-emerald-500/20"
+                      >
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        Mark interested — request meeting
+                      </button>
+                    )
+                  )}
                   <div className="flex justify-between py-1 border-b border-slate-50">
                     <span className="text-slate-400">Source</span>
                     <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${sourceStyles[selectedLead.source] || sourceStyles["Website"]}`}>
@@ -1408,6 +1509,10 @@ function LeadsPage() {
                       )}
                       <span>{selectedLead.setter || "—"}</span>
                     </div>
+                  </div>
+                  <div className="flex justify-between py-1 border-b border-slate-50">
+                    <span className="text-slate-400">Closer</span>
+                    <span className="font-semibold text-slate-800">{selectedLead.closer || "—"}</span>
                   </div>
                   <div className="flex justify-between py-1 border-b border-slate-50">
                     <span className="text-slate-400">Created</span>
@@ -1695,6 +1800,8 @@ function LeadsPage() {
       {showAddModal && (
         <LeadModal
           mode="add"
+          setterOptions={assignees}
+          canAssign={canAssignLeads}
           statusOptions={statusOptions}
           industryOptions={industryOptions}
           onClose={() => setShowAddModal(false)}
@@ -1711,6 +1818,8 @@ function LeadsPage() {
         <LeadModal
           mode="edit"
           lead={editingLead}
+          setterOptions={assignees}
+          canAssign={canAssignLeads}
           statusOptions={statusOptions}
           industryOptions={industryOptions}
           onClose={() => { setShowEditModal(false); setEditingLead(null); }}
@@ -1900,6 +2009,8 @@ function LeadImportModal({
 function LeadModal({
   mode,
   lead,
+  setterOptions,
+  canAssign,
   statusOptions,
   industryOptions,
   onClose,
@@ -1907,6 +2018,8 @@ function LeadModal({
 }: {
   mode: "add" | "edit";
   lead?: Lead | null;
+  setterOptions: { id: string; name: string }[];
+  canAssign: boolean;
   statusOptions: string[];
   industryOptions: string[];
   onClose: () => void;
@@ -1922,7 +2035,7 @@ function LeadModal({
     source: lead?.source || "Website",
     service: lead?.service || "",
     status: lead?.status || statusOptions[0] || "New",
-    setter: lead?.setter || "",
+    setterId: lead?.setterId || "",
     budget: lead?.budget || "",
     timeline: lead?.timeline || "",
     companySize: lead?.companySize || "",
@@ -1944,7 +2057,8 @@ function LeadModal({
 
     setSaving(true);
     try {
-      await onSave(formData);
+      const { setterId, ...rest } = formData;
+      await onSave(canAssign ? { ...rest, setterId } : rest);
     } catch {
       setErrors({ form: "Failed to save lead. Please try again." });
     } finally {
@@ -2052,7 +2166,27 @@ function LeadModal({
             </div>
             <div className="grid grid-cols-2 gap-3">
               {selectField("status", "Status", statusOptions)}
-              {selectField("setter", "Assigned Setter", SETTERS)}
+              {canAssign ? (
+                <div>
+                  <label className="text-[11px] font-semibold text-slate-600 mb-1.5 block">Assigned Setter</label>
+                  <select
+                    value={formData.setterId}
+                    onChange={(e) => setFormData({ ...formData, setterId: e.target.value })}
+                    className="w-full text-xs border border-slate-200 bg-slate-50/50 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 focus:bg-white transition-all cursor-pointer"
+                  >
+                    <option value="">{lead?.setter && !lead.setterId ? `${lead.setter} (not linked)` : "Unassigned"}</option>
+                    {lead?.setterId && !setterOptions.some((option) => option.id === lead.setterId) && (
+                      <option value={lead.setterId}>{lead.setter || "Current setter"}</option>
+                    )}
+                    {setterOptions.map((option) => <option key={option.id} value={option.id}>{option.name}</option>)}
+                  </select>
+                </div>
+              ) : (
+                <div>
+                  <label className="text-[11px] font-semibold text-slate-600 mb-1.5 block">Assigned Setter</label>
+                  <p className="text-xs border border-slate-100 bg-slate-50 rounded-xl px-3 py-2.5 text-slate-600">{lead?.setter || "You"}</p>
+                </div>
+              )}
             </div>
           </div>
 
