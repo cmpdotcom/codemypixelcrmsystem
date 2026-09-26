@@ -1,15 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { dealScope, findActiveUser, fullName, getActor, notify, resolveUserIdByName } from "@/lib/workflow";
 
 // GET /api/deals - list deals, filter by search/stage/pipeline/closer, and return KPI statistics
 export async function GET(request: NextRequest) {
+  const actor = await getActor();
+  if (!actor) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const scope = dealScope(actor);
   const { searchParams } = new URL(request.url);
   const search = searchParams.get("search");
   const stage = searchParams.get("stage");
   const pipeline = searchParams.get("pipeline");
   const closer = searchParams.get("closer");
 
-  const where: Record<string, unknown> = {};
+  const where: Record<string, unknown> = { AND: [scope] };
 
   if (stage && stage !== "all") {
     where.stage = stage;
@@ -17,7 +21,7 @@ export async function GET(request: NextRequest) {
   if (pipeline && pipeline !== "All Pipelines") {
     where.pipeline = pipeline;
   }
-  if (closer && closer !== "All Closers") {
+  if (closer && closer !== "All Closers" && actor.isManager) {
     where.closer = closer;
   }
   if (search) {
@@ -41,6 +45,7 @@ export async function GET(request: NextRequest) {
     }),
     prisma.deal.count({ where }),
     prisma.deal.findMany({
+      where: scope,
       select: { stage: true, value: true },
     }),
   ]);
@@ -72,6 +77,8 @@ export async function GET(request: NextRequest) {
 
 // POST /api/deals - create a new deal
 export async function POST(request: NextRequest) {
+  const actor = await getActor();
+  if (!actor) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const body = await request.json();
 
   if (!body.title || !body.company) {
@@ -79,6 +86,23 @@ export async function POST(request: NextRequest) {
       { error: "Title and Company are required" },
       { status: 400 }
     );
+  }
+
+  // A closer creating a deal owns it; managers can pick any closer.
+  let closerId: string | null = null;
+  let closerName: string | null = body.closer?.trim() || null;
+  let closerImg: string | null = body.closerImg || null;
+  if (!actor.isManager && actor.roleName === "Closer") {
+    closerId = actor.id;
+    closerName = actor.name;
+  } else if (typeof body.closerId === "string" && body.closerId) {
+    const user = await findActiveUser(body.closerId);
+    if (!user) return NextResponse.json({ error: "Selected closer was not found" }, { status: 400 });
+    closerId = user.id;
+    closerName = fullName(user);
+    closerImg = user.image;
+  } else if (closerName) {
+    closerId = await resolveUserIdByName(closerName);
   }
 
   const deal = await prisma.deal.create({
@@ -92,13 +116,21 @@ export async function POST(request: NextRequest) {
       pipeline: body.pipeline || "Software Sales",
       probability: parseInt(body.probability) || 20,
       priority: body.priority || "Medium",
-      closer: body.closer?.trim() || null,
-      closerImg: body.closerImg || null,
+      closer: closerName,
+      closerImg,
+      closerId,
       leadId: body.leadId || null,
       expectedCloseDate: body.expectedCloseDate ? new Date(body.expectedCloseDate) : null,
       notes: body.notes?.trim() || null,
     },
   });
+
+  await notify([closerId], {
+    type: "closer_assigned",
+    title: `Deal assigned to you: ${deal.company}`,
+    body: `${actor.name} made you the closer for "${deal.title}".`,
+    link: "/deals",
+  }, actor.id);
 
   return NextResponse.json(deal, { status: 201 });
 }

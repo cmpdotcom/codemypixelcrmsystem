@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getActor, projectScope } from "@/lib/workflow";
 
 // GET /api/projects - list projects, filters (status, health, search), and KPI metrics
 export async function GET(request: NextRequest) {
+  const actor = await getActor();
+  if (!actor) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const scope = projectScope(actor);
   const { searchParams } = new URL(request.url);
   const search = searchParams.get("search");
   const status = searchParams.get("status");
@@ -10,7 +14,7 @@ export async function GET(request: NextRequest) {
 
   const now = new Date();
 
-  const where: Record<string, unknown> = {};
+  const where: Record<string, unknown> = { AND: [scope] };
 
   if (status && status !== "All Statuses" && status !== "all") {
     where.status = status;
@@ -32,10 +36,19 @@ export async function GET(request: NextRequest) {
       orderBy: { createdAt: "desc" },
       include: {
         client: { select: { id: true, company: true } },
+        assignments: {
+          select: {
+            role: true,
+            isLead: true,
+            user: { select: { firstName: true, lastName: true } },
+            team: { select: { name: true } },
+          },
+        },
       },
     }),
     prisma.project.count({ where }),
     prisma.project.findMany({
+      where: scope,
       select: { status: true, health: true, deadline: true, progress: true },
     }),
   ]);
@@ -92,6 +105,7 @@ export async function POST(request: NextRequest) {
       deadline,
       teamMembers: Array.isArray(body.teamMembers) ? body.teamMembers : ["AK", "SA"],
       clientId: body.clientId || null,
+      dealId: body.dealId || null,
       notes: body.notes?.trim() || null,
     },
   });

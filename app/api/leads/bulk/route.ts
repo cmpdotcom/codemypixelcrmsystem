@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
+import { findActiveUser, fullName, getActor, leadScope, notify, resolveUserIdByName } from "@/lib/workflow";
 
-// POST /api/leads/bulk - Bulk actions (delete, updateStatus)
+// POST /api/leads/bulk - Bulk actions (delete, updateStatus, updateSetter)
 export async function POST(request: NextRequest) {
-  const session = await auth();
-  let body: { action?: unknown; ids?: unknown; status?: unknown; setter?: unknown; setterImg?: unknown };
+  const actor = await getActor();
+  if (!actor) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  let body: { action?: unknown; ids?: unknown; status?: unknown; setter?: unknown; setterId?: unknown; setterImg?: unknown };
   try {
     body = await request.json();
   } catch {
@@ -21,27 +22,53 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // Non-managers can only act on the leads they can see.
+  const where = { AND: [{ id: { in: leadIds } }, leadScope(actor)] };
+
   if (action === "delete") {
-    const result = await prisma.lead.deleteMany({ where: { id: { in: leadIds } } });
+    const result = await prisma.lead.deleteMany({ where });
     return NextResponse.json({ success: true, deleted: result.count });
   }
 
   if (action === "updateStatus" && typeof status === "string" && status.trim()) {
     const result = await prisma.lead.updateMany({
-      where: { id: { in: leadIds } },
+      where,
       data: { status: status.trim() },
     });
     return NextResponse.json({ success: true, updated: result.count });
   }
 
-  if (action === "updateSetter" && typeof body.setter === "string" && body.setter.trim()) {
-    if (!session?.user?.roleName || !["Super Admin", "Executive", "Sales Manager"].includes(session.user.roleName)) {
+  if (action === "updateSetter") {
+    if (!actor.isManager) {
       return NextResponse.json({ error: "Only workspace managers can assign leads" }, { status: 403 });
     }
+    let setterId: string | null = null;
+    let setterName = "";
+    let setterImg: string | null = null;
+    if (typeof body.setterId === "string" && body.setterId) {
+      const user = await findActiveUser(body.setterId);
+      if (!user) return NextResponse.json({ error: "Selected setter was not found" }, { status: 400 });
+      setterId = user.id;
+      setterName = fullName(user);
+      setterImg = user.image;
+    } else if (typeof body.setter === "string" && body.setter.trim()) {
+      setterName = body.setter.trim();
+      setterId = await resolveUserIdByName(setterName);
+      setterImg = typeof body.setterImg === "string" ? body.setterImg : null;
+    } else {
+      return NextResponse.json({ error: "Choose a setter" }, { status: 400 });
+    }
+
     const result = await prisma.lead.updateMany({
-      where: { id: { in: leadIds } },
-      data: { setter: body.setter.trim(), setterImg: typeof body.setterImg === "string" ? body.setterImg : null },
+      where,
+      data: { setter: setterName, setterId, setterImg },
     });
+    await notify([setterId], {
+      type: "lead_assigned",
+      title: `${result.count} lead${result.count === 1 ? "" : "s"} assigned to you`,
+      body: `${actor.name} assigned you new leads to call.`,
+      link: "/leads",
+    }, actor.id);
     return NextResponse.json({ success: true, updated: result.count });
   }
 

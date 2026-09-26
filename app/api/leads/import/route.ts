@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { fullName, isWorkflowManager, notify } from "@/lib/workflow";
 
 const MAX_BATCH_SIZE = 2000;
 
@@ -17,8 +18,9 @@ function optionalDate(value: unknown) {
 // POST /api/leads/import - Insert a validated batch of leads in one database call.
 export async function POST(request: NextRequest) {
   const session = await auth();
-  if (!session?.user?.roleName || !["Super Admin", "Executive", "Sales Manager"].includes(session.user.roleName)) {
-    return NextResponse.json({ error: "Only workspace managers can import leads" }, { status: 403 });
+  const roleName = session?.user?.roleName;
+  if (!roleName || !(isWorkflowManager(roleName, session.user.permissions) || roleName === "Marketing")) {
+    return NextResponse.json({ error: "Only workspace managers and marketing can import leads" }, { status: 403 });
   }
   let body: { leads?: unknown };
   try {
@@ -45,6 +47,7 @@ export async function POST(request: NextRequest) {
     service: string | null;
     status: string;
     setter: string | null;
+    setterId?: string | null;
     budget: string | null;
     timeline: string | null;
     companySize: string | null;
@@ -103,6 +106,28 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ inserted: 0, skipped: body.leads.length });
   }
 
+  // Link CSV setter names to real users so the setter sees the leads in their own list.
+  const users = await prisma.user.findMany({ select: { id: true, firstName: true, lastName: true } });
+  const idsByName = new Map<string, string | null>();
+  for (const user of users) {
+    const key = fullName(user).toLowerCase();
+    idsByName.set(key, idsByName.has(key) ? null : user.id);
+  }
+  const assignedCounts = new Map<string, number>();
+  for (const lead of newLeads) {
+    const setterId = lead.setter ? idsByName.get(lead.setter.toLowerCase()) || null : null;
+    lead.setterId = setterId;
+    if (setterId) assignedCounts.set(setterId, (assignedCounts.get(setterId) || 0) + 1);
+  }
+
   const result = await prisma.lead.createMany({ data: newLeads });
+  for (const [setterId, count] of assignedCounts) {
+    await notify([setterId], {
+      type: "lead_assigned",
+      title: `${count} imported lead${count === 1 ? "" : "s"} assigned to you`,
+      body: `${session.user.name || "A manager"} imported new leads for you to call.`,
+      link: "/leads",
+    }, session.user.id);
+  }
   return NextResponse.json({ inserted: result.count, skipped: body.leads.length - result.count });
 }

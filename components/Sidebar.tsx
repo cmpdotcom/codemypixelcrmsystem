@@ -28,6 +28,8 @@ import {
   Settings,
   Link as LinkIcon,
   Zap,
+  Inbox,
+  GitMerge,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
@@ -35,7 +37,11 @@ import {
 const navSections = [
   {
     title: null,
-    items: [{ icon: LayoutDashboard, label: "Dashboard", href: "/", module: "Dashboard" }],
+    items: [
+      { icon: LayoutDashboard, label: "Dashboard", href: "/", module: "Dashboard" },
+      { icon: Inbox, label: "My Work", href: "/my-work", module: null },
+      { icon: GitMerge, label: "Workflow", href: "/workflow", module: "Workflow" },
+    ],
   },
   {
     title: "Sales",
@@ -92,7 +98,7 @@ export function Sidebar() {
   const visibleSections = navSections
     .map((section) => ({
       ...section,
-      items: section.items.filter((item) => sessionStatus === "loading" || !session?.user?.roleName || session?.user?.roleName === "Super Admin" || hasPermission(session?.user?.permissions, item.module, "view")),
+      items: section.items.filter((item) => item.module === null || sessionStatus === "loading" || !session?.user?.roleName || session?.user?.roleName === "Super Admin" || hasPermission(session?.user?.permissions, item.module, "view")),
     }))
     .filter((section) => section.items.length > 0);
 

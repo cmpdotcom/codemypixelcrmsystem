@@ -8,25 +8,30 @@ datasource db {
 }
 
 model User {
-  id              String       @id @default(cuid())
-  firstName       String
-  lastName        String
-  email           String       @unique
-  password        String
-  emailVerified   DateTime?
-  image           String?
-  roleId          String?
-  teamId          String?
-  status          String       @default("Active") // Active, Inactive
-  lastActive      DateTime?    @default(now())
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
-  accounts        Account[]
-  sessions        Session[]
-  sentInvitations Invitation[] @relation("SentInvitations")
-  role            Role?        @relation(fields: [roleId], references: [id], onDelete: SetNull)
-  team            Team?        @relation("TeamMembers", fields: [teamId], references: [id], onDelete: SetNull)
-  ledTeams        Team[]       @relation("TeamLeader")
+  id                 String              @id @default(cuid())
+  firstName          String
+  lastName           String
+  email              String              @unique
+  password           String
+  emailVerified      DateTime?
+  image              String?
+  roleId             String?
+  teamId             String?
+  status             String              @default("Active") // Active, Inactive
+  lastActive         DateTime?           @default(now())
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  accounts           Account[]
+  sessions           Session[]
+  sentInvitations    Invitation[]        @relation("SentInvitations")
+  role               Role?               @relation(fields: [roleId], references: [id], onDelete: SetNull)
+  team               Team?               @relation("TeamMembers", fields: [teamId], references: [id], onDelete: SetNull)
+  ledTeams           Team[]              @relation("TeamLeader")
+  setterLeads        Lead[]              @relation("LeadSetter")
+  closerLeads        Lead[]              @relation("LeadCloser")
+  closerDeals        Deal[]              @relation("DealCloser")
+  projectAssignments ProjectAssignment[]
+  notifications      Notification[]
 
   @@index([roleId])
   @@index([teamId])
@@ -47,16 +52,17 @@ model Role {
 }
 
 model Team {
-  id          String       @id @default(cuid())
-  name        String       @unique
-  department  String       @default("Sales") // Sales, Delivery, Operations, etc.
-  color       String       @default("blue")
-  leaderId    String?
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  leader      User?        @relation("TeamLeader", fields: [leaderId], references: [id], onDelete: SetNull)
-  members     User[]       @relation("TeamMembers")
-  invitations Invitation[]
+  id                 String              @id @default(cuid())
+  name               String              @unique
+  department         String              @default("Sales") // Sales, Delivery, Operations, etc.
+  color              String              @default("blue")
+  leaderId           String?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  leader             User?               @relation("TeamLeader", fields: [leaderId], references: [id], onDelete: SetNull)
+  members            User[]              @relation("TeamMembers")
+  invitations        Invitation[]
+  projectAssignments ProjectAssignment[]
 
   @@index([department])
 }
@@ -118,38 +124,49 @@ model Invitation {
 }
 
 model Lead {
-  id            String         @id @default(cuid())
-  leadNumber    Int            @unique @default(autoincrement())
-  name          String
-  company       String
-  email         String
-  phone         String?
-  location      String?
-  linkedin      String?
-  source        String         @default("Website")
-  service       String?
-  status        String         @default("New")
-  setter        String?
-  setterImg     String?
-  budget        String?
-  timeline      String?
-  companySize   String?
-  industry      String?
-  lastContact   DateTime?
-  nextFollowUp  DateTime?
-  notes         String?
-  customData    Json?
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  activities    LeadActivity[]
-  files         LeadFile[]
-  crmActivities Activity[]
-  deals         Deal[]
-  followUps     FollowUp[]
+  id               String         @id @default(cuid())
+  leadNumber       Int            @unique @default(autoincrement())
+  name             String
+  company          String
+  email            String
+  phone            String?
+  location         String?
+  linkedin         String?
+  source           String         @default("Website")
+  service          String?
+  status           String         @default("New")
+  setter           String?
+  setterImg        String?
+  setterId         String?
+  closer           String?
+  closerId         String?
+  interestedAt     DateTime? // setter marked the lead interested / meeting requested
+  interestedNote   String?
+  closerAssignedAt DateTime?
+  budget           String?
+  timeline         String?
+  companySize      String?
+  industry         String?
+  lastContact      DateTime?
+  nextFollowUp     DateTime?
+  notes            String?
+  customData       Json?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  activities       LeadActivity[]
+  files            LeadFile[]
+  crmActivities    Activity[]
+  deals            Deal[]
+  followUps        FollowUp[]
+  setterUser       User?          @relation("LeadSetter", fields: [setterId], references: [id], onDelete: SetNull)
+  closerUser       User?          @relation("LeadCloser", fields: [closerId], references: [id], onDelete: SetNull)
 
   @@index([status])
   @@index([source])
   @@index([setter])
+  @@index([setterId])
+  @@index([closerId])
+  @@index([interestedAt])
 }
 
 model LeadActivity {
@@ -223,6 +240,7 @@ model Deal {
   priority          String       @default("Medium") // Low, Medium, High, Urgent
   closer            String?
   closerImg         String?
+  closerId          String?
   leadId            String?
   clientId          String?
   expectedCloseDate DateTime?
@@ -235,8 +253,11 @@ model Deal {
   client            Client?      @relation(fields: [clientId], references: [id], onDelete: SetNull)
   payments          Payment[]
   commissions       Commission[]
+  closerUser        User?        @relation("DealCloser", fields: [closerId], references: [id], onDelete: SetNull)
+  projects          Project[]
 
   @@index([stage])
+  @@index([closerId])
   @@index([pipeline])
   @@index([closer])
   @@index([clientId])
@@ -310,25 +331,28 @@ model FollowUp {
 }
 
 model Project {
-  id          String       @id @default(cuid())
-  projNumber  Int          @unique @default(autoincrement())
+  id          String              @id @default(cuid())
+  projNumber  Int                 @unique @default(autoincrement())
   name        String
   clientName  String
   description String?
-  status      String       @default("Planning") // Planning, Requirements, Design, Development, Testing, Deployment, Completed, On Hold
-  health      String       @default("on-track") // on-track, at-risk, critical
-  progress    Int          @default(0) // 0 - 100
-  budget      Float        @default(0)
-  spent       Float        @default(0)
-  startDate   DateTime     @default(now())
+  status      String              @default("Planning") // Planning, Requirements, Design, Development, Testing, Deployment, Completed, On Hold
+  health      String              @default("on-track") // on-track, at-risk, critical
+  progress    Int                 @default(0) // 0 - 100
+  budget      Float               @default(0)
+  spent       Float               @default(0)
+  startDate   DateTime            @default(now())
   deadline    DateTime
   teamMembers String[] // array of user initials or names
   leadId      String?
   clientId    String?
+  dealId      String?
   notes       String?
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  client      Client?      @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  client      Client?             @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  deal        Deal?               @relation(fields: [dealId], references: [id], onDelete: SetNull)
+  assignments ProjectAssignment[]
   tasks       Task[]
   milestones  Milestone[]
   bugs        Bug[]
@@ -338,6 +362,43 @@ model Project {
   @@index([health])
   @@index([deadline])
   @@index([clientId])
+  @@index([dealId])
+}
+
+// Who works on a project: an individual user or a whole team, per delivery role.
+model ProjectAssignment {
+  id             String   @id @default(cuid())
+  projectId      String
+  role           String // Developer, Tester, DevOps
+  userId         String?
+  teamId         String?
+  isLead         Boolean  @default(false)
+  assignedById   String?
+  assignedByName String?
+  createdAt      DateTime @default(now())
+  project        Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user           User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  team           Team?    @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([userId])
+  @@index([teamId])
+  @@index([role])
+}
+
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  type      String // lead_assigned, lead_interested, closer_assigned, deal_won, project_assigned
+  title     String
+  body      String?
+  link      String?
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt])
+  @@index([createdAt])
 }
 
 model Task {

@@ -46,6 +46,7 @@ interface DealItem {
   probability: number;
   priority: string;
   closer: string | null;
+  closerId?: string | null;
   expectedCloseDate: string | null;
   createdAt: string;
 }
@@ -109,6 +110,20 @@ export default function DealsPage() {
     }
   }, [dealView, settingsLoaded]);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [closers, setClosers] = useState<{ id: string; name: string }[]>([]);
+  const [canAssignCloser, setCanAssignCloser] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/deals/closers")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!data) return;
+        setClosers(data.closers || []);
+        setCanAssignCloser(!!data.canAssign);
+      })
+      .catch(() => {});
+  }, []);
 
   // Add / Edit Deal Modal
   const [showModal, setShowModal] = useState(false);
@@ -124,9 +139,10 @@ export default function DealsPage() {
     pipeline: "Software Sales",
     probability: "50",
     priority: "Medium",
-    closer: "Ali Khan",
+    closerId: "",
     expectedCloseDate: "",
   });
+  const [editingCloserName, setEditingCloserName] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   const fetchDeals = useCallback(async () => {
@@ -161,6 +177,9 @@ export default function DealsPage() {
         body: JSON.stringify({ stage: newStage }),
       });
       if (!res.ok) throw new Error("Failed to update stage");
+      if (newStage === "won") {
+        setNotice("Deal won. The client record is ready and executives were notified to assign a delivery team.");
+      }
       await fetchDeals();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Update failed");
@@ -181,6 +200,7 @@ export default function DealsPage() {
 
   const handleOpenCreateModal = (defaultStage = "qualified") => {
     setModalMode("create");
+    setEditingCloserName(null);
     setDealForm({
       id: "",
       title: "",
@@ -192,7 +212,7 @@ export default function DealsPage() {
       pipeline: "Software Sales",
       probability: "40",
       priority: "Medium",
-      closer: "Ali Khan",
+      closerId: "",
       expectedCloseDate: new Date(Date.now() + 14 * 86400000).toISOString().slice(0, 10),
     });
     setShowModal(true);
@@ -212,9 +232,10 @@ export default function DealsPage() {
       pipeline: d.pipeline,
       probability: String(d.probability),
       priority: d.priority,
-      closer: d.closer || "Ali Khan",
+      closerId: d.closerId || "",
       expectedCloseDate: d.expectedCloseDate ? d.expectedCloseDate.slice(0, 10) : "",
     });
+    setEditingCloserName(d.closer);
     setShowModal(true);
   };
 
@@ -228,14 +249,14 @@ export default function DealsPage() {
         const res = await fetch("/api/deals", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(dealForm),
+          body: JSON.stringify(canAssignCloser ? dealForm : { ...dealForm, closerId: undefined }),
         });
         if (!res.ok) throw new Error("Failed to create deal");
       } else {
         const res = await fetch(`/api/deals/${dealForm.id}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(dealForm),
+          body: JSON.stringify(canAssignCloser ? dealForm : { ...dealForm, closerId: undefined }),
         });
         if (!res.ok) throw new Error("Failed to update deal");
       }
@@ -338,6 +359,15 @@ export default function DealsPage() {
             <button onClick={() => setError(null)} className="text-red-400 hover:text-red-600 font-bold">×</button>
           </div>
         )}
+        {notice && (
+          <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-medium px-4 py-3 rounded-xl flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Trophy className="w-4 h-4 text-emerald-600" />
+              <span>{notice}</span>
+            </div>
+            <button onClick={() => setNotice(null)} className="text-emerald-500 hover:text-emerald-700 font-bold">×</button>
+          </div>
+        )}
 
         {/* 5 Metric KPI Cards (Calculated directly from Database) */}
         <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3.5">
@@ -430,10 +460,7 @@ export default function DealsPage() {
               className="px-3 py-1.5 text-xs bg-white border border-slate-200 rounded-xl cursor-pointer"
             >
               <option value="All Closers">All Closers</option>
-              <option value="Ali Khan">Ali Khan</option>
-              <option value="Fatima Noor">Fatima Noor</option>
-              <option value="Sara Ahmed">Sara Ahmed</option>
-              <option value="Usman Tariq">Usman Tariq</option>
+              {closers.map((closer) => <option key={closer.id} value={closer.name}>{closer.name}</option>)}
             </select>
 
             {(searchQuery || pipelineFilter !== "All Pipelines" || closerFilter !== "All Closers") && (
@@ -724,14 +751,21 @@ export default function DealsPage() {
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Assigned Closer</label>
                   <select
-                    value={dealForm.closer}
-                    onChange={(e) => setDealForm({ ...dealForm, closer: e.target.value })}
-                    className="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg bg-white"
+                    value={dealForm.closerId}
+                    onChange={(e) => setDealForm({ ...dealForm, closerId: e.target.value })}
+                    disabled={!canAssignCloser}
+                    title={canAssignCloser ? undefined : "Only executives can change the closer"}
+                    className="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg bg-white disabled:bg-slate-50 disabled:text-slate-500"
                   >
-                    <option value="Ali Khan">Ali Khan</option>
-                    <option value="Fatima Noor">Fatima Noor</option>
-                    <option value="Sara Ahmed">Sara Ahmed</option>
-                    <option value="Usman Tariq">Usman Tariq</option>
+                    <option value="">
+                      {modalMode === "edit" && editingCloserName && !dealForm.closerId
+                        ? `${editingCloserName} (not linked)`
+                        : canAssignCloser ? "Unassigned" : "You"}
+                    </option>
+                    {dealForm.closerId && !closers.some((closer) => closer.id === dealForm.closerId) && (
+                      <option value={dealForm.closerId}>{editingCloserName || "Current closer"}</option>
+                    )}
+                    {closers.map((closer) => <option key={closer.id} value={closer.id}>{closer.name}</option>)}
                   </select>
                 </div>
                 <div>

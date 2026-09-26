@@ -41,7 +41,7 @@ interface UserOption {
   teamId: string | null;
 }
 
-const DEPARTMENTS = ["All Departments", "Sales", "Delivery", "Operations", "Marketing", "Finance"];
+const DEPARTMENTS = ["All Departments", "Sales", "Delivery", "Development", "QA", "DevOps", "Operations", "Marketing", "Finance"];
 const COLOR_OPTIONS: Team["color"][] = ["blue", "green", "purple", "amber", "rose", "slate"];
 
 const avatarBgColors = [

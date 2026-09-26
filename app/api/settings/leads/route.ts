@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getActor, leadScope } from "@/lib/workflow";
 
 const defaultStatuses = [
   { name: "New", color: "blue" },
@@ -53,9 +54,12 @@ function normalizeIndustries(value: unknown) {
 
 // GET /api/settings/leads - get statuses with REAL lead counts from database + industries
 export async function GET() {
+  const actor = await getActor();
+  if (!actor) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   // 1. Fetch real lead counts grouped by status from Lead table
   const leadCounts = await prisma.lead.groupBy({
     by: ["status"],
+    where: leadScope(actor),
     _count: { id: true },
   });
 
