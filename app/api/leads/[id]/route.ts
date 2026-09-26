@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { canAccessLead, findActiveUser, fullName, getActor, notify, resolveUserIdByName } from "@/lib/workflow";
 
@@ -38,6 +39,9 @@ export async function PATCH(
   }
 
   // Only managers can move a lead to another setter; everyone else keeps the current owner.
+  if ((body.setterId !== undefined || body.setter !== undefined) && !actor.isManager) {
+    return NextResponse.json({ error: "Only workspace managers can assign leads" }, { status: 403 });
+  }
   let setterChange: { setter: string | null; setterId: string | null; setterImg: string | null } | null = null;
   if (actor.isManager && typeof body.setterId === "string" && body.setterId !== (existing.setterId || "")) {
     if (body.setterId) {

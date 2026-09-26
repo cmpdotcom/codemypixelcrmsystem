@@ -326,6 +326,8 @@ function LeadsPage() {
     || session?.user?.permissions?.Workflow && (session.user.permissions.Workflow as { assign?: boolean }).assign === true;
   const canImportLeads = isLeadManager || roleName === "Marketing";
   const canAssignLeads = !!isLeadManager;
+  const canEditLeadStatus = roleName === "Super Admin"
+    || (session?.user?.permissions as Record<string, { edit?: boolean }> | undefined)?.Leads?.edit === true;
   const [activeTab, setActiveTab] = useState("All Leads");
   const [searchQuery, setSearchQuery] = useState("");
   const [sourceFilter, setSourceFilter] = useState("");
@@ -350,6 +352,7 @@ function LeadsPage() {
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [selectAll, setSelectAll] = useState(false);
   const [detailsTab, setDetailsTab] = useState("Overview");
+  const [statusUpdating, setStatusUpdating] = useState(false);
 
   // Data state
   const [leads, setLeads] = useState<Lead[]>([]);
@@ -369,6 +372,7 @@ function LeadsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [leadSettings, setLeadSettings] = useState<LeadSettings>({ statuses: [], industries: [] });
+  const [assignees, setAssignees] = useState<{ id: string; name: string; image: string | null; role: string }[]>([]);
 
   useEffect(() => {
     fetch("/api/leads/options")
@@ -393,8 +397,6 @@ function LeadsPage() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
   const [showBulkActions, setShowBulkActions] = useState(false);
-  const [assignees, setAssignees] = useState<{ id: string; name: string; image: string | null; role: string }[]>([]);
-
   // Inline edit state
   const [inlineEdit, setInlineEdit] = useState<{ id: string; field: string; value: string } | null>(null);
 
@@ -734,6 +736,20 @@ function LeadsPage() {
       await fetchLeads();
     } catch {
       setError("Failed to save changes");
+    }
+  };
+
+  const handleStatusChange = async (status: string) => {
+    if (!selectedLead || !canEditLeadStatus || status === selectedLead.status) return;
+    setStatusUpdating(true);
+    try {
+      const updatedLead = await updateLead(selectedLead.id, { status });
+      setSelectedLead((current) => current?.id === selectedLead.id ? { ...current, ...updatedLead } : current);
+      await fetchLeads();
+    } catch {
+      setError("Failed to update lead status");
+    } finally {
+      setStatusUpdating(false);
     }
   };
 
@@ -1294,9 +1310,17 @@ function LeadsPage() {
                       <span className="text-xs font-bold text-slate-900">
                         LD-{String(selectedLead.leadNumber).padStart(5, "0")}
                       </span>
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${getStatusStyle(selectedLead.status)}`}>
-                        {selectedLead.status}
-                      </span>
+                      <select
+                        value={selectedLead.status}
+                        onChange={(event) => handleStatusChange(event.target.value)}
+                        disabled={!canEditLeadStatus || statusUpdating}
+                        aria-label="Change lead status"
+                        className={`px-2 py-0.5 rounded text-[10px] font-bold cursor-pointer outline-none ${getStatusStyle(selectedLead.status)} disabled:cursor-not-allowed disabled:opacity-70`}
+                      >
+                        {Array.from(new Set([selectedLead.status, ...statusOptions])).map((status) => (
+                          <option key={status} value={status}>{status}</option>
+                        ))}
+                      </select>
                     </div>
                   </div>
 

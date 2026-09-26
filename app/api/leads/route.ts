@@ -100,6 +100,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "A valid email is required" }, { status: 400 });
   }
 
+  if ((body.setter !== undefined || body.setterId !== undefined) && !actor.isManager && !(actor.roleName === "Setter")) {
+    return NextResponse.json({ error: "Only workspace managers can assign leads" }, { status: 403 });
+  }
+
   const optionalString = (value: unknown) => typeof value === "string" && value.trim() ? value.trim() : null;
   const optionalDate = (value: unknown) => {
     if (!value) return null;
