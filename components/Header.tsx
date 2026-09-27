@@ -5,12 +5,17 @@ import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
 import { Search, Grid, ChevronDown, Settings, LogOut, Menu } from "lucide-react";
 import { NotificationBell } from "@/components/NotificationBell";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+
+function initialsOf(name: string) {
+  return name.split(/\s+/).filter(Boolean).map((part) => part[0]).join("").slice(0, 2).toUpperCase() || "U";
+}
 
 export function Header({ onMenuClick }: { onMenuClick?: () => void }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const { data: session } = useSession();
-  const userName = session?.user?.name ?? "Ahmed Raza";
-  const userEmail = session?.user?.email ?? "admin@nexacrm.com";
+  const userName = session?.user?.name || session?.user?.email?.split("@")[0] || "";
+  const userEmail = session?.user?.email || "";
 
   return (
     <header className="h-16 shrink-0 bg-white border-b border-slate-200 px-3 sm:px-6 lg:px-8 flex items-center justify-between gap-2 sm:gap-4">
@@ -53,11 +58,12 @@ export function Header({ onMenuClick }: { onMenuClick?: () => void }) {
             onClick={() => setMenuOpen(!menuOpen)}
             className="flex items-center gap-2 sm:gap-2.5 pl-1 sm:pl-2 pr-1 sm:pr-2 py-1 cursor-pointer rounded-lg hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-100"
           >
-            <img
-              className="h-8 w-8 sm:h-9 sm:w-9 rounded-full border border-white shadow-sm object-cover"
-              src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80"
-              alt={userName}
-            />
+            <Avatar className="size-8 sm:size-9">
+              {session?.user?.image && <AvatarImage src={session.user.image} alt={userName} />}
+              <AvatarFallback className="bg-blue-100 text-blue-700 text-xs font-bold">
+                {userName ? initialsOf(userName) : ""}
+              </AvatarFallback>
+            </Avatar>
             <div className="hidden md:block text-left leading-tight">
               <p className="text-xs font-bold text-slate-900 max-w-[140px] truncate">{userName}</p>
               <p className="text-[10px] text-slate-400 font-medium">{session?.user?.roleName || ""}</p>

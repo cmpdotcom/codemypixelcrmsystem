@@ -41,6 +41,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           id: user.id,
           email: user.email,
           name: `${user.firstName} ${user.lastName}`,
+          image: user.image,
           roleName: user.role?.name || "Unassigned",
           permissions: normalizePermissions(user.role?.permissions, user.role?.name),
         };
