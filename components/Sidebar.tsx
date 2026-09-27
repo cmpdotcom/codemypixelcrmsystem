@@ -27,11 +27,9 @@ import {
   FileText,
   Settings,
   Link as LinkIcon,
-  Zap,
   Inbox,
   GitMerge,
   ChevronLeft,
-  ChevronRight,
   X,
 } from "lucide-react";
 
@@ -228,30 +226,6 @@ export function Sidebar({ mobileOpen = false, onClose }: { mobileOpen?: boolean;
         ))}
       </nav>
 
-      {/* Upgrade Banner / Expand button */}
-      <div className="p-3 mt-auto">
-        {isCollapsed ? (
-          <button
-            onClick={() => setCollapsed(false)}
-            aria-label="Expand sidebar"
-            className="w-full flex items-center justify-center p-2.5 rounded-xl bg-blue-50 border border-blue-100 text-blue-600 hover:bg-blue-100 transition-colors"
-          >
-            <ChevronRight className="w-4 h-4" />
-          </button>
-        ) : (
-          <div className="bg-gradient-to-br from-blue-50/80 to-indigo-50/80 border border-blue-100/80 rounded-2xl p-3.5 flex items-center gap-3 relative overflow-hidden">
-            <div className="bg-blue-600 text-white rounded-xl p-2 shrink-0 shadow-sm shadow-blue-500/30">
-              <Zap className="w-4 h-4" />
-            </div>
-            <div>
-              <h4 className="text-xs font-bold text-slate-900">Upgrade to Pro</h4>
-              <p className="text-[11px] text-slate-500 mt-0.5 leading-tight">
-                Unlock more power for your team.
-              </p>
-            </div>
-          </div>
-        )}
-      </div>
     </>
   );
 
