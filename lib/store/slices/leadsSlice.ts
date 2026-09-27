@@ -287,13 +287,10 @@ const leadsSlice = createSlice({
         state.total = action.payload.total;
         state.totalPages = action.payload.totalPages;
         state.stats = action.payload.stats;
-        if (state.leads.length === 0) {
-          state.selectedLead = null;
-        } else {
-          const current = state.selectedLead;
-          const refreshed = current && state.leads.find((lead) => lead.id === current.id);
-          state.selectedLead = refreshed || state.leads[0];
-        }
+        // Keep whatever the user opened (refreshed if it is on this page); never auto-open one.
+        const current = state.selectedLead;
+        const refreshed = current && state.leads.find((lead) => lead.id === current.id);
+        if (refreshed) state.selectedLead = refreshed;
       })
       .addCase(fetchLeads.rejected, (state, action) => {
         state.loading = false;
@@ -354,7 +351,7 @@ const leadsSlice = createSlice({
           state.leads = state.leads.filter((item) => item.id !== id);
           state.total = Math.max(0, state.total - 1);
         }
-        if (state.selectedLead?.id === id) state.selectedLead = state.leads[0] || null;
+        if (state.selectedLead?.id === id) state.selectedLead = null;
       })
       .addCase(deleteLead.rejected, (state, action) => {
         state.error = (action.payload as string) || "Failed to delete lead";
@@ -369,6 +366,7 @@ const leadsSlice = createSlice({
           });
           state.leads = state.leads.filter((item) => !ids.includes(item.id));
           state.total = Math.max(0, state.total - ids.length);
+          if (state.selectedLead && ids.includes(state.selectedLead.id)) state.selectedLead = null;
         } else if (type === "updateStatus" && status) {
           ids.forEach((id) => {
             const lead = state.leads.find((item) => item.id === id);

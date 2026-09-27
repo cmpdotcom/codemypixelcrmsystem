@@ -1,5 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { canAccessLead, getActor } from "@/lib/workflow";
+
+async function authorize(id: string) {
+  const actor = await getActor();
+  if (!actor) return { error: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) };
+  const lead = await prisma.lead.findUnique({ where: { id }, select: { setterId: true, setter: true, closerId: true } });
+  if (!lead || !canAccessLead(actor, lead)) return { error: NextResponse.json({ error: "Lead not found" }, { status: 404 }) };
+  return { actor };
+}
 
 // GET /api/leads/[id]/files
 export async function GET(
@@ -7,6 +16,8 @@ export async function GET(
   ctx: RouteContext<"/api/leads/[id]/files">,
 ) {
   const { id } = await ctx.params;
+  const { error } = await authorize(id);
+  if (error) return error;
   const files = await prisma.leadFile.findMany({
     where: { leadId: id },
     orderBy: { createdAt: "desc" },
@@ -20,6 +31,8 @@ export async function POST(
   ctx: RouteContext<"/api/leads/[id]/files">,
 ) {
   const { id } = await ctx.params;
+  const { actor, error } = await authorize(id);
+  if (error) return error;
   const body = await request.json();
 
   if (!body.fileName || !body.fileUrl) {
@@ -33,7 +46,7 @@ export async function POST(
       fileSize: body.fileSize || 0,
       fileType: body.fileType || null,
       fileUrl: body.fileUrl,
-      uploadedBy: body.uploadedBy || null,
+      uploadedBy: actor.name || null,
     },
   });
 
@@ -46,6 +59,8 @@ export async function DELETE(
   ctx: RouteContext<"/api/leads/[id]/files">,
 ) {
   const { id } = await ctx.params;
+  const { error } = await authorize(id);
+  if (error) return error;
   const { searchParams } = new URL(request.url);
   const fileId = searchParams.get("fileId");
 

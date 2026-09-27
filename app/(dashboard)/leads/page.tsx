@@ -17,13 +17,9 @@ import {
   MessageCircle,
   Plus,
   Download,
-  CalendarDays,
   MoreHorizontal,
   X,
-  Target,
   Inbox,
-  ShieldCheck,
-  Trophy,
   Filter,
   Columns,
   MapPin,
@@ -36,12 +32,14 @@ import {
   Paperclip,
   Send,
   Clock,
-  Video,
   File as FileIcon,
   Copy,
   Check as CheckIcon,
+  Upload,
+  SearchX,
 } from "lucide-react";
 import { useSettings } from "@/components/SettingsProvider";
+import { useUploadThing } from "@/lib/uploadthing";
 import { useAppDispatch, useAppSelector } from "@/lib/store/hooks";
 import {
   fetchLeads as fetchLeadsThunk,
@@ -335,6 +333,9 @@ function LeadsPage() {
   const [mobilePanelOpen, setMobilePanelOpen] = useState(false);
   const [statusUpdating, setStatusUpdating] = useState(false);
   const [localError, setError] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<{ title: string; message: string; confirmLabel: string; onConfirm: () => void } | null>(null);
+  const [searchInput, setSearchInput] = useState(searchQuery);
   // Combine local, non-Redux errors (activities, files, CSV import) with
   // Redux data-layer errors (fetch/mutation failures) for a single banner.
   const error = localError || leadsError;
@@ -360,6 +361,30 @@ function LeadsPage() {
   useEffect(() => {
     dispatch(fetchLeadsThunk());
   }, [dispatch, page, pageSize, searchQuery, activeTab, sourceFilter, setterFilter]);
+
+  // Only hit the API once the user pauses typing, instead of on every keystroke.
+  useEffect(() => {
+    if (searchInput.trim() === searchQuery) return;
+    const timer = setTimeout(() => dispatch(setSearchQueryAction(searchInput.trim())), 300);
+    return () => clearTimeout(timer);
+  }, [searchInput, searchQuery, dispatch]);
+
+  // Escape closes the dialog first, then the details panel
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      if (confirmDialog) setConfirmDialog(null);
+      else if (mobilePanelOpen) setMobilePanelOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [confirmDialog, mobilePanelOpen]);
+
+  useEffect(() => {
+    if (!toast) return;
+    const timer = setTimeout(() => setToast(null), 3000);
+    return () => clearTimeout(timer);
+  }, [toast]);
 
   // Modal state
   const [showAddModal, setShowAddModal] = useState(false);
@@ -406,16 +431,17 @@ function LeadsPage() {
     } catch { /* ignore */ }
   }, []);
 
-  // Fetch activities and files when selected lead changes
+  // Fetch activities and files when a different lead is opened (not on every list refresh)
+  const selectedLeadId = selectedLead?.id;
   useEffect(() => {
-    if (selectedLead) {
-      fetchActivities(selectedLead.id);
-      fetchFiles(selectedLead.id);
+    if (selectedLeadId) {
+      fetchActivities(selectedLeadId);
+      fetchFiles(selectedLeadId);
     } else {
       setActivities([]);
       setFiles([]);
     }
-  }, [selectedLead, fetchActivities, fetchFiles]);
+  }, [selectedLeadId, fetchActivities, fetchFiles]);
 
   const addActivity = async () => {
     if (!selectedLead || !activityForm.title.trim()) return;
@@ -463,6 +489,8 @@ function LeadsPage() {
         setFiles((prev) => [newFile, ...prev]);
         setFileUrl("");
         setFileName("");
+        setShowLinkForm(false);
+        setToast("Link added");
       }
     } catch { /* ignore */ }
     setFileLoading(false);
@@ -638,21 +666,33 @@ function LeadsPage() {
     }
   };
 
-  const handleBulkDelete = async () => {
-    if (!confirm(`Delete ${selectedRows.length} selected leads? This cannot be undone.`)) return;
-    try {
-      await dispatch(bulkActionThunk({ action: "delete", ids: selectedRows })).unwrap();
-      setSelectedRows([]);
-      setShowBulkActions(false);
-    } catch {
-      setError("Failed to delete leads");
-    }
+  const handleBulkDelete = () => {
+    const ids = selectedRows;
+    setConfirmDialog({
+      title: `Delete ${ids.length} lead${ids.length > 1 ? "s" : ""}?`,
+      message: "Their activities and files will be removed too. This cannot be undone.",
+      confirmLabel: "Delete",
+      onConfirm: async () => {
+        setConfirmDialog(null);
+        try {
+          await dispatch(bulkActionThunk({ action: "delete", ids })).unwrap();
+          setSelectedRows([]);
+          setSelectAll(false);
+          setShowBulkActions(false);
+          setToast(`${ids.length} lead${ids.length > 1 ? "s" : ""} deleted`);
+        } catch {
+          setError("Failed to delete leads");
+        }
+      },
+    });
   };
 
   const handleBulkStatus = async (status: string) => {
     try {
       await dispatch(bulkActionThunk({ action: "updateStatus", ids: selectedRows, status })).unwrap();
+      setToast(`${selectedRows.length} lead${selectedRows.length > 1 ? "s" : ""} moved to ${status}`);
       setSelectedRows([]);
+      setSelectAll(false);
       setShowBulkActions(false);
     } catch {
       setError("Failed to update leads");
@@ -664,6 +704,7 @@ function LeadsPage() {
     if (!assignee) return;
     try {
       await dispatch(bulkActionThunk({ action: "updateSetter", ids: selectedRows, setterId: assignee.id })).unwrap();
+      setToast(`Assigned to ${assignee.name}`);
       setSelectedRows([]);
       setSelectAll(false);
       setShowBulkActions(false);
@@ -672,14 +713,49 @@ function LeadsPage() {
     }
   };
 
-  const handleDeleteLead = async (id: string) => {
-    if (!confirm("Delete this lead? This cannot be undone.")) return;
-    setMobilePanelOpen(false);
-    try {
-      await dispatch(deleteLeadThunk(id)).unwrap();
-    } catch {
-      setError("Failed to delete lead");
-    }
+  const handleDeleteLead = (id: string) => {
+    const lead = leads.find((item) => item.id === id) || (selectedLead?.id === id ? selectedLead : null);
+    setConfirmDialog({
+      title: `Delete ${lead?.name || "this lead"}?`,
+      message: "Its activities and files will be removed too. This cannot be undone.",
+      confirmLabel: "Delete lead",
+      onConfirm: async () => {
+        setConfirmDialog(null);
+        setMobilePanelOpen(false);
+        try {
+          await dispatch(deleteLeadThunk(id)).unwrap();
+          setToast(`${lead?.name || "Lead"} deleted`);
+        } catch {
+          setError("Failed to delete lead");
+        }
+      },
+    });
+  };
+
+  // Real uploads for the Files tab (UploadThing), saved against the lead afterwards.
+  const [showLinkForm, setShowLinkForm] = useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const { startUpload, isUploading } = useUploadThing("leadFile", {
+    onUploadError: (uploadError) => setError(uploadError.message || "Upload failed"),
+  });
+  const uploadLeadFiles = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const picked = Array.from(event.target.files || []);
+    event.target.value = "";
+    if (!selectedLead || picked.length === 0) return;
+    const leadId = selectedLead.id;
+    const uploaded = await startUpload(picked);
+    if (!uploaded) return;
+    const saved = await Promise.all(uploaded.map(async (file) => {
+      const res = await fetch(`/api/leads/${leadId}/files`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fileName: file.name, fileUrl: file.ufsUrl, fileSize: file.size, fileType: file.type }),
+      });
+      return res.ok ? (res.json() as Promise<LeadFile>) : null;
+    }));
+    const added = saved.filter((file): file is LeadFile => !!file);
+    if (selectedLead?.id === leadId) setFiles((prev) => [...added, ...prev]);
+    setToast(`${added.length} file${added.length === 1 ? "" : "s"} uploaded`);
   };
 
   const [handoffForm, setHandoffForm] = useState<{ leadId: string | null; note: string; meetingAt: string; saving: boolean }>({
@@ -709,14 +785,6 @@ function LeadsPage() {
     }
   };
 
-  // KPI cards
-  const kpiStats = stats ? [
-    { title: "Total Leads", value: stats.total.toLocaleString(), change: "↑ 12%", subtext: "vs last month", icon: Target, iconColor: "text-blue-600", iconBg: "bg-blue-50" },
-    { title: "New Leads", value: stats.new.toLocaleString(), change: "↑ 18%", subtext: "This month", icon: Inbox, iconColor: "text-purple-600", iconBg: "bg-purple-50" },
-    { title: "Contacted", value: stats.contacted.toLocaleString(), change: "↑ 14%", subtext: "This month", icon: Phone, iconColor: "text-amber-500", iconBg: "bg-amber-50" },
-    { title: "Qualified", value: stats.qualified.toLocaleString(), change: "↑ 22%", subtext: "This month", icon: ShieldCheck, iconColor: "text-emerald-600", iconBg: "bg-emerald-50" },
-    { title: "Converted", value: stats.converted.toLocaleString(), change: "↑ 30%", subtext: "This month", icon: Trophy, iconColor: "text-amber-500", iconBg: "bg-amber-50" },
-  ] : [];
 
   const tabs = [
     { label: "All Leads", count: stats?.total ?? 0 },
@@ -726,6 +794,14 @@ function LeadsPage() {
     })),
   ];
   const statusOptions = leadSettings.statuses.length ? leadSettings.statuses.map((status) => status.name) : STATUSES;
+  const activeFilterCount = (sourceFilter ? 1 : 0) + (setterFilter ? 1 : 0);
+  const isFiltered = !!searchQuery || activeFilterCount > 0 || activeTab !== "All Leads";
+  const firstLoad = loading && leads.length === 0;
+  // With the xl side panel open the table loses ~360px, so drop the columns the panel already shows.
+  const wideCol = selectedLead ? "hidden" : "hidden xl:table-cell";
+  const widestCol = selectedLead ? "hidden" : "hidden 2xl:table-cell";
+  const openLead = (lead: Lead) => { dispatch(setSelectedLeadAction(lead)); setMobilePanelOpen(true); };
+  const clearEverything = () => { setSearchInput(""); dispatch(setSearchQueryAction("")); dispatch(clearLeadFilters()); dispatch(setActiveTabAction("All Leads")); };
   const industryOptions = leadSettings.industries.length ? leadSettings.industries : [];
   const getStatusStyle = (status: string) =>
     statusStyles[status] ||
@@ -765,7 +841,9 @@ function LeadsPage() {
               Leads
             </h2>
             <p className="text-xs text-slate-500 mt-1">
-              Manage, track and convert your leads into valuable clients.
+              {stats
+                ? <>{stats.total.toLocaleString()} leads · <span className="text-slate-700 font-semibold">{stats.new.toLocaleString()} new</span> · {stats.converted.toLocaleString()} converted</>
+                : "Manage, track and convert your leads into valuable clients."}
             </p>
           </div>
 
@@ -796,31 +874,6 @@ function LeadsPage() {
               <span>Add Lead</span>
             </button>
           </div>
-        </div>
-
-        {/* Row of 5 Metric KPI Cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3.5">
-          {kpiStats.map((kpi, idx) => {
-            const Icon = kpi.icon;
-            return (
-              <div
-                key={idx}
-                className="bg-white p-4 rounded-2xl border border-slate-100/90 shadow-[0_1px_3px_rgba(0,0,0,0.02),0_6px_16px_rgba(0,0,0,0.02)] hover:shadow-md transition-all flex items-center gap-3.5"
-              >
-                <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 ${kpi.iconBg} ${kpi.iconColor}`}>
-                  <Icon className="w-5 h-5" />
-                </div>
-                <div>
-                  <p className="text-[11px] font-medium text-slate-500 leading-tight">{kpi.title}</p>
-                  <h3 className="text-xl font-extrabold text-slate-900 mt-0.5">{kpi.value}</h3>
-                  <div className="flex items-center gap-1 text-[10px] mt-0.5">
-                    <span className="font-bold text-emerald-600">{kpi.change}</span>
-                    <span className="text-slate-400">{kpi.subtext}</span>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
         </div>
 
         {/* Bulk Actions Bar */}
@@ -871,16 +924,16 @@ function LeadsPage() {
           {/* Left/Center Leads Table Container - flex-1 grows to fill, shrinks when right panel opens */}
           <div className="flex-1 min-w-0 bg-white rounded-2xl border border-slate-100/90 shadow-[0_1px_3px_rgba(0,0,0,0.02),0_6px_16px_rgba(0,0,0,0.02)] p-3 sm:p-5 space-y-4 transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]">
             {/* Category Status Tabs */}
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3 overflow-x-auto custom-scrollbar">
-              <div className="flex items-center gap-1 pb-1 sm:pb-0">
+            <div className="-mx-3 sm:mx-0 px-3 sm:px-0 border-b border-slate-100 pb-3 overflow-x-auto no-scrollbar">
+              <div className="flex items-center gap-1 w-max">
                 {tabs.map((tab, i) => (
                   <button
                     key={i}
                     onClick={() => dispatch(setActiveTabAction(tab.label))}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-2 whitespace-nowrap transition-all cursor-pointer ${
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-2 whitespace-nowrap transition-all cursor-pointer border ${
                       activeTab === tab.label
-                        ? "bg-blue-50 text-blue-600 border border-blue-100 shadow-2xs"
-                        : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                        ? "bg-blue-50 text-blue-600 border-blue-100 shadow-2xs"
+                        : "text-slate-600 border-transparent hover:bg-slate-50 hover:text-slate-900"
                     }`}
                   >
                     <span>{tab.label}</span>
@@ -895,51 +948,70 @@ function LeadsPage() {
             </div>
 
             {/* Search Bar + Columns & Filters */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
-              <div className="flex-1 relative">
+            <div className="flex items-center gap-2 pt-1">
+              <div className="flex-1 min-w-0 relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
                   <Search className="w-3.5 h-3.5" />
                 </div>
                 <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => dispatch(setSearchQueryAction(e.target.value))}
-                  placeholder="Search leads by name, company, email or phone..."
-                  className="block w-full pl-9 pr-4 py-2 bg-slate-50/70 border border-slate-200/80 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all"
+                  type="search"
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  placeholder="Search name, company, email or phone…"
+                  className="block w-full pl-9 pr-9 py-2.5 sm:py-2 bg-slate-50/70 border border-slate-200/80 rounded-xl text-sm sm:text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all [&::-webkit-search-cancel-button]:hidden"
                 />
+                {searchInput && (
+                  <button
+                    onClick={() => { setSearchInput(""); dispatch(setSearchQueryAction("")); }}
+                    aria-label="Clear search"
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
               </div>
 
-              <div className="flex flex-wrap items-center gap-2 shrink-0">
-                <div className="relative">
+              <div className="relative hidden md:block">
                 <button onClick={() => setShowColumns((visible) => !visible)} className="bg-white border border-slate-200/80 hover:bg-slate-50 text-slate-700 text-xs font-semibold px-3 py-2 rounded-xl shadow-2xs flex items-center gap-1.5 transition-colors cursor-pointer">
                   <Columns className="w-3.5 h-3.5 text-slate-400" />
                   <span>Columns</span>
                 </button>
                 {showColumns && (
-                  <div className="absolute right-0 top-full z-20 mt-2 w-44 rounded-xl border border-slate-200 bg-white p-3 shadow-xl">
-                    {Object.entries(visibleColumns).map(([column, visible]) => (
-                      <label key={column} className="flex items-center gap-2 py-1 text-xs capitalize text-slate-600 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={visible}
-                          onChange={() => setVisibleColumns((current) => ({ ...current, [column]: !current[column as keyof typeof current] }))}
-                          className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                        />
-                        {column}
-                      </label>
-                    ))}
-                  </div>
+                  <>
+                    <div className="fixed inset-0 z-10" onClick={() => setShowColumns(false)} />
+                    <div className="absolute right-0 top-full z-20 mt-2 w-44 rounded-xl border border-slate-200 bg-white p-3 shadow-xl">
+                      {Object.entries(visibleColumns).map(([column, visible]) => (
+                        <label key={column} className="flex items-center gap-2 py-1 text-xs capitalize text-slate-600 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={visible}
+                            onChange={() => setVisibleColumns((current) => ({ ...current, [column]: !current[column as keyof typeof current] }))}
+                            className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          {column}
+                        </label>
+                      ))}
+                    </div>
+                  </>
                 )}
-                </div>
-                <button onClick={() => setShowFilters((visible) => !visible)} className="bg-white border border-slate-200/80 hover:bg-slate-50 text-slate-700 text-xs font-semibold px-3 py-2 rounded-xl shadow-2xs flex items-center gap-1.5 transition-colors cursor-pointer">
-                  <Filter className="w-3.5 h-3.5 text-slate-400" />
-                  <span>Filters</span>
-                </button>
               </div>
+              <button
+                onClick={() => setShowFilters((visible) => !visible)}
+                aria-label="Filters"
+                className={`shrink-0 border text-xs font-semibold px-3 py-2.5 sm:py-2 rounded-xl shadow-2xs flex items-center gap-1.5 transition-colors cursor-pointer ${
+                  showFilters || activeFilterCount ? "bg-blue-50 border-blue-200 text-blue-700" : "bg-white border-slate-200/80 hover:bg-slate-50 text-slate-700"
+                }`}
+              >
+                <Filter className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Filters</span>
+                {activeFilterCount > 0 && (
+                  <span className="bg-blue-600 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">{activeFilterCount}</span>
+                )}
+              </button>
             </div>
 
             {showFilters && (
-              <div className="flex flex-wrap items-center gap-2 rounded-xl border border-blue-100 bg-blue-50/50 p-3">
+              <div className="grid grid-cols-1 sm:flex sm:flex-wrap sm:items-center gap-2 rounded-xl border border-blue-100 bg-blue-50/50 p-3">
                 <select value={sourceFilter} onChange={(event) => dispatch(setSourceFilterAction(event.target.value))} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700">
                   <option value="">All Sources</option>
                   {SOURCES.map((source) => <option key={source} value={source}>{source}</option>)}
@@ -948,162 +1020,256 @@ function LeadsPage() {
                   <option value="">All Setters</option>
                   {assignees.map((assignee) => <option key={assignee.id} value={assignee.name}>{assignee.name}</option>)}
                 </select>}
-                {(sourceFilter || setterFilter) && (
-                  <button onClick={() => dispatch(clearLeadFilters())} className="text-xs font-semibold text-blue-600 hover:text-blue-700">Clear filters</button>
+                {activeFilterCount > 0 && (
+                  <button onClick={() => dispatch(clearLeadFilters())} className="text-xs font-semibold text-blue-600 hover:text-blue-700 text-left sm:ml-1">Clear filters</button>
                 )}
               </div>
             )}
 
-            {/* Leads Table */}
-            <div className="overflow-x-auto pt-2 custom-scrollbar">
-              {loading ? (
-                <div className="flex items-center justify-center py-20">
-                  <Loader2 className="w-6 h-6 text-blue-500 animate-spin" />
-                  <span className="ml-2 text-sm text-slate-500">Loading leads...</span>
+            {/* Leads list — keeps the current rows on screen while new ones load */}
+            <div className="relative pt-2">
+              {loading && !firstLoad && (
+                <div className="absolute inset-x-0 top-0 h-0.5 overflow-hidden rounded-full bg-blue-100">
+                  <div className="h-full w-1/3 bg-blue-500 lead-progress-bar" />
+                </div>
+              )}
+              {firstLoad ? (
+                <div className="space-y-2 py-2" aria-busy="true">
+                  {Array.from({ length: 6 }, (_, i) => (
+                    <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-slate-50/70 animate-pulse">
+                      <div className="w-8 h-8 rounded-full bg-slate-200/80 shrink-0" />
+                      <div className="flex-1 space-y-1.5">
+                        <div className="h-2.5 w-1/3 rounded bg-slate-200/80" />
+                        <div className="h-2 w-1/4 rounded bg-slate-200/60" />
+                      </div>
+                      <div className="h-4 w-16 rounded bg-slate-200/70" />
+                    </div>
+                  ))}
                 </div>
               ) : leads.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-20 text-center">
-                  <Inbox className="w-10 h-10 text-slate-300 mb-3" />
-                  <p className="text-sm font-semibold text-slate-600">No leads found</p>
-                  <p className="text-xs text-slate-400 mt-1">Try adjusting your filters or add a new lead.</p>
-                  <button
-                    onClick={() => setShowAddModal(true)}
-                    className="mt-4 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-4 py-2 rounded-xl flex items-center gap-1.5 cursor-pointer"
-                  >
-                    <Plus className="w-3.5 h-3.5" /> Add Lead
-                  </button>
+                <div className="flex flex-col items-center justify-center py-16 sm:py-20 text-center px-4">
+                  {leadsError ? (
+                    <>
+                      <AlertCircle className="w-10 h-10 text-red-300 mb-3" />
+                      <p className="text-sm font-semibold text-slate-600">Couldn&apos;t load leads</p>
+                      <p className="text-xs text-slate-400 mt-1">Check your connection and try again.</p>
+                      <button
+                        onClick={() => { dispatch(clearLeadsError()); dispatch(fetchLeadsThunk()); }}
+                        className="mt-4 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold px-4 py-2 rounded-xl cursor-pointer"
+                      >
+                        Try again
+                      </button>
+                    </>
+                  ) : isFiltered ? (
+                    <>
+                      <SearchX className="w-10 h-10 text-slate-300 mb-3" />
+                      <p className="text-sm font-semibold text-slate-600">No leads match</p>
+                      <p className="text-xs text-slate-400 mt-1">Nothing matches your search, status or filters.</p>
+                      <button
+                        onClick={clearEverything}
+                        className="mt-4 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold px-4 py-2 rounded-xl cursor-pointer"
+                      >
+                        Show all leads
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <Inbox className="w-10 h-10 text-slate-300 mb-3" />
+                      <p className="text-sm font-semibold text-slate-600">No leads yet</p>
+                      <p className="text-xs text-slate-400 mt-1">Add your first lead{canImportLeads ? " or import a CSV" : ""} to get started.</p>
+                      <button
+                        onClick={() => setShowAddModal(true)}
+                        className="mt-4 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-4 py-2 rounded-xl flex items-center gap-1.5 cursor-pointer"
+                      >
+                        <Plus className="w-3.5 h-3.5" /> Add Lead
+                      </button>
+                    </>
+                  )}
                 </div>
               ) : (
-                <table className="w-full min-w-[820px] text-xs text-left table-fixed">
-                  <thead className="text-[11px] text-slate-400 font-semibold border-b border-slate-100 bg-slate-50/50">
-                    <tr>
-                      <th className="py-3 px-3 w-10">
-                        <input
-                          type="checkbox"
-                          checked={selectAll}
-                          onChange={toggleSelectAll}
-                          className="w-3.5 h-3.5 text-blue-600 border-slate-300 rounded focus:ring-blue-500 cursor-pointer"
-                        />
-                      </th>
-                      <th className="py-3 px-2 w-16 font-medium">#</th>
-                      <th className="py-3 px-3 w-44 font-medium">Name / Company</th>
-                      {visibleColumns.contact && <th className="py-3 px-3 w-40 font-medium">Contact</th>}
-                      {visibleColumns.source && <th className="py-3 px-3 w-24 font-medium">Source</th>}
-                      {visibleColumns.service && <th className="py-3 px-3 w-24 font-medium">Service</th>}
-                      <th className="py-3 px-3 w-28 font-medium">Status</th>
-                      {visibleColumns.setter && <th className="py-3 px-3 w-28 font-medium">Setter</th>}
-                      {visibleColumns.created && <th className="py-3 px-3 w-24 font-medium">Created</th>}
-                      <th className="py-3 px-2 w-20 font-medium text-center">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-50">
-                    {leads.map((lead) => {
-                      const isSelected = selectedRows.includes(lead.id);
-                      const isDetailActive = selectedLead?.id === lead.id;
-                      const leadId = `LD-${String(lead.leadNumber).padStart(5, "0")}`;
-
-                      return (
-                        <tr
-                          key={lead.id}
-                          onClick={() => { dispatch(setSelectedLeadAction(lead)); setMobilePanelOpen(true); }}
-                          className={`hover:bg-slate-50/80 transition-colors cursor-pointer ${
-                            isDetailActive ? "bg-blue-50/40" : isSelected ? "bg-blue-50/20" : ""
-                          }`}
-                        >
-                          <td className="py-3 px-3" onClick={(e) => toggleSelectRow(lead.id, e)}>
+                <div className={`transition-opacity duration-200 ${loading ? "opacity-60" : "opacity-100"}`}>
+                  {/* Phones: tappable cards */}
+                  <div className="md:hidden -mx-1">
+                    <label className="flex items-center gap-2 px-2 pb-2 text-[11px] font-semibold text-slate-500">
+                      <input
+                        type="checkbox"
+                        checked={selectAll}
+                        onChange={toggleSelectAll}
+                        className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500"
+                      />
+                      Select all on this page
+                    </label>
+                    <ul className="divide-y divide-slate-100">
+                      {leads.map((lead) => {
+                        const isSelected = selectedRows.includes(lead.id);
+                        return (
+                          <li key={lead.id} className={`flex items-center gap-3 px-2 py-3 rounded-xl ${isSelected ? "bg-blue-50/50" : ""}`}>
                             <input
                               type="checkbox"
                               checked={isSelected}
-                              onChange={() => {}}
-                              className="w-3.5 h-3.5 text-blue-600 border-slate-300 rounded focus:ring-blue-500 cursor-pointer"
+                              onChange={() => setSelectedRows((prev) => prev.includes(lead.id) ? prev.filter((id) => id !== lead.id) : [...prev, lead.id])}
+                              aria-label={`Select ${lead.name}`}
+                              className="w-4 h-4 shrink-0 text-blue-600 border-slate-300 rounded focus:ring-blue-500"
                             />
-                          </td>
-                          <td className="py-3 px-2 font-medium text-slate-500 whitespace-nowrap">{leadId}</td>
-                          <td className="py-3 px-3">
-                            <div className="flex items-center gap-2.5">
-                              <div className={`w-7 h-7 rounded-full flex items-center justify-center font-bold text-[10px] shrink-0 ${getAvatarBg(lead.name)}`}>
+                            <button onClick={() => openLead(lead)} className="flex-1 min-w-0 flex items-center gap-3 text-left">
+                              <div className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-[11px] shrink-0 ${getAvatarBg(lead.name)}`}>
                                 {getInitials(lead.name)}
                               </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between gap-2">
+                                  <p className="text-sm font-bold text-slate-900 truncate">{lead.name}</p>
+                                  <span className={`shrink-0 px-2 py-0.5 rounded text-[10px] font-bold ${getStatusStyle(lead.status)}`}>{lead.status}</span>
+                                </div>
+                                <p className="text-xs text-slate-500 truncate mt-0.5">{lead.company}</p>
+                                <p className="text-[11px] text-slate-400 truncate mt-0.5">
+                                  {lead.source} · {formatDate(lead.createdAt)}{lead.setter ? ` · ${lead.setter}` : ""}
+                                </p>
+                              </div>
+                              <ChevronRight className="w-4 h-4 text-slate-300 shrink-0" />
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+
+                  {/* Tablets & desktops: table */}
+                  <div className="hidden md:block overflow-x-auto custom-scrollbar">
+                  <table className="w-full min-w-[620px] text-xs text-left table-fixed">
+                    <thead className="text-[11px] text-slate-400 font-semibold border-b border-slate-100 bg-slate-50/50">
+                      <tr>
+                        <th className="py-3 px-3 w-10">
+                          <input
+                            type="checkbox"
+                            checked={selectAll}
+                            onChange={toggleSelectAll}
+                            className="w-3.5 h-3.5 text-blue-600 border-slate-300 rounded focus:ring-blue-500 cursor-pointer"
+                          />
+                        </th>
+                        <th className="hidden lg:table-cell py-3 px-2 w-16 font-medium">#</th>
+                        <th className="py-3 px-3 w-44 font-medium">Name / Company</th>
+                        {visibleColumns.contact && <th className={`${wideCol} py-3 px-3 w-40 font-medium`}>Contact</th>}
+                        {visibleColumns.source && <th className="py-3 px-3 w-24 font-medium">Source</th>}
+                        {visibleColumns.service && <th className={`${widestCol} py-3 px-3 w-24 font-medium`}>Service</th>}
+                        <th className="py-3 px-3 w-28 font-medium">Status</th>
+                        {visibleColumns.setter && <th className={`${wideCol} py-3 px-3 w-28 font-medium`}>Setter</th>}
+                        {visibleColumns.created && <th className="py-3 px-3 w-24 font-medium">Created</th>}
+                        <th className="py-3 px-2 w-20 font-medium text-center">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-50">
+                      {leads.map((lead) => {
+                        const isSelected = selectedRows.includes(lead.id);
+                        const isDetailActive = selectedLead?.id === lead.id;
+                        const leadId = `LD-${String(lead.leadNumber).padStart(5, "0")}`;
+
+                        return (
+                          <tr
+                            key={lead.id}
+                            onClick={() => openLead(lead)}
+                            className={`hover:bg-slate-50/80 transition-colors cursor-pointer ${
+                              isDetailActive ? "bg-blue-50/40" : isSelected ? "bg-blue-50/20" : ""
+                            }`}
+                          >
+                            <td className="py-3 px-3" onClick={(e) => toggleSelectRow(lead.id, e)}>
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={() => {}}
+                                className="w-3.5 h-3.5 text-blue-600 border-slate-300 rounded focus:ring-blue-500 cursor-pointer"
+                              />
+                            </td>
+                            <td className="hidden lg:table-cell py-3 px-2 font-medium text-slate-500 whitespace-nowrap">{leadId}</td>
+                            <td className="py-3 px-3">
+                              <div className="flex items-center gap-2.5">
+                                <div className={`w-7 h-7 rounded-full flex items-center justify-center font-bold text-[10px] shrink-0 ${getAvatarBg(lead.name)}`}>
+                                  {getInitials(lead.name)}
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="font-bold text-slate-900 leading-tight truncate">{lead.name}</p>
+                                  <p className="text-[10px] text-slate-400 mt-0.5 truncate">{lead.company}</p>
+                                </div>
+                              </div>
+                            </td>
+                            {visibleColumns.contact && <td className={`${wideCol} py-3 px-3`}>
                               <div className="min-w-0">
-                                <p className="font-bold text-slate-900 leading-tight truncate">{lead.name}</p>
-                                <p className="text-[10px] text-slate-400 mt-0.5 truncate">{lead.company}</p>
+                                <p className="text-slate-700 font-medium truncate">{lead.email}</p>
+                                <p className="text-[10px] text-slate-400 truncate">{lead.phone || "—"}</p>
                               </div>
-                            </div>
-                          </td>
-                          {visibleColumns.contact && <td className="py-3 px-3">
-                            <div className="min-w-0">
-                              <p className="text-slate-700 font-medium truncate">{lead.email}</p>
-                              <p className="text-[10px] text-slate-400 truncate">{lead.phone || "—"}</p>
-                            </div>
-                          </td>}
-                          {visibleColumns.source && <td className="py-3 px-3">
-                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold whitespace-nowrap ${sourceStyles[lead.source] || sourceStyles["Website"]}`}>
-                              {lead.source}
-                            </span>
-                          </td>}
-                          {visibleColumns.service && <td className="py-3 px-3 text-slate-700 font-medium">
-                            <span className="truncate block">{lead.service || "—"}</span>
-                          </td>}
-                          <td className="py-3 px-3">
-                            {/* Inline-editable status */}
-                            {inlineEdit?.id === lead.id && inlineEdit.field === "status" ? (
-                              <select
-                                autoFocus
-                                value={inlineEdit.value}
-                                onChange={(e) => handleInlineSave(lead.id, "status", e.target.value)}
-                                onBlur={() => setInlineEdit(null)}
-                                className="text-[10px] font-bold border border-blue-300 rounded px-1 py-0.5 cursor-pointer"
-                              >
-                                {statusOptions.map((status) => <option key={status} value={status}>{status}</option>)}
-                              </select>
-                            ) : (
-                              <span
-                                onClick={(e) => { e.stopPropagation(); setInlineEdit({ id: lead.id, field: "status", value: lead.status }); }}
-                                className={`px-2 py-0.5 rounded text-[10px] font-bold cursor-pointer hover:opacity-80 whitespace-nowrap ${getStatusStyle(lead.status)}`}
-                                title="Click to edit status"
-                              >
-                                {lead.status}
+                            </td>}
+                            {visibleColumns.source && <td className="py-3 px-3">
+                              <span className={`px-2 py-0.5 rounded text-[10px] font-bold whitespace-nowrap ${sourceStyles[lead.source] || sourceStyles["Website"]}`}>
+                                {lead.source}
                               </span>
-                            )}
-                          </td>
-                          {visibleColumns.setter && <td className="py-3 px-3">
-                            {lead.setter ? (
-                              <div className="flex items-center gap-2 min-w-0">
-                                {lead.setterImg ? (
-                                  <img src={lead.setterImg} alt={lead.setter} className="w-5 h-5 rounded-full object-cover border border-slate-200 shrink-0" />
-                                ) : (
-                                  <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0 ${getAvatarBg(lead.setter)}`}>
-                                    {getInitials(lead.setter)}
-                                  </div>
-                                )}
-                                <span className="font-medium text-slate-800 truncate">{lead.setter}</span>
+                            </td>}
+                            {visibleColumns.service && <td className={`${widestCol} py-3 px-3 text-slate-700 font-medium`}>
+                              <span className="truncate block">{lead.service || "—"}</span>
+                            </td>}
+                            <td className="py-3 px-3">
+                              {/* Inline-editable status */}
+                              {inlineEdit?.id === lead.id && inlineEdit.field === "status" ? (
+                                <select
+                                  autoFocus
+                                  value={inlineEdit.value}
+                                  onChange={(e) => handleInlineSave(lead.id, "status", e.target.value)}
+                                  onBlur={() => setInlineEdit(null)}
+                                  className="text-[10px] font-bold border border-blue-300 rounded px-1 py-0.5 cursor-pointer"
+                                >
+                                  {statusOptions.map((status) => <option key={status} value={status}>{status}</option>)}
+                                </select>
+                              ) : (
+                                <button
+                                  type="button"
+                                  disabled={!canEditLeadStatus}
+                                  onClick={(e) => { e.stopPropagation(); setInlineEdit({ id: lead.id, field: "status", value: lead.status }); }}
+                                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold cursor-pointer hover:opacity-80 whitespace-nowrap disabled:cursor-default disabled:hover:opacity-100 ${getStatusStyle(lead.status)}`}
+                                  title={canEditLeadStatus ? "Change status" : undefined}
+                                >
+                                  {lead.status}
+                                  {canEditLeadStatus && <ChevronDown className="w-3 h-3 opacity-60" />}
+                                </button>
+                              )}
+                            </td>
+                            {visibleColumns.setter && <td className={`${wideCol} py-3 px-3`}>
+                              {lead.setter ? (
+                                <div className="flex items-center gap-2 min-w-0">
+                                  {lead.setterImg ? (
+                                    <img src={lead.setterImg} alt={lead.setter} className="w-5 h-5 rounded-full object-cover border border-slate-200 shrink-0" />
+                                  ) : (
+                                    <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0 ${getAvatarBg(lead.setter)}`}>
+                                      {getInitials(lead.setter)}
+                                    </div>
+                                  )}
+                                  <span className="font-medium text-slate-800 truncate">{lead.setter}</span>
+                                </div>
+                              ) : <span className="text-slate-400">—</span>}
+                            </td>}
+                            {visibleColumns.created && <td className="py-3 px-3 text-slate-500 whitespace-nowrap">{formatDate(lead.createdAt)}</td>}
+                            <td className="py-3 px-2 text-center" onClick={(e) => e.stopPropagation()}>
+                              <div className="flex items-center justify-center gap-1">
+                                <button
+                                  onClick={() => { setEditingLead(lead); setShowEditModal(true); }}
+                                  className="p-1 rounded-lg hover:bg-blue-50 text-slate-400 hover:text-blue-600 transition-colors cursor-pointer"
+                                  title="Edit"
+                                >
+                                  <Edit3 className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteLead(lead.id)}
+                                  className="p-1 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-600 transition-colors cursor-pointer"
+                                  title="Delete"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
                               </div>
-                            ) : <span className="text-slate-400">—</span>}
-                          </td>}
-                          {visibleColumns.created && <td className="py-3 px-3 text-slate-500 whitespace-nowrap">{formatDate(lead.createdAt)}</td>}
-                          <td className="py-3 px-2 text-center" onClick={(e) => e.stopPropagation()}>
-                            <div className="flex items-center justify-center gap-1">
-                              <button
-                                onClick={() => { setEditingLead(lead); setShowEditModal(true); }}
-                                className="p-1 rounded-lg hover:bg-blue-50 text-slate-400 hover:text-blue-600 transition-colors cursor-pointer"
-                                title="Edit"
-                              >
-                                <Edit3 className="w-3.5 h-3.5" />
-                              </button>
-                              <button
-                                onClick={() => handleDeleteLead(lead.id)}
-                                className="p-1 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-600 transition-colors cursor-pointer"
-                                title="Delete"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                  </div>
+                </div>
               )}
             </div>
 
@@ -1441,33 +1607,6 @@ function LeadsPage() {
                       {formatDate(selectedLead.nextFollowUp)}
                     </span>
                   </div>
-                  <div className="pt-2 mt-1 border-t border-slate-100">
-                    <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400 mb-2">All CRM fields</p>
-                    <div className="space-y-2">
-                      {[
-                        ["Full Name", selectedLead.name],
-                        ["Company", selectedLead.company],
-                        ["Email", selectedLead.email],
-                        ["Phone", selectedLead.phone],
-                        ["Location", selectedLead.location],
-                        ["LinkedIn", selectedLead.linkedin],
-                        ["Source", selectedLead.source],
-                        ["Service", selectedLead.service],
-                        ["Status", selectedLead.status],
-                        ["Assigned Setter", selectedLead.setter],
-                        ["Budget", selectedLead.budget],
-                        ["Timeline", selectedLead.timeline],
-                        ["Company Size", selectedLead.companySize],
-                        ["Industry", selectedLead.industry],
-                        ["Notes", selectedLead.notes],
-                      ].map(([label, value]) => (
-                        <div key={label} className="flex items-start justify-between gap-3 border-b border-slate-50 pb-1.5">
-                          <span className="text-slate-400 shrink-0">{label}</span>
-                          <span className="text-right font-semibold text-slate-800 break-words">{value || "—"}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
                   {selectedLead.customData && Object.keys(selectedLead.customData).length > 0 && (
                     <div className="pt-2 mt-1 border-t border-slate-100">
                       <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400 mb-2">Custom fields</p>
@@ -1558,7 +1697,8 @@ function LeadsPage() {
                                 <p className="text-xs font-semibold text-slate-800 truncate">{act.title}</p>
                                 <button
                                   onClick={() => deleteActivity(act.id)}
-                                  className="text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer shrink-0"
+                                  aria-label="Delete activity"
+                                  className="p-1 -m-1 text-slate-300 hover:text-red-500 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity cursor-pointer shrink-0"
                                 >
                                   <Trash2 className="w-3 h-3" />
                                 </button>
@@ -1609,38 +1749,57 @@ function LeadsPage() {
               {/* ============ FILES TAB ============ */}
               {detailsTab === "Files" && (
                 <div className="pt-2 border-t border-slate-100 space-y-3">
-                  {/* Add File Form */}
-                  <div className="bg-slate-50 rounded-xl p-3 space-y-2">
-                    <input
-                      type="text"
-                      value={fileName}
-                      onChange={(e) => setFileName(e.target.value)}
-                      placeholder="File name (e.g. proposal.pdf)..."
-                      className="w-full text-xs border border-slate-200 rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
-                    />
-                    <input
-                      type="text"
-                      value={fileUrl}
-                      onChange={(e) => setFileUrl(e.target.value)}
-                      placeholder="File URL (https://...)..."
-                      className="w-full text-xs border border-slate-200 rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
-                    />
-                    <button
-                      onClick={addFile}
-                      disabled={!fileName.trim() || !fileUrl.trim() || fileLoading}
-                      className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-semibold py-1.5 rounded-lg flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
-                    >
-                      {fileLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Paperclip className="w-3 h-3" />}
-                      Attach File
+                  {/* Upload */}
+                  <input ref={fileInputRef} type="file" multiple onChange={uploadLeadFiles} className="hidden" />
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isUploading}
+                    className="w-full border-2 border-dashed border-slate-200 hover:border-blue-300 hover:bg-blue-50/40 rounded-xl py-5 flex flex-col items-center justify-center gap-1.5 text-slate-500 hover:text-blue-600 transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-wait"
+                  >
+                    {isUploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Upload className="w-5 h-5" />}
+                    <span className="text-xs font-semibold">{isUploading ? "Uploading…" : "Upload files"}</span>
+                    <span className="text-[10px] text-slate-400">Up to 5 files, 16 MB each</span>
+                  </button>
+                  {showLinkForm ? (
+                    <div className="bg-slate-50 rounded-xl p-3 space-y-2">
+                      <input
+                        type="text"
+                        value={fileName}
+                        onChange={(e) => setFileName(e.target.value)}
+                        placeholder="Name (e.g. Proposal v2)"
+                        className="w-full text-xs border border-slate-200 rounded-lg px-2.5 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
+                      />
+                      <input
+                        type="url"
+                        value={fileUrl}
+                        onChange={(e) => setFileUrl(e.target.value)}
+                        placeholder="https://docs.google.com/…"
+                        className="w-full text-xs border border-slate-200 rounded-lg px-2.5 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
+                      />
+                      <div className="flex gap-2">
+                        <button onClick={() => setShowLinkForm(false)} className="flex-1 border border-slate-200 bg-white text-slate-600 text-xs font-semibold py-2 rounded-lg cursor-pointer">Cancel</button>
+                        <button
+                          onClick={addFile}
+                          disabled={!fileName.trim() || !fileUrl.trim() || fileLoading}
+                          className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-semibold py-2 rounded-lg flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
+                        >
+                          {fileLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <LinkIcon className="w-3 h-3" />}
+                          Add link
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button onClick={() => setShowLinkForm(true)} className="w-full text-[11px] font-semibold text-slate-500 hover:text-blue-600 flex items-center justify-center gap-1 cursor-pointer">
+                      <LinkIcon className="w-3 h-3" /> Or add a link (Google Drive, Figma…)
                     </button>
-                  </div>
+                  )}
 
                   {/* File List */}
                   {files.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-8 text-center">
                       <Paperclip className="w-8 h-8 text-slate-300 mb-2" />
                       <p className="text-xs font-semibold text-slate-500">No files attached</p>
-                      <p className="text-[10px] text-slate-400 mt-0.5">Attach a file by adding its name and URL above.</p>
+                      <p className="text-[10px] text-slate-400 mt-0.5">Upload proposals, briefs or screenshots for this lead.</p>
                     </div>
                   ) : (
                     <div className="space-y-2">
@@ -1651,22 +1810,30 @@ function LeadsPage() {
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="text-xs font-semibold text-slate-800 truncate">{file.fileName}</p>
-                            <p className="text-[10px] text-slate-400">{formatDateTime(file.createdAt)}</p>
+                            <p className="text-[10px] text-slate-400 truncate">
+                              {file.fileSize > 0 ? `${file.fileSize >= 1048576 ? `${(file.fileSize / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(file.fileSize / 1024))} KB`} · ` : ""}
+                              {formatDateTime(file.createdAt)}{file.uploadedBy ? ` · ${file.uploadedBy}` : ""}
+                            </p>
                           </div>
                           <div className="flex items-center gap-1 shrink-0">
                             <a
                               href={file.fileUrl}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="p-1 rounded-lg hover:bg-blue-50 text-slate-400 hover:text-blue-600 cursor-pointer"
+                              className="p-1.5 rounded-lg hover:bg-blue-50 text-slate-400 hover:text-blue-600 cursor-pointer"
                               title="Open"
                             >
                               <Download className="w-3.5 h-3.5" />
                             </a>
                             <button
-                              onClick={() => deleteFile(file.id)}
-                              className="p-1 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-600 cursor-pointer"
-                              title="Delete"
+                              onClick={() => setConfirmDialog({
+                                title: `Remove ${file.fileName}?`,
+                                message: "The file will no longer be attached to this lead.",
+                                confirmLabel: "Remove",
+                                onConfirm: () => { setConfirmDialog(null); deleteFile(file.id); },
+                              })}
+                              className="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-600 cursor-pointer"
+                              title="Remove"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
@@ -1743,13 +1910,64 @@ function LeadsPage() {
         />
       )}
 
-      {/* Custom Scrollbars */}
+      {/* Confirm dialog (replaces the browser's confirm()) */}
+      {confirmDialog && (
+        <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/50 backdrop-blur-sm" onClick={() => setConfirmDialog(null)}>
+          <div
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="lead-confirm-title"
+            onClick={(event) => event.stopPropagation()}
+            className="w-full sm:max-w-sm bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl p-5 sm:p-6"
+          >
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-full bg-red-50 text-red-600 flex items-center justify-center shrink-0">
+                <Trash2 className="w-4 h-4" />
+              </div>
+              <div className="min-w-0">
+                <h3 id="lead-confirm-title" className="text-sm font-bold text-slate-900 break-words">{confirmDialog.title}</h3>
+                <p className="text-xs text-slate-500 mt-1">{confirmDialog.message}</p>
+              </div>
+            </div>
+            <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 mt-5">
+              <button
+                onClick={() => setConfirmDialog(null)}
+                className="w-full sm:w-auto px-4 py-2.5 sm:py-2 text-xs font-semibold text-slate-700 border border-slate-200 rounded-xl hover:bg-slate-50 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                autoFocus
+                onClick={confirmDialog.onConfirm}
+                className="w-full sm:w-auto px-4 py-2.5 sm:py-2 text-xs font-semibold text-white bg-red-600 hover:bg-red-700 rounded-xl cursor-pointer"
+              >
+                {confirmDialog.confirmLabel}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast */}
+      <div aria-live="polite" className="fixed bottom-4 inset-x-4 sm:inset-x-auto sm:right-6 sm:bottom-6 z-[70] flex justify-center sm:justify-end pointer-events-none">
+        {toast && (
+          <div className="pointer-events-auto flex items-center gap-2 bg-slate-900 text-white text-xs font-semibold px-4 py-3 rounded-xl shadow-xl">
+            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+            <span>{toast}</span>
+          </div>
+        )}
+      </div>
+
       <style dangerouslySetInnerHTML={{
         __html: `
           .custom-scrollbar::-webkit-scrollbar { width: 5px; height: 5px; }
           .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
           .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
           .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+          .no-scrollbar { scrollbar-width: none; }
+          .no-scrollbar::-webkit-scrollbar { display: none; }
+          @keyframes lead-progress { 0% { transform: translateX(-100%); } 100% { transform: translateX(300%); } }
+          .lead-progress-bar { animation: lead-progress 1s ease-in-out infinite; }
         `,
       }} />
     </>
