@@ -181,12 +181,13 @@ export default function Dashboard() {
     setError(null);
     try {
       const res = await fetch("/api/dashboard");
-      if (!res.ok) throw new Error("Failed to load dashboard data");
-      const json: DashboardData = await res.json();
+      const payload = await res.json().catch(() => null);
+      if (!res.ok || !payload) throw new Error(payload?.error || "Could not load live dashboard data.");
+      const json = payload as DashboardData;
       setData(json);
       setTasks(json.todayTasks);
-    } catch {
-      setError("Could not load live dashboard data.");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not load live dashboard data.");
     } finally {
       setLoading(false);
     }

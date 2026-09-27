@@ -20,8 +20,12 @@ export default auth((req) => {
     return NextResponse.redirect(new URL("/", req.url));
   }
 
-  // Redirect unauthenticated users to login
+  // Redirect unauthenticated users to login. API calls get a JSON 401 instead of the login
+  // page's HTML, so the UI can tell "session expired" apart from a real server error.
   if (!isPublicRoute && !isLoggedIn) {
+    if (pathname.startsWith("/api/")) {
+      return NextResponse.json({ error: "Your session has expired. Please sign in again." }, { status: 401 });
+    }
     return NextResponse.redirect(new URL("/login", req.url));
   }
 
