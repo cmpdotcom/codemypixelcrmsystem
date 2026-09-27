@@ -18,6 +18,7 @@ import {
   Kanban,
   List,
   Building2,
+  Sparkles,
   X,
 } from "lucide-react";
 import { useSettings } from "@/components/SettingsProvider";
@@ -57,6 +58,17 @@ const STAGES = [
   "Completed",
   "On Hold",
 ];
+
+const STAGE_TONES: Record<string, { dot: string; badge: string; empty: string }> = {
+  Planning: { dot: "bg-slate-400", badge: "bg-slate-100 text-slate-600", empty: "text-slate-300" },
+  Requirements: { dot: "bg-violet-500", badge: "bg-violet-50 text-violet-700", empty: "text-violet-200" },
+  Design: { dot: "bg-fuchsia-500", badge: "bg-fuchsia-50 text-fuchsia-700", empty: "text-fuchsia-200" },
+  Development: { dot: "bg-blue-500", badge: "bg-blue-50 text-blue-700", empty: "text-blue-200" },
+  Testing: { dot: "bg-amber-500", badge: "bg-amber-50 text-amber-700", empty: "text-amber-200" },
+  Deployment: { dot: "bg-cyan-500", badge: "bg-cyan-50 text-cyan-700", empty: "text-cyan-200" },
+  Completed: { dot: "bg-emerald-500", badge: "bg-emerald-50 text-emerald-700", empty: "text-emerald-200" },
+  "On Hold": { dot: "bg-rose-500", badge: "bg-rose-50 text-rose-700", empty: "text-rose-200" },
+};
 
 const HEALTH_COLORS: Record<string, string> = {
   "on-track": "bg-emerald-500",
@@ -234,19 +246,22 @@ export default function ProjectsPage() {
   }
 
   return (
-    <div className="p-4 sm:p-5 xl:p-6 max-w-[1780px] mx-auto w-full pb-12 space-y-4">
+    <div className="p-4 sm:p-5 xl:p-6 max-w-[1780px] mx-auto w-full pb-12 space-y-5">
       {/* Top Title Bar & Primary Actions */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Projects</h2>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Deliver projects on time, manage agile task boards, and monitor milestone progression
+      <div className="flex flex-col gap-5 rounded-[24px] border border-slate-200/80 bg-white px-5 py-5 shadow-sm shadow-slate-200/40 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
+        <div className="min-w-0">
+          <div className="mb-2 flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.18em] text-blue-600">
+            <Sparkles className="h-3.5 w-3.5" /> Delivery pipeline
+          </div>
+          <h2 className="text-2xl font-black tracking-tight text-slate-900 sm:text-3xl">Projects</h2>
+          <p className="mt-1 max-w-2xl text-xs leading-5 text-slate-500">
+            Keep every delivery moving, see project health at a glance, and give each team a clear next step.
           </p>
         </div>
 
         <div className="flex items-center gap-2">
           {/* View Mode Toggle */}
-          <div className="bg-white border border-slate-200/80 rounded-xl p-1 flex items-center gap-1 shadow-2xs">
+          <div className="flex items-center gap-1 rounded-xl border border-slate-200/80 bg-slate-50/70 p-1 shadow-sm">
             <button
               onClick={() => setCurrentView("kanban")}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
@@ -273,7 +288,7 @@ export default function ProjectsPage() {
 
           <button
             onClick={() => handleOpenCreate("Planning")}
-            className="bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs font-semibold py-2 px-3.5 rounded-xl shadow-md shadow-blue-500/25 flex items-center gap-1.5 transition-all cursor-pointer"
+            className="flex items-center gap-1.5 rounded-xl bg-blue-600 px-3.5 py-2.5 text-xs font-bold text-white shadow-md shadow-blue-500/25 transition-all hover:bg-blue-700 active:bg-blue-800"
           >
             <Plus className="w-4 h-4" />
             <span>Add Project</span>
@@ -292,8 +307,8 @@ export default function ProjectsPage() {
       )}
 
       {/* Row of 6 KPI Metric Cards (Calculated directly from Database) */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3">
-        <div className="bg-white p-3.5 rounded-2xl border border-slate-100/90 shadow-sm flex items-center gap-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
+        <div className="flex items-center gap-3 rounded-2xl border border-slate-200/80 bg-white p-3.5 shadow-sm shadow-slate-200/30">
           <div className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 bg-blue-50 text-blue-600">
             <FolderKanban className="w-5 h-5" />
           </div>
@@ -303,7 +318,7 @@ export default function ProjectsPage() {
           </div>
         </div>
 
-        <div className="bg-white p-3.5 rounded-2xl border border-slate-100/90 shadow-sm flex items-center gap-3">
+        <div className="flex items-center gap-3 rounded-2xl border border-slate-200/80 bg-white p-3.5 shadow-sm shadow-slate-200/30">
           <div className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 bg-green-50 text-green-600">
             <Activity className="w-5 h-5" />
           </div>
@@ -313,7 +328,7 @@ export default function ProjectsPage() {
           </div>
         </div>
 
-        <div className="bg-white p-3.5 rounded-2xl border border-slate-100/90 shadow-sm flex items-center gap-3">
+        <div className="flex items-center gap-3 rounded-2xl border border-slate-200/80 bg-white p-3.5 shadow-sm shadow-slate-200/30">
           <div className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 bg-emerald-50 text-emerald-600">
             <CheckCircle className="w-5 h-5" />
           </div>
@@ -323,7 +338,7 @@ export default function ProjectsPage() {
           </div>
         </div>
 
-        <div className="bg-white p-3.5 rounded-2xl border border-slate-100/90 shadow-sm flex items-center gap-3">
+        <div className="flex items-center gap-3 rounded-2xl border border-slate-200/80 bg-white p-3.5 shadow-sm shadow-slate-200/30">
           <div className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 bg-amber-50 text-amber-500">
             <AlertTriangle className="w-5 h-5" />
           </div>
@@ -333,7 +348,7 @@ export default function ProjectsPage() {
           </div>
         </div>
 
-        <div className="bg-white p-3.5 rounded-2xl border border-slate-100/90 shadow-sm flex items-center gap-3">
+        <div className="flex items-center gap-3 rounded-2xl border border-slate-200/80 bg-white p-3.5 shadow-sm shadow-slate-200/30">
           <div className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 bg-purple-50 text-purple-600">
             <CheckCheck className="w-5 h-5" />
           </div>
@@ -343,7 +358,7 @@ export default function ProjectsPage() {
           </div>
         </div>
 
-        <div className="bg-white p-3.5 rounded-2xl border border-slate-100/90 shadow-sm flex items-center gap-3">
+        <div className="flex items-center gap-3 rounded-2xl border border-slate-200/80 bg-white p-3.5 shadow-sm shadow-slate-200/30">
           <div className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 bg-rose-50 text-rose-500">
             <Clock className="w-5 h-5" />
           </div>
@@ -355,7 +370,7 @@ export default function ProjectsPage() {
       </div>
 
       {/* Search & Filter Bar */}
-      <div className="bg-white rounded-2xl border border-slate-100/90 shadow-sm p-3 flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200/80 bg-white p-3 shadow-sm shadow-slate-200/30">
         <div className="flex-1 min-w-[260px] relative">
           <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
           <input
@@ -363,7 +378,7 @@ export default function ProjectsPage() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search projects by name, client, or description..."
-            className="block w-full pl-9 pr-4 py-1.5 bg-slate-50/70 border border-slate-200/80 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all"
+            className="block w-full rounded-xl border border-slate-200/80 bg-slate-50/70 py-2 pl-9 pr-4 text-xs text-slate-800 placeholder-slate-400 transition-all focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
           />
         </div>
 
@@ -371,7 +386,7 @@ export default function ProjectsPage() {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-3 py-1.5 text-xs bg-white border border-slate-200 rounded-xl cursor-pointer"
+            className="cursor-pointer rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-600"
           >
             <option value="All Statuses">All Statuses</option>
             {STAGES.map((s) => (
@@ -382,7 +397,7 @@ export default function ProjectsPage() {
           <select
             value={healthFilter}
             onChange={(e) => setHealthFilter(e.target.value)}
-            className="px-3 py-1.5 text-xs bg-white border border-slate-200 rounded-xl cursor-pointer"
+            className="cursor-pointer rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-600"
           >
             <option value="All Health">All Health</option>
             <option value="on-track">On Track</option>
@@ -407,24 +422,28 @@ export default function ProjectsPage() {
 
       {/* VIEW 1: KANBAN WORKFLOW BOARD */}
       {currentView === "kanban" && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8 gap-3 items-start overflow-x-auto pb-4">
+        <div className="grid grid-cols-1 gap-4 pb-4 sm:grid-cols-2 xl:grid-cols-4">
           {STAGES.map((st) => {
             const stageProjects = projects.filter((p) => p.status === st);
+            const stageTone = STAGE_TONES[st] || STAGE_TONES.Planning;
             return (
               <div
                 key={st}
-                className="bg-slate-50/70 rounded-2xl p-2.5 border border-slate-200/70 flex flex-col gap-2.5 min-w-[210px]"
+                className="flex min-h-[245px] flex-col gap-3 rounded-[22px] border border-slate-200/80 bg-white p-3 shadow-sm shadow-slate-200/30"
               >
                 {/* Column Header */}
-                <div className="flex items-center justify-between px-1">
-                  <h3 className="text-xs font-bold text-slate-900">{st}</h3>
-                  <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-slate-200/80 text-slate-700">
+                <div className="flex items-center justify-between border-b border-slate-100 px-1 pb-3">
+                  <div className="flex items-center gap-2">
+                    <span className={`h-2 w-2 rounded-full ${stageTone.dot}`} />
+                    <h3 className="text-xs font-extrabold text-slate-900">{st}</h3>
+                  </div>
+                  <span className={`rounded-full px-2 py-1 text-[10px] font-black ${stageTone.badge}`}>
                     {stageProjects.length}
                   </span>
                 </div>
 
                 {/* Cards */}
-                <div className="space-y-2 min-h-[140px]">
+                <div className="min-h-[150px] flex-1 space-y-2">
                   {stageProjects.map((proj) => (
                     <div
                       key={proj.id}
@@ -491,11 +510,18 @@ export default function ProjectsPage() {
                       </div>
                     </div>
                   ))}
+                  {stageProjects.length === 0 && (
+                    <div className="flex min-h-[140px] flex-col items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50/50 px-4 text-center">
+                      <FolderKanban className={`mb-2 h-5 w-5 ${stageTone.empty}`} />
+                      <p className="text-[11px] font-semibold text-slate-500">No projects here yet</p>
+                      <p className="mt-1 text-[10px] leading-4 text-slate-400">Move a project into {st.toLowerCase()} or create one below.</p>
+                    </div>
+                  )}
                 </div>
 
                 <button
                   onClick={() => handleOpenCreate(st)}
-                  className="w-full py-1.5 bg-white hover:bg-slate-100 border border-dashed border-slate-300 rounded-xl text-xs font-medium text-slate-600 transition-colors flex items-center justify-center gap-1 cursor-pointer"
+                  className="flex w-full cursor-pointer items-center justify-center gap-1 rounded-xl border border-dashed border-slate-300 bg-slate-50/60 py-2 text-xs font-bold text-slate-600 transition-colors hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   <span>Add Project</span>
