@@ -1,15 +1,25 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { fullName, getActor, getPickerOptions } from "@/lib/workflow";
+import { dealScope, fullName, getActor, getPickerOptions, leadScope, projectScope } from "@/lib/workflow";
 
-// GET /api/workflow - the executive hand-off board: every place work is waiting on a decision
+// GET /api/workflow - the hand-off board: every place work is waiting on a decision.
+// Managers see everything; everyone else only sees the hand-offs that involve them
+// (their own leads, their own deals, their own projects) — same scoping rules the
+// Leads/Deals/Projects pages already use, applied here for consistency.
 export async function GET() {
   const actor = await getActor();
   if (!actor) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  const leadWhere = leadScope(actor);
+  const dealWhere = dealScope(actor);
+  const projWhere = projectScope(actor);
+  // Starting a project from a won deal is a manager-only decision, and a won deal
+  // isn't "owned" by anyone the way a lead or open deal is — only managers see this queue.
+  const canSeeAwaitingDelivery = actor.isManager;
+
   const [awaitingCloser, withClosers, awaitingDelivery, activeProjects, pickers] = await Promise.all([
     prisma.lead.findMany({
-      where: { interestedAt: { not: null }, closerId: null },
+      where: { AND: [leadWhere, { interestedAt: { not: null }, closerId: null }] },
       orderBy: { interestedAt: "asc" },
       take: 200,
       select: {
@@ -18,7 +28,7 @@ export async function GET() {
       },
     }),
     prisma.deal.findMany({
-      where: { stage: { notIn: ["won", "lost"] }, OR: [{ leadId: { not: null } }, { closerId: { not: null } }] },
+      where: { AND: [dealWhere, { stage: { notIn: ["won", "lost"] }, OR: [{ leadId: { not: null } }, { closerId: { not: null } }] }] },
       orderBy: { updatedAt: "desc" },
       take: 200,
       select: {
@@ -26,17 +36,19 @@ export async function GET() {
         stage: true, value: true, expectedCloseDate: true, updatedAt: true,
       },
     }),
-    prisma.deal.findMany({
-      where: { stage: "won", projects: { none: {} } },
-      orderBy: { closedAt: "asc" },
-      take: 200,
-      select: {
-        id: true, dealNumber: true, title: true, company: true, contact: true, closer: true, service: true,
-        value: true, closedAt: true, clientId: true, expectedCloseDate: true,
-      },
-    }),
+    canSeeAwaitingDelivery
+      ? prisma.deal.findMany({
+          where: { stage: "won", projects: { none: {} } },
+          orderBy: { closedAt: "asc" },
+          take: 200,
+          select: {
+            id: true, dealNumber: true, title: true, company: true, contact: true, closer: true, service: true,
+            value: true, closedAt: true, clientId: true, expectedCloseDate: true,
+          },
+        })
+      : Promise.resolve([]),
     prisma.project.findMany({
-      where: { status: { notIn: ["Completed"] } },
+      where: { AND: [projWhere, { status: { notIn: ["Completed"] } }] },
       orderBy: { deadline: "asc" },
       take: 200,
       select: {

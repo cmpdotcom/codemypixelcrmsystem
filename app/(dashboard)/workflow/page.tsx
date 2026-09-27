@@ -235,7 +235,7 @@ export default function WorkflowPage() {
       )}
       {!canManage && board && (
         <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-600">
-          You can view this board. Assigning closers and delivery teams needs the Workflow “assign” permission.
+          You&apos;re only seeing hand-offs that involve you. Assigning closers and delivery teams needs the Workflow “assign” permission.
         </div>
       )}
 
