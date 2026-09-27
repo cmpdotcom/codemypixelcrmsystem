@@ -84,7 +84,7 @@ const navSections = [
     title: "System",
     items: [
       { icon: Users, label: "Users", href: "/users", module: "Users" },
-      { icon: Settings, label: "Settings", href: "/settings", module: "Settings" },
+      { icon: Settings, label: "Settings", href: "/settings/general", module: "Settings" },
       { icon: LinkIcon, label: "Integrations", href: "/integrations", module: "Integrations" },
     ],
   },
