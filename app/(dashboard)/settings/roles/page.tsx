@@ -6,6 +6,15 @@ import { FormCard, Badge } from "@/components/SettingsUI";
 import { CRM_MODULES, normalizePermissions, type PermissionSet } from "@/lib/permissions";
 import {
   Shield,
+  ShieldCheck,
+  Crown,
+  Eye,
+  Phone,
+  Handshake,
+  Code,
+  Bug,
+  Rocket,
+  Megaphone,
   Plus,
   Search,
   Check,
@@ -16,6 +25,20 @@ import {
   AlertCircle,
   Save,
 } from "lucide-react";
+
+const ROLE_ICONS: Record<string, typeof Shield> = {
+  "Super Admin": Crown,
+  Executive: ShieldCheck,
+  Supervisor: Eye,
+  Setter: Phone,
+  Closer: Handshake,
+  Developer: Code,
+  Tester: Bug,
+  QA: Bug,
+  DevOps: Rocket,
+  Marketing: Megaphone,
+};
+const getRoleIcon = (name: string) => ROLE_ICONS[name] || Shield;
 
 interface Role {
   id: string;
@@ -268,6 +291,7 @@ export default function RolesSettingsPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {filteredRoles.map((role) => {
             const isSelected = selectedRole?.id === role.id;
+            const RoleIcon = getRoleIcon(role.name);
             return (
               <div
                 key={role.id}
@@ -284,7 +308,7 @@ export default function RolesSettingsPage() {
                       isSelected ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-600"
                     }`}
                   >
-                    <Shield className="w-4 h-4" />
+                    <RoleIcon className="w-4 h-4" />
                   </div>
                   <div className="min-w-0">
                     <p className="text-xs font-bold text-slate-900 truncate">{role.name}</p>
