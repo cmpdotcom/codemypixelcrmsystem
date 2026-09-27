@@ -4,7 +4,6 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import {
   AlertCircle,
-  ArrowRight,
   Building2,
   Briefcase,
   CalendarDays,
@@ -271,7 +270,7 @@ export default function WorkflowPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-4 sm:gap-4">
         {steps.map((step, index) => {
           const Icon = step.icon;
           return (
@@ -286,7 +285,6 @@ export default function WorkflowPage() {
                 <p className="text-[11px] font-bold text-slate-700">{index + 1}. {step.label}</p>
                 <p className="mt-1 text-[10px] text-slate-400">{step.sub}</p>
               </div>
-              {index < steps.length - 1 && <ArrowRight className="absolute -right-3 top-1/2 z-10 hidden h-4 w-4 -translate-y-1/2 text-slate-300 sm:block" />}
             </div>
           );
         })}
