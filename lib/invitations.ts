@@ -1,10 +1,11 @@
 import { prisma } from "@/lib/prisma";
 
-export const INVITABLE_ROLES = ["Executive", "Setter", "Closer", "Developer", "Tester", "DevOps", "Marketing"] as const;
+export const INVITABLE_ROLES = ["Executive", "Supervisor", "Setter", "Closer", "Developer", "Tester", "DevOps", "Marketing"] as const;
 export type InvitableRole = (typeof INVITABLE_ROLES)[number];
 
 const ROLE_DEFAULTS: Record<InvitableRole, { color: string; description: string }> = {
   Executive: { color: "purple", description: "Business leadership and workspace management" },
+  Supervisor: { color: "purple", description: "Oversees setters, closers and delivery teams day-to-day" },
   Setter: { color: "amber", description: "Qualify leads and book calls for closers" },
   Closer: { color: "green", description: "Close sales deals and manage the customer pipeline" },
   Developer: { color: "slate", description: "Delivery, code tasks, and milestone execution" },

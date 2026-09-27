@@ -3,6 +3,13 @@ import { prisma } from "@/lib/prisma";
 import { defaultPermissionsForRole } from "@/lib/permissions";
 import { ensureInvitableRoles } from "@/lib/invitations";
 
+// Org hierarchy, top to bottom. Roles not listed here (custom roles someone adds
+// later) sort after these by creation order, which is what the DB order gives us.
+const ROLE_DISPLAY_ORDER = [
+  "Super Admin", "Executive", "Supervisor", "Sales Manager",
+  "Setter", "Closer", "Developer", "Tester", "QA", "DevOps", "Marketing",
+];
+
 // GET /api/roles - list all roles with user count
 export async function GET() {
   await ensureInvitableRoles();
@@ -15,8 +22,14 @@ export async function GET() {
     orderBy: { createdAt: "asc" },
   });
 
+  const rank = (name: string) => {
+    const index = ROLE_DISPLAY_ORDER.indexOf(name);
+    return index === -1 ? ROLE_DISPLAY_ORDER.length : index;
+  };
+  const ordered = [...roles].sort((a, b) => rank(a.name) - rank(b.name));
+
   return NextResponse.json(
-    roles.map((r) => ({
+    ordered.map((r) => ({
       ...r,
       userCount: r._count.users,
     }))

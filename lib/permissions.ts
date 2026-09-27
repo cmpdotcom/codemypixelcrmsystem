@@ -82,6 +82,15 @@ export function defaultPermissionsForRole(roleName: string): PermissionsMap {
 
   if (fullRoles.has(roleName)) return Object.fromEntries(CRM_MODULES.map((module) => [module, clone(FULL_PERMISSIONS)]));
 
+  if (roleName === "Supervisor") {
+    // Oversees day-to-day work across the sales/delivery pipeline (create, edit, assign)
+    // without the delete rights or user/settings administration reserved for Executives.
+    const oversightModules = CRM_MODULES.filter((module) => !["Users", "Settings", "Dashboard", "Reports"].includes(module));
+    grant(oversightModules, STANDARD_PERMISSIONS);
+    grant(["Dashboard", "Reports"], READ_PERMISSIONS);
+    return permissions;
+  }
+
   grant(["Dashboard"], READ_PERMISSIONS);
   if (roleName === "Setter") {
     grant(["Leads", "Activities", "Follow-ups"], STANDARD_PERMISSIONS);
