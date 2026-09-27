@@ -236,6 +236,8 @@ export default function ProjectsPage() {
     }
   };
 
+  const hasActiveFilters = Boolean(searchQuery || statusFilter !== "All Statuses" || healthFilter !== "All Health");
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -549,7 +551,46 @@ export default function ProjectsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {projects.map((proj) => (
+              {projects.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="px-6 py-16 text-center">
+                    <div className="mx-auto flex max-w-sm flex-col items-center">
+                      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 text-blue-400">
+                        <FolderKanban className="h-6 w-6" />
+                      </div>
+                      <h3 className="mt-4 text-sm font-extrabold text-slate-800">
+                        {hasActiveFilters ? "No matching projects" : "No data yet"}
+                      </h3>
+                      <p className="mt-1 text-xs leading-5 text-slate-400">
+                        {hasActiveFilters
+                          ? "Try clearing a filter or searching for a different project."
+                          : "Create your first project to start tracking delivery progress here."}
+                      </p>
+                      {hasActiveFilters ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSearchQuery("");
+                            setStatusFilter("All Statuses");
+                            setHealthFilter("All Health");
+                          }}
+                          className="mt-4 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-bold text-slate-600 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
+                        >
+                          Clear filters
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => handleOpenCreate("Planning")}
+                          className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-3.5 py-2 text-xs font-bold text-white shadow-sm shadow-blue-200 transition hover:bg-blue-700"
+                        >
+                          <Plus className="h-3.5 w-3.5" /> Add your first project
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ) : projects.map((proj) => (
                 <tr key={proj.id} className="hover:bg-slate-50/50 transition-colors">
                   <td className="py-3 px-3 font-bold text-slate-900">
                     <Link href={`/projects/${proj.id}`} className="hover:text-blue-600">
