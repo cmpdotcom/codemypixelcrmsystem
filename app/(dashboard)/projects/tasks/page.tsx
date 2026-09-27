@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import Link from "next/link";
 import {
   Search,
   Plus,
@@ -10,8 +9,6 @@ import {
   CheckSquare,
   LayoutGrid,
   List,
-  ChevronLeft,
-  ChevronRight,
   Loader2,
   Trash2,
   Edit2,
@@ -19,7 +16,7 @@ import {
   AlertTriangle,
   X,
   Lock,
-  Tag,
+  Sparkles,
 } from "lucide-react";
 
 type Priority = "Urgent" | "High" | "Medium" | "Low";
@@ -72,6 +69,17 @@ const COLUMNS: Status[] = [
   "Blocked",
 ];
 
+const COLUMN_TONES: Record<Status, { dot: string; badge: string; empty: string }> = {
+  Backlog: { dot: "bg-slate-400", badge: "bg-slate-100 text-slate-600", empty: "text-slate-300" },
+  Todo: { dot: "bg-sky-500", badge: "bg-sky-50 text-sky-700", empty: "text-sky-200" },
+  "In Progress": { dot: "bg-blue-500", badge: "bg-blue-50 text-blue-700", empty: "text-blue-200" },
+  "Code Review": { dot: "bg-violet-500", badge: "bg-violet-50 text-violet-700", empty: "text-violet-200" },
+  QA: { dot: "bg-amber-500", badge: "bg-amber-50 text-amber-700", empty: "text-amber-200" },
+  Revision: { dot: "bg-orange-500", badge: "bg-orange-50 text-orange-700", empty: "text-orange-200" },
+  Done: { dot: "bg-emerald-500", badge: "bg-emerald-50 text-emerald-700", empty: "text-emerald-200" },
+  Blocked: { dot: "bg-rose-500", badge: "bg-rose-50 text-rose-700", empty: "text-rose-200" },
+};
+
 const PRIORITY_DOT: Record<Priority, string> = {
   Urgent: "bg-red-500",
   High: "bg-red-500",
@@ -86,17 +94,6 @@ const PRIORITY_BADGES: Record<Priority, string> = {
   Low: "bg-emerald-50 text-emerald-600 border border-emerald-100",
 };
 
-const STATUS_STYLES: Record<Status, string> = {
-  Backlog: "bg-slate-100 text-slate-600",
-  Todo: "bg-slate-100 text-slate-600",
-  "In Progress": "bg-blue-100 text-blue-700",
-  "Code Review": "bg-violet-100 text-violet-700",
-  QA: "bg-amber-100 text-amber-700",
-  Revision: "bg-orange-100 text-orange-700",
-  Done: "bg-green-100 text-green-700",
-  Blocked: "bg-rose-100 text-rose-700",
-};
-
 function getInitials(name: string) {
   return name
     .split(" ")
@@ -104,6 +101,22 @@ function getInitials(name: string) {
     .join("")
     .slice(0, 2)
     .toUpperCase();
+}
+
+function makeNewTaskForm(status: Status = "Todo") {
+  return {
+    id: "",
+    name: "",
+    description: "",
+    projectName: "ABC ERP Implementation",
+    module: "Core",
+    assignee: "John Smith",
+    priority: "Medium" as Priority,
+    status,
+    progress: "0",
+    estimatedHours: "8",
+    dueDate: new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10),
+  };
 }
 
 export default function TasksPage() {
@@ -127,19 +140,7 @@ export default function TasksPage() {
   // Add / Edit Modal State
   const [showModal, setShowModal] = useState(false);
   const [modalMode, setModalMode] = useState<"create" | "edit">("create");
-  const [taskForm, setTaskForm] = useState({
-    id: "",
-    name: "",
-    description: "",
-    projectName: "ABC ERP Implementation",
-    module: "Core",
-    assignee: "John Smith",
-    priority: "Medium" as Priority,
-    status: "Todo" as Status,
-    progress: "0",
-    estimatedHours: "8",
-    dueDate: new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10),
-  });
+  const [taskForm, setTaskForm] = useState(() => makeNewTaskForm());
   const [submitting, setSubmitting] = useState(false);
 
   const fetchTasks = useCallback(async () => {
@@ -162,7 +163,10 @@ export default function TasksPage() {
   }, [searchQuery, statusFilter, priorityFilter]);
 
   useEffect(() => {
-    fetchTasks();
+    const loadTasks = async () => {
+      await fetchTasks();
+    };
+    void loadTasks();
   }, [fetchTasks]);
 
   const handleStatusChange = async (id: string, nextStatus: Status) => {
@@ -193,19 +197,7 @@ export default function TasksPage() {
 
   const handleOpenCreate = (defaultStatus: Status = "Todo") => {
     setModalMode("create");
-    setTaskForm({
-      id: "",
-      name: "",
-      description: "",
-      projectName: "ABC ERP Implementation",
-      module: "Core",
-      assignee: "John Smith",
-      priority: "Medium",
-      status: defaultStatus,
-      progress: "0",
-      estimatedHours: "8",
-      dueDate: new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10),
-    });
+    setTaskForm(makeNewTaskForm(defaultStatus));
     setShowModal(true);
   };
 
@@ -258,6 +250,8 @@ export default function TasksPage() {
     }
   };
 
+  const hasActiveFilters = Boolean(searchQuery || statusFilter !== "All Statuses" || priorityFilter !== "All Priorities");
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -268,19 +262,18 @@ export default function TasksPage() {
   }
 
   return (
-    <div className="p-4 sm:p-5 xl:p-6 max-w-[1780px] mx-auto w-full pb-12 space-y-4">
+    <div className="p-4 sm:p-5 xl:p-6 max-w-[1780px] mx-auto w-full pb-12 space-y-5">
       {/* Top Title Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Tasks</h2>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Manage engineering sprint items, priority backlogs, code reviews, and QA verification
-          </p>
+      <div className="flex flex-col gap-5 rounded-[24px] border border-slate-200/80 bg-white px-5 py-5 shadow-sm shadow-slate-200/40 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
+        <div className="min-w-0">
+          <div className="mb-2 flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.18em] text-blue-600"><Sparkles className="h-3.5 w-3.5" /> Team execution</div>
+          <h2 className="text-2xl font-black tracking-tight text-slate-900 sm:text-3xl">Tasks</h2>
+          <p className="mt-1 max-w-2xl text-xs leading-5 text-slate-500">Plan the next move, protect focus, and keep every delivery task moving through the team.</p>
         </div>
 
         <div className="flex items-center gap-2">
           {/* View Toggle */}
-          <div className="bg-white border border-slate-200/80 rounded-xl p-1 flex items-center gap-1 shadow-2xs">
+          <div className="flex items-center gap-1 rounded-xl border border-slate-200/80 bg-slate-50/70 p-1 shadow-sm">
             <button
               onClick={() => setCurrentView("board")}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
@@ -307,7 +300,7 @@ export default function TasksPage() {
 
           <button
             onClick={() => handleOpenCreate("Todo")}
-            className="bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs font-semibold py-2 px-3.5 rounded-xl shadow-md shadow-blue-500/25 flex items-center gap-1.5 transition-all cursor-pointer"
+            className="flex items-center gap-1.5 rounded-xl bg-blue-600 px-3.5 py-2.5 text-xs font-bold text-white shadow-md shadow-blue-500/25 transition-all hover:bg-blue-700 active:bg-blue-800"
           >
             <Plus className="w-4 h-4" />
             <span>Add Task</span>
@@ -326,8 +319,8 @@ export default function TasksPage() {
       )}
 
       {/* Row of 5 Metric KPI Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3">
-        <div className="bg-white p-3.5 rounded-2xl border border-slate-100/90 shadow-sm flex items-center gap-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
+        <div className="flex items-center gap-3 rounded-2xl border border-slate-200/80 bg-white p-3.5 shadow-sm shadow-slate-200/30">
           <div className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 bg-blue-50 text-blue-600">
             <CheckSquare className="w-5 h-5" />
           </div>
@@ -337,7 +330,7 @@ export default function TasksPage() {
           </div>
         </div>
 
-        <div className="bg-white p-3.5 rounded-2xl border border-slate-100/90 shadow-sm flex items-center gap-3">
+        <div className="flex items-center gap-3 rounded-2xl border border-slate-200/80 bg-white p-3.5 shadow-sm shadow-slate-200/30">
           <div className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 bg-indigo-50 text-indigo-600">
             <Clock className="w-5 h-5" />
           </div>
@@ -347,7 +340,7 @@ export default function TasksPage() {
           </div>
         </div>
 
-        <div className="bg-white p-3.5 rounded-2xl border border-slate-100/90 shadow-sm flex items-center gap-3">
+        <div className="flex items-center gap-3 rounded-2xl border border-slate-200/80 bg-white p-3.5 shadow-sm shadow-slate-200/30">
           <div className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 bg-emerald-50 text-emerald-600">
             <CheckCircle className="w-5 h-5" />
           </div>
@@ -357,7 +350,7 @@ export default function TasksPage() {
           </div>
         </div>
 
-        <div className="bg-white p-3.5 rounded-2xl border border-slate-100/90 shadow-sm flex items-center gap-3">
+        <div className="flex items-center gap-3 rounded-2xl border border-slate-200/80 bg-white p-3.5 shadow-sm shadow-slate-200/30">
           <div className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 bg-rose-50 text-rose-500">
             <AlertTriangle className="w-5 h-5" />
           </div>
@@ -367,7 +360,7 @@ export default function TasksPage() {
           </div>
         </div>
 
-        <div className="bg-white p-3.5 rounded-2xl border border-slate-100/90 shadow-sm flex items-center gap-3">
+        <div className="flex items-center gap-3 rounded-2xl border border-slate-200/80 bg-white p-3.5 shadow-sm shadow-slate-200/30">
           <div className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 bg-amber-50 text-amber-500">
             <AlertCircle className="w-5 h-5" />
           </div>
@@ -379,7 +372,7 @@ export default function TasksPage() {
       </div>
 
       {/* Search & Filter Bar */}
-      <div className="bg-white rounded-2xl border border-slate-100/90 shadow-sm p-3 flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200/80 bg-white p-3 shadow-sm shadow-slate-200/30">
         <div className="flex-1 min-w-[260px] relative">
           <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
           <input
@@ -387,7 +380,7 @@ export default function TasksPage() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search tasks by title, project, assignee, module..."
-            className="block w-full pl-9 pr-4 py-1.5 bg-slate-50/70 border border-slate-200/80 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all"
+            className="block w-full rounded-xl border border-slate-200/80 bg-slate-50/70 py-2 pl-9 pr-4 text-xs text-slate-800 placeholder-slate-400 transition-all focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
           />
         </div>
 
@@ -395,7 +388,7 @@ export default function TasksPage() {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-3 py-1.5 text-xs bg-white border border-slate-200 rounded-xl cursor-pointer"
+            className="cursor-pointer rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-600"
           >
             <option value="All Statuses">All Statuses</option>
             {COLUMNS.map((s) => (
@@ -406,7 +399,7 @@ export default function TasksPage() {
           <select
             value={priorityFilter}
             onChange={(e) => setPriorityFilter(e.target.value)}
-            className="px-3 py-1.5 text-xs bg-white border border-slate-200 rounded-xl cursor-pointer"
+            className="cursor-pointer rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-600"
           >
             <option value="All Priorities">All Priorities</option>
             <option value="Urgent">Urgent</option>
@@ -432,28 +425,29 @@ export default function TasksPage() {
 
       {/* VIEW 1: KANBAN BOARD */}
       {currentView === "board" && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8 gap-3 items-start overflow-x-auto pb-4">
+        <div className="grid grid-cols-1 gap-4 pb-4 sm:grid-cols-2 xl:grid-cols-4">
           {COLUMNS.map((col) => {
             const colTasks = tasks.filter((t) => t.status === col);
+            const columnTone = COLUMN_TONES[col];
             return (
               <div
                 key={col}
-                className="bg-slate-50/70 rounded-2xl p-2.5 border border-slate-200/70 flex flex-col gap-2.5 min-w-[210px]"
+                className="flex min-h-[260px] flex-col gap-3 rounded-[22px] border border-slate-200/80 bg-white p-3 shadow-sm shadow-slate-200/30"
               >
                 {/* Header */}
-                <div className="flex items-center justify-between px-1">
-                  <h3 className="text-xs font-bold text-slate-900">{col}</h3>
-                  <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-slate-200/80 text-slate-700">
+                <div className="flex items-center justify-between border-b border-slate-100 px-1 pb-3">
+                  <div className="flex items-center gap-2"><span className={`h-2 w-2 rounded-full ${columnTone.dot}`} /><h3 className="text-xs font-extrabold text-slate-900">{col}</h3></div>
+                  <span className={`rounded-full px-2 py-1 text-[10px] font-black ${columnTone.badge}`}>
                     {colTasks.length}
                   </span>
                 </div>
 
                 {/* Task Stack */}
-                <div className="space-y-2 min-h-[140px]">
+                <div className="min-h-[155px] flex-1 space-y-2">
                   {colTasks.map((task) => (
                     <div
                       key={task.id}
-                      className="bg-white p-3 rounded-xl border border-slate-200/60 shadow-2xs hover:shadow-md hover:border-blue-200 transition-all cursor-pointer group"
+                      className="group cursor-pointer rounded-xl border border-slate-200/80 bg-slate-50/50 p-3 transition-all hover:border-blue-200 hover:bg-white hover:shadow-md"
                     >
                       <div className="flex items-start justify-between gap-1 mb-1">
                         <span className="text-[10px] font-semibold text-slate-400">
@@ -471,7 +465,8 @@ export default function TasksPage() {
                       <h4 className="text-xs font-bold text-slate-900 group-hover:text-blue-600 transition-colors leading-tight line-clamp-2">
                         {task.name}
                       </h4>
-                      <p className="text-[10px] text-slate-400 mt-1 truncate">{task.projectName}</p>
+                      <p className="mt-1 truncate text-[10px] text-slate-400">{task.projectName}</p>
+                      <div className="mt-2 flex flex-wrap gap-1.5"><span className={`rounded-md px-1.5 py-0.5 text-[9px] font-bold ${PRIORITY_BADGES[task.priority]}`}>{task.priority}</span>{task.module && <span className="rounded-md bg-white px-1.5 py-0.5 text-[9px] font-semibold text-slate-400 shadow-sm">{task.module}</span>}</div>
 
                       {/* Progress */}
                       {task.progress > 0 && (
@@ -523,11 +518,18 @@ export default function TasksPage() {
                       </div>
                     </div>
                   ))}
+                  {colTasks.length === 0 && (
+                    <div className="flex min-h-[145px] flex-col items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50/50 px-4 text-center">
+                      <CheckSquare className={`mb-2 h-5 w-5 ${columnTone.empty}`} />
+                      <p className="text-[11px] font-semibold text-slate-500">No tasks yet</p>
+                      <p className="mt-1 text-[10px] leading-4 text-slate-400">Add a task here when it reaches {col.toLowerCase()}.</p>
+                    </div>
+                  )}
                 </div>
 
                 <button
                   onClick={() => handleOpenCreate(col)}
-                  className="w-full py-1.5 bg-white hover:bg-slate-100 border border-dashed border-slate-300 rounded-xl text-xs font-medium text-slate-600 transition-colors flex items-center justify-center gap-1 cursor-pointer"
+                  className="flex w-full cursor-pointer items-center justify-center gap-1 rounded-xl border border-dashed border-slate-300 bg-slate-50/60 py-2 text-xs font-bold text-slate-600 transition-colors hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   <span>Add Task</span>
@@ -555,7 +557,24 @@ export default function TasksPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {tasks.map((task) => (
+              {tasks.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="px-6 py-16 text-center">
+                    <div className="mx-auto flex max-w-sm flex-col items-center">
+                      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 text-blue-400"><CheckSquare className="h-6 w-6" /></div>
+                      <h3 className="mt-4 text-sm font-extrabold text-slate-800">{hasActiveFilters ? "No matching tasks" : "No data yet"}</h3>
+                      <p className="mt-1 text-xs leading-5 text-slate-400">
+                        {hasActiveFilters ? "Try clearing a filter or searching for a different task." : "Create your first task to begin planning the team’s delivery work."}
+                      </p>
+                      {hasActiveFilters ? (
+                        <button type="button" onClick={() => { setSearchQuery(""); setStatusFilter("All Statuses"); setPriorityFilter("All Priorities"); }} className="mt-4 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-bold text-slate-600 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700">Clear filters</button>
+                      ) : (
+                        <button type="button" onClick={() => handleOpenCreate("Todo")} className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-3.5 py-2 text-xs font-bold text-white shadow-sm shadow-blue-200 transition hover:bg-blue-700"><Plus className="h-3.5 w-3.5" /> Add your first task</button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ) : tasks.map((task) => (
                 <tr key={task.id} className="hover:bg-slate-50/50 transition-colors">
                   <td className="py-3 px-3 text-slate-400 font-medium">
                     TK-{String(task.taskNumber).padStart(4, "0")}
