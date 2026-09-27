@@ -5,9 +5,12 @@ import Link from "next/link";
 import {
   AlertCircle,
   ArrowRight,
+  Building2,
   Briefcase,
+  CalendarDays,
   CheckCircle2,
   Code,
+  DollarSign,
   FolderKanban,
   Loader2,
   Phone,
@@ -302,27 +305,36 @@ export default function WorkflowPage() {
           count={board?.awaitingCloser.length || 0}
         >
         {board?.awaitingCloser.map((lead) => (
-          <div key={lead.id} className="flex flex-col gap-3 border-b border-slate-50 py-3 last:border-0 lg:flex-row lg:items-center">
-            <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <Link href={`/leads?lead=${lead.id}`} className="text-sm font-bold text-slate-900 hover:text-blue-600">{lead.name}</Link>
-                <span className="text-xs text-slate-500">{lead.company}</span>
-                <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold text-slate-500">LD-{String(lead.leadNumber).padStart(5, "0")}</span>
+          <div key={lead.id} className="my-3 rounded-2xl border border-slate-200/80 bg-slate-50/60 p-3.5 transition hover:border-amber-200 hover:bg-amber-50/30">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
+              <div className="flex min-w-0 flex-1 gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 text-xs font-black text-white shadow-sm shadow-amber-200">
+                  {lead.name.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase()}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Link href={`/leads?lead=${lead.id}`} className="text-sm font-extrabold text-slate-900 hover:text-blue-600">{lead.name}</Link>
+                    <span className="rounded-md bg-white px-1.5 py-0.5 text-[10px] font-bold text-slate-400 shadow-sm">LD-{String(lead.leadNumber).padStart(5, "0")}</span>
+                  </div>
+                  <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-slate-500">
+                    <span className="inline-flex items-center gap-1"><Building2 className="h-3 w-3 text-slate-400" />{lead.company}</span>
+                    <span className="hidden text-slate-300 sm:inline">•</span>
+                    <span>Setter <b className="text-slate-700">{lead.setter || "—"}</b></span>
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    <span className="rounded-md border border-slate-200 bg-white px-2 py-1 text-[10px] font-semibold text-slate-500">Interested {since(lead.interestedAt, loadedAt)}</span>
+                    {lead.service && <span className="rounded-md border border-blue-100 bg-blue-50 px-2 py-1 text-[10px] font-semibold text-blue-700">{lead.service}</span>}
+                    {lead.budget && <span className="rounded-md border border-emerald-100 bg-emerald-50 px-2 py-1 text-[10px] font-semibold text-emerald-700">{lead.budget}</span>}
+                    {lead.nextFollowUp && <span className="inline-flex items-center gap-1 rounded-md border border-violet-100 bg-violet-50 px-2 py-1 text-[10px] font-semibold text-violet-700"><CalendarDays className="h-3 w-3" />{shortDate(lead.nextFollowUp)}</span>}
+                  </div>
+                </div>
               </div>
-              <p className="mt-0.5 text-[11px] text-slate-500">
-                Setter <b className="text-slate-700">{lead.setter || "—"}</b> · marked {since(lead.interestedAt, loadedAt)}
-                {lead.service && <> · {lead.service}</>}
-                {lead.budget && <> · {lead.budget}</>}
-                {lead.nextFollowUp && <> · meeting pref. {shortDate(lead.nextFollowUp)}</>}
-              </p>
-              {lead.interestedNote && <p className="mt-1 rounded-lg bg-amber-50 px-2 py-1 text-[11px] text-amber-900">“{lead.interestedNote}”</p>}
-            </div>
-            {canManage && (
-              <div className="flex shrink-0 items-center gap-2">
+              {canManage && (
+                <div className="flex shrink-0 flex-col gap-2 sm:flex-row lg:w-[290px] lg:items-center">
                 <select
                   value={closerChoice[lead.id] || ""}
                   onChange={(event) => setCloserChoice({ ...closerChoice, [lead.id]: event.target.value })}
-                  className="w-48 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700"
+                  className="h-9 min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-3 text-xs font-medium text-slate-700 shadow-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                 >
                   <option value="">Choose closer…</option>
                   {board.people.closers.map((closer) => (
@@ -332,7 +344,7 @@ export default function WorkflowPage() {
                 <button
                   onClick={() => assignCloser(lead)}
                   disabled={busy === `lead:${lead.id}`}
-                  className="flex cursor-pointer items-center gap-1 rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white shadow-sm hover:bg-blue-700 disabled:opacity-50"
+                  className="flex h-9 cursor-pointer items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-3 text-xs font-bold text-white shadow-sm shadow-blue-200 transition hover:bg-blue-700 disabled:opacity-50"
                 >
                   {busy === `lead:${lead.id}` ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <UserCheck className="h-3.5 w-3.5" />}
                   Assign
@@ -341,16 +353,22 @@ export default function WorkflowPage() {
                   onClick={() => sendBack(lead)}
                   disabled={busy === `lead:${lead.id}`}
                   title="Send back to setter"
-                  className="cursor-pointer rounded-lg border border-slate-200 p-2 text-slate-500 hover:bg-slate-50 hover:text-slate-800 disabled:opacity-50"
+                  className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm transition hover:bg-slate-50 hover:text-slate-800 disabled:opacity-50"
                 >
                   <Undo2 className="h-3.5 w-3.5" />
                 </button>
+                </div>
+              )}
+            </div>
+            {lead.interestedNote && (
+              <div className="mt-3 flex items-start gap-2 rounded-xl border border-amber-100 bg-amber-50 px-3 py-2 text-[11px] leading-5 text-amber-900">
+                <span className="mt-0.5 text-amber-500">“</span><span className="flex-1">{lead.interestedNote}</span><span className="text-amber-500">”</span>
               </div>
             )}
           </div>
         ))}
         {canManage && board && board.people.closers.length === 0 && board.awaitingCloser.length > 0 && (
-          <p className="pt-2 text-[11px] text-amber-700">No active users have the Closer role yet — invite one from Users.</p>
+          <div className="mb-3 flex items-center gap-2 rounded-xl border border-orange-100 bg-orange-50 px-3 py-2 text-[11px] font-medium text-orange-700"><AlertCircle className="h-3.5 w-3.5" />No active users have the Closer role yet — invite one from Users.</div>
         )}
         </Section>
 
@@ -365,36 +383,38 @@ export default function WorkflowPage() {
           emptyHint="Assigned deals will be tracked here until they are won."
           count={board?.withClosers.length || 0}
         >
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead>
-              <tr className="border-b border-slate-100 text-[10px] uppercase tracking-wide text-slate-400">
-                <th className="py-2 pr-3 font-semibold">Deal</th>
-                <th className="py-2 pr-3 font-semibold">Stage</th>
-                <th className="py-2 pr-3 font-semibold">Value</th>
-                <th className="py-2 pr-3 font-semibold">Expected close</th>
-                <th className="py-2 font-semibold">Closer</th>
+        <div className="my-3 overflow-x-auto rounded-2xl border border-slate-200/80">
+          <table className="w-full min-w-[620px] text-left text-xs">
+            <thead className="bg-slate-50/80">
+              <tr className="border-b border-slate-200/80 text-[10px] uppercase tracking-wide text-slate-400">
+                <th className="px-3 py-3 pr-3 font-bold">Deal</th>
+                <th className="px-3 py-3 pr-3 font-bold">Stage</th>
+                <th className="px-3 py-3 pr-3 font-bold">Value</th>
+                <th className="px-3 py-3 pr-3 font-bold">Expected close</th>
+                <th className="px-3 py-3 font-bold">Closer</th>
               </tr>
             </thead>
             <tbody>
               {board?.withClosers.map((deal) => (
-                <tr key={deal.id} className="border-b border-slate-50 last:border-0">
-                  <td className="py-2.5 pr-3">
-                    <p className="font-bold text-slate-900">{deal.title}</p>
-                    <p className="text-[11px] text-slate-500">{deal.company}{deal.contact ? ` · ${deal.contact}` : ""}</p>
+                <tr key={deal.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50/60">
+                  <td className="px-3 py-3 pr-3">
+                    <div className="flex items-center gap-2.5">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600"><Briefcase className="h-3.5 w-3.5" /></div>
+                      <div><p className="font-extrabold text-slate-900">{deal.title}</p><p className="text-[11px] text-slate-500">{deal.company}{deal.contact ? ` · ${deal.contact}` : ""}</p></div>
+                    </div>
                   </td>
-                  <td className="py-2.5 pr-3">
-                    <span className="rounded-md bg-indigo-50 px-2 py-0.5 text-[10px] font-bold text-indigo-700">{stageLabel[deal.stage] || deal.stage}</span>
+                  <td className="px-3 py-3 pr-3">
+                    <span className="inline-flex rounded-md border border-indigo-100 bg-indigo-50 px-2 py-1 text-[10px] font-bold text-indigo-700">{stageLabel[deal.stage] || deal.stage}</span>
                   </td>
-                  <td className="py-2.5 pr-3 font-semibold text-slate-800">{money(deal.value)}</td>
-                  <td className="py-2.5 pr-3 text-slate-600">{shortDate(deal.expectedCloseDate)}</td>
-                  <td className="py-2.5">
+                  <td className="px-3 py-3 pr-3 font-extrabold text-slate-800">{money(deal.value)}</td>
+                  <td className="px-3 py-3 pr-3 text-slate-600"><span className="inline-flex items-center gap-1"><CalendarDays className="h-3 w-3 text-slate-400" />{shortDate(deal.expectedCloseDate)}</span></td>
+                  <td className="px-3 py-3">
                     {canManage ? (
                       <select
                         value={deal.closerId || ""}
                         disabled={busy === `deal:${deal.id}`}
                         onChange={(event) => reassignDeal(deal, event.target.value)}
-                        className="w-44 rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-700"
+                        className="w-44 rounded-xl border border-slate-200 bg-white px-2.5 py-2 text-xs font-medium text-slate-700 shadow-sm focus:border-indigo-400 focus:outline-none"
                       >
                         <option value="" disabled>{deal.closer ? `${deal.closer} (not linked)` : "Unassigned"}</option>
                         {deal.closerId && !board.people.closers.some((closer) => closer.id === deal.closerId) && (
@@ -427,17 +447,15 @@ export default function WorkflowPage() {
           count={board?.awaitingDelivery.length || 0}
         >
         {board?.awaitingDelivery.map((deal) => (
-          <div key={deal.id} className="flex flex-col gap-3 border-b border-slate-50 py-3 last:border-0 sm:flex-row sm:items-center">
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-bold text-slate-900">{deal.title}</p>
-              <p className="text-[11px] text-slate-500">
-                {deal.company} · {money(deal.value)} · closed by <b className="text-slate-700">{deal.closer || "—"}</b> · won {shortDate(deal.closedAt)}
-              </p>
+          <div key={deal.id} className="my-3 flex flex-col gap-4 rounded-2xl border border-emerald-100 bg-emerald-50/40 p-3.5 transition hover:border-emerald-200 sm:flex-row sm:items-center">
+            <div className="flex min-w-0 flex-1 items-center gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600"><Trophy className="h-4 w-4" /></div>
+              <div className="min-w-0"><p className="truncate text-sm font-extrabold text-slate-900">{deal.title}</p><p className="mt-1 text-[11px] text-slate-500">{deal.company} · closed by <b className="text-slate-700">{deal.closer || "—"}</b></p><div className="mt-2 flex flex-wrap gap-1.5"><span className="inline-flex items-center gap-1 rounded-md bg-white px-2 py-1 text-[10px] font-bold text-emerald-700 shadow-sm"><DollarSign className="h-3 w-3" />{money(deal.value)}</span><span className="inline-flex items-center gap-1 rounded-md bg-white px-2 py-1 text-[10px] font-semibold text-slate-500 shadow-sm"><CalendarDays className="h-3 w-3" />Won {shortDate(deal.closedAt)}</span></div></div>
             </div>
             {canManage && (
               <button
                 onClick={() => setStartingDeal(deal)}
-                className="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white shadow-sm hover:bg-emerald-700"
+                className="flex shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-bold text-white shadow-sm shadow-emerald-200 transition hover:bg-emerald-700"
               >
                 <Briefcase className="h-3.5 w-3.5" /> Start project
               </button>
@@ -458,10 +476,13 @@ export default function WorkflowPage() {
           count={board?.activeProjects.length || 0}
         >
         {board?.activeProjects.map((project) => (
-          <div key={project.id} className="flex flex-col gap-2 border-b border-slate-50 py-3 last:border-0 lg:flex-row lg:items-center">
-            <div className="min-w-0 lg:w-72">
-              <Link href={`/projects/${project.id}`} className="text-sm font-bold text-slate-900 hover:text-blue-600">{project.name}</Link>
-              <p className="text-[11px] text-slate-500">{project.clientName} · {project.status} · due {shortDate(project.deadline)} · {project.progress}%</p>
+          <div key={project.id} className="my-3 rounded-2xl border border-slate-200/80 bg-slate-50/50 p-3.5 transition hover:border-blue-200 hover:bg-blue-50/20">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
+              <div className="min-w-0 lg:w-64 lg:shrink-0">
+                <div className="flex items-center gap-2"><div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600"><FolderKanban className="h-3.5 w-3.5" /></div><Link href={`/projects/${project.id}`} className="truncate text-sm font-extrabold text-slate-900 hover:text-blue-600">{project.name}</Link></div>
+                <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-slate-500"><span>{project.clientName}</span><span className="text-slate-300">•</span><span>{project.status}</span><span className="text-slate-300">•</span><span>Due {shortDate(project.deadline)}</span></p>
+                <div className="mt-3 flex items-center gap-2"><div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-200"><div className="h-full rounded-full bg-blue-500" style={{ width: `${Math.min(100, Math.max(0, project.progress))}%` }} /></div><span className="text-[10px] font-bold text-slate-600">{project.progress}%</span></div>
+              </div>
             </div>
             <div className="flex flex-1 flex-wrap gap-1.5">
               {ROLE_META.map(({ role, short, icon: Icon, chip }) => {
