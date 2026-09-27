@@ -136,7 +136,7 @@ export default function TestRunsPage() {
   return (
     <div className="p-4 sm:p-5 xl:p-6 max-w-[1780px] mx-auto w-full pb-12 space-y-6">
       {/* Page Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-xl font-bold text-slate-900">Test Runs</h1>
           <p className="mt-1 text-xs text-slate-500">Execute test suites and track results</p>

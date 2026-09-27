@@ -292,7 +292,7 @@ export default function DealsPage() {
 
   return (
     <>
-      <div className="p-6 md:p-8 max-w-[1600px] mx-auto w-full space-y-6 pb-12">
+      <div className="p-4 sm:p-6 md:p-8 max-w-[1600px] mx-auto w-full space-y-6 pb-12">
         {/* Top Title Bar & Primary Actions */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
@@ -302,7 +302,7 @@ export default function DealsPage() {
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {/* View Mode Toggle */}
             <div className="bg-white border border-slate-200/80 rounded-xl p-1 flex items-center gap-1 shadow-2xs">
               <button
@@ -431,7 +431,7 @@ export default function DealsPage() {
 
         {/* Search & Filter Bar */}
         <div className="bg-white rounded-2xl border border-slate-100/90 shadow-sm p-3 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex-1 min-w-[260px] relative">
+          <div className="flex-1 basis-full sm:basis-auto min-w-0 sm:min-w-[260px] relative">
             <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
@@ -480,11 +480,11 @@ export default function DealsPage() {
 
         {/* VIEW 1: KANBAN BOARD */}
         {currentView === "kanban" && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 items-start overflow-x-auto pb-4">
+          <div className="flex xl:grid xl:grid-cols-6 gap-3 sm:gap-4 items-start overflow-x-auto snap-x snap-mandatory xl:snap-none pb-4 -mx-4 px-4 sm:mx-0 sm:px-0">
             {kanbanStages.map((col) => (
               <div
                 key={col.id}
-                className="bg-slate-50/70 rounded-2xl p-3 border border-slate-200/70 flex flex-col gap-3 min-w-[230px]"
+                className="bg-slate-50/70 rounded-2xl p-3 border border-slate-200/70 flex flex-col gap-3 w-[82vw] max-w-[300px] sm:w-[300px] shrink-0 snap-start xl:w-auto xl:max-w-none min-w-[230px]"
               >
                 {/* Column Header */}
                 <div className="flex items-center justify-between px-1">
@@ -669,7 +669,7 @@ export default function DealsPage() {
           onClick={() => setShowModal(false)}
         >
           <div
-            className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 space-y-4 max-h-[90vh] overflow-y-auto"
+            className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-4 sm:p-6 space-y-4 max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
@@ -697,7 +697,7 @@ export default function DealsPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Company *</label>
                   <input
@@ -721,7 +721,7 @@ export default function DealsPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Deal Value ($) *</label>
                   <input
@@ -747,7 +747,7 @@ export default function DealsPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Assigned Closer</label>
                   <select

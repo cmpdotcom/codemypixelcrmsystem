@@ -1,5 +1,4 @@
-import { Sidebar } from "@/components/Sidebar";
-import { Header } from "@/components/Header";
+import { AppShell } from "@/components/AppShell";
 import { SettingsProvider } from "@/components/SettingsProvider";
 
 export default function DashboardLayout({
@@ -9,15 +8,7 @@ export default function DashboardLayout({
 }) {
   return (
     <SettingsProvider>
-      <div className="flex h-screen overflow-hidden bg-[#f4f7fc]">
-        <Sidebar />
-        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-          <Header />
-          <main className="flex-1 overflow-y-auto custom-scrollbar">
-            {children}
-          </main>
-        </div>
-      </div>
+      <AppShell>{children}</AppShell>
     </SettingsProvider>
   );
 }

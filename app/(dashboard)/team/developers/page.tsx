@@ -116,7 +116,7 @@ export default function DevelopersPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Link
             href="/projects/tasks"
             className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-md shadow-blue-500/20 transition-all cursor-pointer"
@@ -197,7 +197,7 @@ export default function DevelopersPage() {
 
       {/* Top Engineer Highlight Banner */}
       {topDev && (
-        <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-950 rounded-3xl p-6 text-white shadow-md flex flex-col md:flex-row md:items-center justify-between gap-4 border border-slate-800">
+        <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-950 rounded-3xl p-4 sm:p-6 text-white shadow-md flex flex-col md:flex-row md:items-center justify-between gap-4 border border-slate-800">
           <div className="flex items-center gap-4">
             <div className="w-14 h-14 rounded-2xl bg-white/10 backdrop-blur-md flex items-center justify-center text-white border border-white/20 text-xl font-extrabold shadow-sm">
               <Award className="w-7 h-7 text-indigo-400" />
@@ -214,7 +214,7 @@ export default function DevelopersPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-6 border-t md:border-t-0 md:border-l border-white/20 pt-3 md:pt-0 md:pl-6">
+          <div className="grid grid-cols-3 gap-3 sm:gap-6 border-t md:border-t-0 md:border-l border-white/20 pt-3 md:pt-0 md:pl-6">
             <div>
               <span className="text-[10px] uppercase font-semibold text-white/70 block">Completed</span>
               <span className="text-xl font-extrabold mt-0.5 block">{topDev.completedTasks} tasks</span>

@@ -165,16 +165,16 @@ export default function DealStagesPage() {
         title={`${selectedPipeline} Stages`}
         description="Active progression stages for the selected pipeline"
       >
-        <div className="overflow-x-auto -mx-6">
-          <table className="w-full text-xs">
+        <div className="overflow-x-auto -mx-4 sm:-mx-6">
+          <table className="w-full min-w-[520px] text-xs">
             <thead>
               <tr className="border-b border-slate-200/80 bg-slate-50/50">
-                <th className="text-left font-semibold text-slate-600 px-6 py-3">Stage Name</th>
+                <th className="text-left font-semibold text-slate-600 px-4 sm:px-6 py-3">Stage Name</th>
                 <th className="text-left font-semibold text-slate-600 px-3 py-3">Probability</th>
                 <th className="text-left font-semibold text-slate-600 px-3 py-3">Color</th>
                 <th className="text-left font-semibold text-slate-600 px-3 py-3">Required Fields</th>
                 <th className="text-left font-semibold text-slate-600 px-3 py-3">Expected Duration</th>
-                <th className="text-right font-semibold text-slate-600 px-6 py-3">Actions</th>
+                <th className="text-right font-semibold text-slate-600 px-4 sm:px-6 py-3">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -187,7 +187,7 @@ export default function DealStagesPage() {
               ) : (
                 stages.map((stage, idx) => (
                   <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="px-6 py-3.5 font-semibold text-slate-800">{stage.name}</td>
+                    <td className="px-4 sm:px-6 py-3.5 font-semibold text-slate-800">{stage.name}</td>
                     <td className="px-3 py-3.5 text-slate-600 font-medium">{stage.probability}</td>
                     <td className="px-3 py-3.5">
                       <div className="flex items-center gap-1.5">
@@ -197,7 +197,7 @@ export default function DealStagesPage() {
                     </td>
                     <td className="px-3 py-3.5 text-slate-600 max-w-[200px] truncate">{stage.requiredFields}</td>
                     <td className="px-3 py-3.5 text-slate-600">{stage.expectedDuration}</td>
-                    <td className="px-6 py-3.5 text-right">
+                    <td className="px-4 sm:px-6 py-3.5 text-right">
                       <button
                         type="button"
                         onClick={() => handleRemoveStage(idx)}

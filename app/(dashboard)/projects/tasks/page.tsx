@@ -373,7 +373,7 @@ export default function TasksPage() {
 
       {/* Search & Filter Bar */}
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200/80 bg-white p-3 shadow-sm shadow-slate-200/30">
-        <div className="flex-1 min-w-[260px] relative">
+        <div className="flex-1 basis-full sm:basis-auto min-w-0 sm:min-w-[260px] relative">
           <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             type="text"
@@ -631,7 +631,7 @@ export default function TasksPage() {
           onClick={() => setShowModal(false)}
         >
           <div
-            className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 space-y-4 max-h-[90vh] overflow-y-auto"
+            className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-4 sm:p-6 space-y-4 max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
@@ -682,7 +682,7 @@ export default function TasksPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Status Column</label>
                   <select
@@ -711,7 +711,7 @@ export default function TasksPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Assignee</label>
                   <select

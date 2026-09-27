@@ -12,7 +12,7 @@ export function FormCard({
   children: ReactNode;
 }) {
   return (
-    <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 mb-5">
+    <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-4 sm:p-6 mb-5">
       <div className="mb-5">
         <h3 className="text-sm font-bold text-slate-900">{title}</h3>
         {description && (
@@ -113,8 +113,8 @@ export function Toggle({
 }) {
   const on = checked !== undefined ? checked : !!defaultOn;
   return (
-    <div className="flex items-center justify-between py-3 border-b border-slate-100 last:border-0">
-      <div>
+    <div className="flex items-center justify-between gap-4 py-3 border-b border-slate-100 last:border-0">
+      <div className="min-w-0">
         <p className="text-xs font-semibold text-slate-800">{label}</p>
         {description && (
           <p className="text-[10px] text-slate-400 mt-0.5">{description}</p>
@@ -151,9 +151,9 @@ export function SaveBar({
 }) {
   return (
     <div className="sticky bottom-0 -mx-1 mt-6 z-20">
-      <div className="flex items-center justify-end gap-3 bg-white/90 backdrop-blur-md border border-slate-200/80 rounded-2xl px-4 py-3 shadow-lg shadow-slate-200/50">
+      <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3 bg-white/90 backdrop-blur-md border border-slate-200/80 rounded-2xl px-3 sm:px-4 py-3 shadow-lg shadow-slate-200/50">
         {saved && (
-          <span className="text-xs font-semibold text-emerald-600 flex items-center gap-1 mr-auto">
+          <span className="text-xs font-semibold text-emerald-600 flex items-center gap-1 mr-auto basis-full sm:basis-auto">
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
             Saved — changes are live across the CRM
           </span>

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   Settings,
   Building2,
@@ -21,6 +21,7 @@ import {
   Tag,
   Layers,
   Mail,
+  ChevronDown,
 } from "lucide-react";
 
 const settingsNav = [
@@ -84,7 +85,7 @@ export function SettingsSidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="w-64 bg-white border-r border-slate-200 flex flex-col h-full shrink-0 overflow-y-auto custom-scrollbar">
+    <aside className="hidden md:flex w-56 lg:w-64 bg-white border-r border-slate-200 flex-col h-full shrink-0 overflow-y-auto custom-scrollbar">
       {/* Header */}
       <div className="h-16 shrink-0 border-b border-slate-200 px-5 flex items-center">
         <div>
@@ -132,5 +133,35 @@ export function SettingsSidebar() {
         ))}
       </div>
     </aside>
+  );
+}
+
+// Phones / small tablets: the settings sections collapse into a single picker
+export function SettingsMobileNav() {
+  const pathname = usePathname();
+  const router = useRouter();
+  const current = settingsNav.flatMap((section) => section.items).find((item) => item.href === pathname);
+
+  return (
+    <div className="md:hidden shrink-0 bg-white border-b border-slate-200 px-4 py-3">
+      <label className="block text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1">Settings</label>
+      <div className="relative">
+        <select
+          value={current?.href ?? ""}
+          onChange={(event) => router.push(event.target.value)}
+          className="w-full appearance-none rounded-lg border border-slate-200 bg-slate-50 pl-3 pr-9 py-2.5 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+        >
+          {!current && <option value="" disabled>Choose a section…</option>}
+          {settingsNav.map((section) => (
+            <optgroup key={section.title} label={section.title}>
+              {section.items.map((item) => (
+                <option key={item.href} value={item.href}>{item.label}</option>
+              ))}
+            </optgroup>
+          ))}
+        </select>
+        <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+      </div>
+    </div>
   );
 }

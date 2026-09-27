@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
@@ -32,9 +32,12 @@ import {
   GitMerge,
   ChevronLeft,
   ChevronRight,
+  X,
 } from "lucide-react";
 
-const navSections = [
+type NavItem = { icon: typeof LayoutDashboard; label: string; href: string; module: string | null; match?: string };
+
+const navSections: { title: string | null; items: NavItem[] }[] = [
   {
     title: null,
     items: [
@@ -84,13 +87,24 @@ const navSections = [
     title: "System",
     items: [
       { icon: Users, label: "Users", href: "/users", module: "Users" },
-      { icon: Settings, label: "Settings", href: "/settings/general", module: "Settings" },
+      { icon: Settings, label: "Settings", href: "/settings/general", module: "Settings", match: "/settings" },
       { icon: LinkIcon, label: "Integrations", href: "/integrations", module: "Integrations" },
     ],
   },
 ];
 
-export function Sidebar() {
+
+function findActiveHref(pathname: string, items: NavItem[]) {
+  let best: NavItem | null = null;
+  for (const item of items) {
+    const prefix = item.match ?? item.href;
+    const matches = prefix === "/" ? pathname === "/" : pathname === prefix || pathname.startsWith(`${prefix}/`);
+    if (matches && (!best || prefix.length > (best.match ?? best.href).length)) best = item;
+  }
+  return best?.href ?? null;
+}
+
+export function Sidebar({ mobileOpen = false, onClose }: { mobileOpen?: boolean; onClose?: () => void }) {
   const pathname = usePathname();
   const { data: session, status: sessionStatus } = useSession();
   const { companyName, logoUrl, primaryHex, primaryBg } = useSettings();
@@ -101,24 +115,30 @@ export function Sidebar() {
       items: section.items.filter((item) => item.module === null || sessionStatus === "loading" || !session?.user?.roleName || session?.user?.roleName === "Super Admin" || hasPermission(session?.user?.permissions, item.module, "view")),
     }))
     .filter((section) => section.items.length > 0);
+  const activeHref = findActiveHref(pathname, visibleSections.flatMap((section) => section.items));
 
-  return (
-    <aside
-      className={`${
-        collapsed ? "w-20" : "w-60"
-      } bg-white border-r border-slate-200 flex flex-col h-screen shrink-0 hidden lg:flex z-30 transition-all duration-300 ease-in-out overflow-hidden`}
-    >
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const onKey = (event: KeyboardEvent) => event.key === "Escape" && onClose?.();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [mobileOpen, onClose]);
+
+  const renderContent = (isCollapsed: boolean, isMobile: boolean) => (
+    <>
       {/* Brand Header - fixed, never scrolls */}
       <div className="h-16 shrink-0 bg-white border-b border-slate-200 px-5 flex items-center justify-between">
         <Link
           href="/"
           onClick={(e) => {
-            if (collapsed) {
+            if (isCollapsed) {
               e.preventDefault();
               setCollapsed(false);
+            } else if (isMobile) {
+              onClose?.();
             }
           }}
-          className="flex items-center gap-2.5 group"
+          className="flex items-center gap-2.5 group min-w-0"
         >
           <Image
             src={logoUrl}
@@ -128,9 +148,9 @@ export function Sidebar() {
             unoptimized={logoUrl.startsWith("http")}
             className="rounded-xl shadow-sm group-hover:scale-105 transition-transform shrink-0 object-contain"
           />
-          {!collapsed && (
-            <div>
-              <h1 className="text-lg font-bold tracking-tight text-slate-900 leading-none whitespace-nowrap">
+          {!isCollapsed && (
+            <div className="min-w-0">
+              <h1 className="text-lg font-bold tracking-tight text-slate-900 leading-none whitespace-nowrap truncate">
                 {companyName}
               </h1>
               <p className="text-[10px] text-slate-400 mt-1 font-medium tracking-wide whitespace-nowrap">
@@ -139,9 +159,18 @@ export function Sidebar() {
             </div>
           )}
         </Link>
-        {!collapsed && (
+        {isMobile ? (
+          <button
+            onClick={onClose}
+            aria-label="Close menu"
+            className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-50 transition-colors shrink-0"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        ) : !isCollapsed && (
           <button
             onClick={() => setCollapsed(true)}
+            aria-label="Collapse sidebar"
             className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-50 transition-colors shrink-0"
           >
             <ChevronLeft className="w-4 h-4" />
@@ -150,36 +179,37 @@ export function Sidebar() {
       </div>
 
       {/* Navigation Sections - only this part scrolls */}
-      <div className="flex-1 px-3 py-3 space-y-5 overflow-y-auto custom-scrollbar">
+      <nav className="flex-1 px-3 py-3 space-y-5 overflow-y-auto custom-scrollbar">
         {visibleSections.map((section, si) => (
           <div key={si}>
-            {section.title && !collapsed && (
+            {section.title && !isCollapsed && (
               <h3 className="px-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5 whitespace-nowrap">
                 {section.title}
               </h3>
             )}
-            {section.title && collapsed && (
+            {section.title && isCollapsed && (
               <div className="border-b border-slate-100 my-1.5" />
             )}
             <div className="space-y-0.5">
               {section.items.map((item, i) => {
                 const Icon = item.icon;
-                const isActive = pathname === item.href;
+                const isActive = activeHref === item.href;
                 return (
                   <Link
                     key={i}
                     href={item.href}
-                    title={collapsed ? item.label : undefined}
+                    onClick={isMobile ? onClose : undefined}
+                    title={isCollapsed ? item.label : undefined}
                     style={
                       isActive
                         ? { backgroundColor: primaryBg, color: primaryHex, borderLeftColor: primaryHex }
                         : undefined
                     }
-                    className={`flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-colors group border-l-[3px] ${
+                    className={`flex items-center gap-3 px-3 ${isMobile ? "py-2.5" : "py-2"} rounded-xl text-sm font-medium transition-colors group border-l-[3px] ${
                       isActive
                         ? "shadow-sm"
                         : "text-slate-600 hover:bg-slate-50 hover:text-slate-900 border-transparent"
-                    } ${collapsed ? "justify-center" : ""}`}
+                    } ${isCollapsed ? "justify-center" : ""}`}
                   >
                     <Icon
                       style={isActive ? { color: primaryHex } : undefined}
@@ -189,20 +219,21 @@ export function Sidebar() {
                           : "text-slate-400 group-hover:text-slate-600"
                       }`}
                     />
-                    {!collapsed && <span>{item.label}</span>}
+                    {!isCollapsed && <span>{item.label}</span>}
                   </Link>
                 );
               })}
             </div>
           </div>
         ))}
-      </div>
+      </nav>
 
       {/* Upgrade Banner / Expand button */}
       <div className="p-3 mt-auto">
-        {collapsed ? (
+        {isCollapsed ? (
           <button
             onClick={() => setCollapsed(false)}
+            aria-label="Expand sidebar"
             className="w-full flex items-center justify-center p-2.5 rounded-xl bg-blue-50 border border-blue-100 text-blue-600 hover:bg-blue-100 transition-colors"
           >
             <ChevronRight className="w-4 h-4" />
@@ -221,6 +252,37 @@ export function Sidebar() {
           </div>
         )}
       </div>
-    </aside>
+    </>
+  );
+
+  return (
+    <>
+      {/* Desktop / large laptop sidebar */}
+      <aside
+        className={`${
+          collapsed ? "w-20" : "w-60"
+        } bg-white border-r border-slate-200 flex-col h-dvh shrink-0 hidden lg:flex z-30 transition-all duration-300 ease-in-out overflow-hidden`}
+      >
+        {renderContent(collapsed, false)}
+      </aside>
+
+      {/* Phone / tablet drawer */}
+      <div
+        className={`lg:hidden fixed inset-0 z-50 ${mobileOpen ? "" : "pointer-events-none"}`}
+        aria-hidden={!mobileOpen}
+      >
+        <div
+          onClick={onClose}
+          className={`absolute inset-0 bg-slate-900/40 backdrop-blur-[1px] transition-opacity duration-300 ${mobileOpen ? "opacity-100" : "opacity-0"}`}
+        />
+        <aside
+          className={`absolute inset-y-0 left-0 w-72 max-w-[85vw] bg-white flex flex-col transition-transform duration-300 ease-out ${
+            mobileOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full"
+          }`}
+        >
+          {renderContent(false, true)}
+        </aside>
+      </div>
+    </>
   );
 }

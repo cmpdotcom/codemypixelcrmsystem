@@ -82,7 +82,7 @@ export default function MyWorkPage() {
   const nothing = !Object.values(show).some(Boolean);
 
   return (
-    <div className="mx-auto w-full max-w-[1400px] space-y-6 p-6 pb-12 md:p-8">
+    <div className="mx-auto w-full max-w-[1400px] space-y-6 p-4 pb-12 sm:p-6 md:p-8">
       <div>
         <h2 className="text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">My Work</h2>
         <p className="mt-1 text-xs text-slate-500">Everything assigned to you right now{role ? ` as ${role}` : ""}.</p>

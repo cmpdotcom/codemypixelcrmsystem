@@ -232,7 +232,7 @@ export default function Dashboard() {
 
   return (
     <>
-      <div className="p-6 md:p-8 max-w-[1600px] mx-auto w-full space-y-6 pb-12">
+      <div className="p-4 sm:p-6 md:p-8 max-w-[1600px] mx-auto w-full space-y-6 pb-12">
           {/* Greeting & Date Header */}
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
             <div>
@@ -275,7 +275,7 @@ export default function Dashboard() {
           )}
 
           {/* Row 1: KPI Cards (5 Columns) */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4">
             {/* Total Leads */}
             {canView("Leads") && <div className="bg-white p-4 rounded-2xl border border-slate-100/90 shadow-[0_1px_3px_rgba(0,0,0,0.02),0_6px_16px_rgba(0,0,0,0.02)] hover:shadow-md transition-all">
               <div className="flex justify-between items-start">
@@ -372,9 +372,9 @@ export default function Dashboard() {
           </div>
 
           {/* Row 2: Charts & Today's Tasks (3 Columns) */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-12 gap-4 sm:gap-5">
             {/* 1. Revenue Overview (5 cols) */}
-            {canView("Payments") && <div className="bg-white rounded-2xl border border-slate-100/90 shadow-[0_1px_3px_rgba(0,0,0,0.02),0_6px_16px_rgba(0,0,0,0.02)] p-5 lg:col-span-5 flex flex-col justify-between">
+            {canView("Payments") && <div className="bg-white rounded-2xl border border-slate-100/90 shadow-[0_1px_3px_rgba(0,0,0,0.02),0_6px_16px_rgba(0,0,0,0.02)] p-4 sm:p-5 xl:col-span-5 flex flex-col justify-between">
               <div className="flex justify-between items-start">
                 <div>
                   <h3 className="text-sm font-bold text-slate-900">
@@ -471,21 +471,21 @@ export default function Dashboard() {
             </div>}
 
             {/* 2. Lead Conversion Funnel (4 cols) */}
-            {canView("Leads") && <div className="bg-white rounded-2xl border border-slate-100/90 shadow-[0_1px_3px_rgba(0,0,0,0.02),0_6px_16px_rgba(0,0,0,0.02)] p-5 lg:col-span-4 flex flex-col justify-between">
+            {canView("Leads") && <div className="bg-white rounded-2xl border border-slate-100/90 shadow-[0_1px_3px_rgba(0,0,0,0.02),0_6px_16px_rgba(0,0,0,0.02)] p-4 sm:p-5 xl:col-span-4 flex flex-col justify-between">
               <div className="flex justify-between items-center mb-2">
                 <h3 className="text-sm font-bold text-slate-900">
                   Lead Conversion Funnel
                 </h3>
               </div>
 
-              <div className="flex items-center gap-4 pt-2">
+              <div className="flex flex-col sm:flex-row items-center gap-4 pt-2">
                 {/* Left: SVG Trapezoid Funnel */}
-                <div className="w-1/2 flex items-center justify-center">
+                <div className="w-full max-w-[220px] sm:max-w-none sm:w-1/2 flex items-center justify-center">
                   <FunnelGraphic />
                 </div>
 
                 {/* Right: Funnel Data Rows */}
-                <div className="w-1/2 space-y-2">
+                <div className="w-full sm:w-1/2 space-y-2">
                   {funnel.map((item, idx) => (
                     <div
                       key={idx}
@@ -513,7 +513,7 @@ export default function Dashboard() {
             </div>}
 
             {/* 3. Today's Tasks (3 cols) */}
-            {canView("Tasks") && <div className="bg-white rounded-2xl border border-slate-100/90 shadow-[0_1px_3px_rgba(0,0,0,0.02),0_6px_16px_rgba(0,0,0,0.02)] p-5 lg:col-span-3 flex flex-col justify-between">
+            {canView("Tasks") && <div className="bg-white rounded-2xl border border-slate-100/90 shadow-[0_1px_3px_rgba(0,0,0,0.02),0_6px_16px_rgba(0,0,0,0.02)] p-4 sm:p-5 md:col-span-2 xl:col-span-3 flex flex-col justify-between">
               <div className="flex justify-between items-center mb-3">
                 <h3 className="text-sm font-bold text-slate-900">
                   Today&apos;s Tasks
@@ -583,7 +583,7 @@ export default function Dashboard() {
           </div>
 
           {/* Row 3: Recent Leads, Active Deals, Project Progress (3 Equal Columns) */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5">
             {/* 1. Recent Leads */}
             {canView("Leads") && <div className="bg-white rounded-2xl border border-slate-100/90 shadow-[0_1px_3px_rgba(0,0,0,0.02),0_6px_16px_rgba(0,0,0,0.02)] p-5">
               <div className="flex justify-between items-center mb-4">
@@ -747,9 +747,9 @@ export default function Dashboard() {
           </div>
 
           {/* Row 4: Team Performance, Activity Timeline, Promotional Card */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-12 gap-4 sm:gap-5">
             {/* 1. Team Performance (5 cols) */}
-            {canView("Performance") && <div className="bg-white rounded-2xl border border-slate-100/90 shadow-[0_1px_3px_rgba(0,0,0,0.02),0_6px_16px_rgba(0,0,0,0.02)] p-5 lg:col-span-5">
+            {canView("Performance") && <div className="bg-white rounded-2xl border border-slate-100/90 shadow-[0_1px_3px_rgba(0,0,0,0.02),0_6px_16px_rgba(0,0,0,0.02)] p-4 sm:p-5 md:col-span-2 xl:col-span-5">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-sm font-bold text-slate-900">
                   Team Performance
@@ -798,7 +798,7 @@ export default function Dashboard() {
             </div>}
 
             {/* 2. Activity Timeline (4 cols) */}
-            {canView("Activities") && <div className="bg-white rounded-2xl border border-slate-100/90 shadow-[0_1px_3px_rgba(0,0,0,0.02),0_6px_16px_rgba(0,0,0,0.02)] p-5 lg:col-span-4">
+            {canView("Activities") && <div className="bg-white rounded-2xl border border-slate-100/90 shadow-[0_1px_3px_rgba(0,0,0,0.02),0_6px_16px_rgba(0,0,0,0.02)] p-4 sm:p-5 xl:col-span-4">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-sm font-bold text-slate-900">
                   Activity Timeline
@@ -840,7 +840,7 @@ export default function Dashboard() {
             </div>}
 
             {/* 3. Promotional Card: Turn Opportunities Into Success (3 cols) */}
-            {canView("Reports") && <div className="bg-gradient-to-br from-[#e8f1ff] via-[#f0f4ff] to-[#f5f0ff] rounded-2xl border border-blue-100/80 shadow-[0_1px_3px_rgba(0,0,0,0.02),0_6px_16px_rgba(0,0,0,0.02)] p-5 lg:col-span-3 flex flex-col justify-between relative overflow-hidden">
+            {canView("Reports") && <div className="bg-gradient-to-br from-[#e8f1ff] via-[#f0f4ff] to-[#f5f0ff] rounded-2xl border border-blue-100/80 shadow-[0_1px_3px_rgba(0,0,0,0.02),0_6px_16px_rgba(0,0,0,0.02)] p-4 sm:p-5 xl:col-span-3 flex flex-col justify-between relative overflow-hidden">
               {/* 3D Isometric Pastel Cubes Graphic */}
               <div className="absolute top-3 right-3 pointer-events-none opacity-90">
                 <svg

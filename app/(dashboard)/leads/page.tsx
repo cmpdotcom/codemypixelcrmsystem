@@ -331,6 +331,8 @@ function LeadsPage() {
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [selectAll, setSelectAll] = useState(false);
   const [detailsTab, setDetailsTab] = useState("Overview");
+  // Below xl the detail panel is a slide-over sheet that only opens on an explicit row tap.
+  const [mobilePanelOpen, setMobilePanelOpen] = useState(false);
   const [statusUpdating, setStatusUpdating] = useState(false);
   const [localError, setError] = useState<string | null>(null);
   // Combine local, non-Redux errors (activities, files, CSV import) with
@@ -483,11 +485,12 @@ function LeadsPage() {
       if (lead) {
         dispatch(setSelectedLeadAction(lead));
         setDetailsTab("Activities");
+        setMobilePanelOpen(true);
       } else {
         // Lead might be on another page — fetch it directly
         fetch(`/api/leads/${leadId}`)
           .then((res) => res.ok ? res.json() : null)
-          .then((data) => { if (data) { dispatch(setSelectedLeadAction(data)); setDetailsTab("Activities"); } })
+          .then((data) => { if (data) { dispatch(setSelectedLeadAction(data)); setDetailsTab("Activities"); setMobilePanelOpen(true); } })
           .catch(() => {});
       }
     }
@@ -671,6 +674,7 @@ function LeadsPage() {
 
   const handleDeleteLead = async (id: string) => {
     if (!confirm("Delete this lead? This cannot be undone.")) return;
+    setMobilePanelOpen(false);
     try {
       await dispatch(deleteLeadThunk(id)).unwrap();
     } catch {
@@ -729,7 +733,7 @@ function LeadsPage() {
 
   return (
     <>
-      <div className="p-6 md:p-8 max-w-[1600px] mx-auto w-full space-y-6 pb-12">
+      <div className="p-4 sm:p-6 md:p-8 max-w-[1600px] mx-auto w-full space-y-6 pb-12">
         {/* Error banner */}
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-700 text-xs font-medium px-4 py-3 rounded-xl flex items-center gap-3">
@@ -765,7 +769,7 @@ function LeadsPage() {
             </p>
           </div>
 
-          <div className="flex items-center gap-2.5">
+          <div className="flex flex-wrap items-center gap-2.5">
             <input
               ref={importInputRef}
               type="file"
@@ -821,12 +825,12 @@ function LeadsPage() {
 
         {/* Bulk Actions Bar */}
         {selectedRows.length > 0 && (
-          <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-2.5 flex items-center justify-between">
+          <div className="bg-blue-50 border border-blue-200 rounded-xl px-3 sm:px-4 py-2.5 flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-2 text-xs font-semibold text-blue-700">
               <Check className="w-4 h-4" />
               <span>{selectedRows.length} lead{selectedRows.length > 1 ? "s" : ""} selected</span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               {canAssignLeads && (
                 <select
                   onChange={(event) => { if (event.target.value) handleBulkAssign(event.target.value); event.target.value = ""; }}
@@ -865,7 +869,7 @@ function LeadsPage() {
         {/* Main 2-Column Workspace Layout - flex with animated right panel width */}
         <div className="flex flex-col xl:flex-row gap-6 items-stretch">
           {/* Left/Center Leads Table Container - flex-1 grows to fill, shrinks when right panel opens */}
-          <div className="flex-1 min-w-0 bg-white rounded-2xl border border-slate-100/90 shadow-[0_1px_3px_rgba(0,0,0,0.02),0_6px_16px_rgba(0,0,0,0.02)] p-5 space-y-4 transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]">
+          <div className="flex-1 min-w-0 bg-white rounded-2xl border border-slate-100/90 shadow-[0_1px_3px_rgba(0,0,0,0.02),0_6px_16px_rgba(0,0,0,0.02)] p-3 sm:p-5 space-y-4 transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]">
             {/* Category Status Tabs */}
             <div className="flex items-center justify-between border-b border-slate-100 pb-3 overflow-x-auto custom-scrollbar">
               <div className="flex items-center gap-1 pb-1 sm:pb-0">
@@ -905,7 +909,7 @@ function LeadsPage() {
                 />
               </div>
 
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex flex-wrap items-center gap-2 shrink-0">
                 <div className="relative">
                 <button onClick={() => setShowColumns((visible) => !visible)} className="bg-white border border-slate-200/80 hover:bg-slate-50 text-slate-700 text-xs font-semibold px-3 py-2 rounded-xl shadow-2xs flex items-center gap-1.5 transition-colors cursor-pointer">
                   <Columns className="w-3.5 h-3.5 text-slate-400" />
@@ -1001,7 +1005,7 @@ function LeadsPage() {
                       return (
                         <tr
                           key={lead.id}
-                          onClick={() => dispatch(setSelectedLeadAction(lead))}
+                          onClick={() => { dispatch(setSelectedLeadAction(lead)); setMobilePanelOpen(true); }}
                           className={`hover:bg-slate-50/80 transition-colors cursor-pointer ${
                             isDetailActive ? "bg-blue-50/40" : isSelected ? "bg-blue-50/20" : ""
                           }`}
@@ -1111,7 +1115,7 @@ function LeadsPage() {
                 <span className="font-bold text-slate-800">{total}</span> leads
               </p>
 
-              <div className="flex items-center gap-1">
+              <div className="flex flex-wrap items-center gap-1">
                 <button
                   onClick={() => dispatch(setPageAction(Math.max(1, page - 1)))}
                   disabled={page === 1}
@@ -1163,22 +1167,30 @@ function LeadsPage() {
             </div>
           </div>
 
-          {/* Right Column: Detail Panel - always in DOM, width + opacity animates */}
+          {/* Right Column: Detail Panel - side column on xl, slide-over sheet below xl */}
           <div
-            className={`shrink-0 self-stretch overflow-hidden transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] ${
+            className={`fixed inset-0 z-40 xl:static xl:inset-auto xl:z-auto xl:shrink-0 xl:self-stretch xl:overflow-hidden xl:transition-all xl:duration-300 xl:ease-[cubic-bezier(0.4,0,0.2,1)] ${
+              mobilePanelOpen && selectedLead ? "" : "pointer-events-none xl:pointer-events-auto"
+            } ${
               selectedLead
-                ? "xl:w-[340px] opacity-100"
-                : "xl:w-0 opacity-0"
+                ? "xl:w-[340px] xl:opacity-100"
+                : "xl:w-0 xl:opacity-0"
             }`}
           >
-            <div className="w-[340px] h-full min-h-[620px] bg-white rounded-2xl border border-slate-100/90 shadow-[0_1px_3px_rgba(0,0,0,0.02),0_6px_16px_rgba(0,0,0,0.02)] p-5 space-y-4 flex flex-col">
+            <div
+              onClick={() => setMobilePanelOpen(false)}
+              className={`xl:hidden absolute inset-0 bg-slate-900/40 transition-opacity duration-300 ${mobilePanelOpen && selectedLead ? "opacity-100" : "opacity-0"}`}
+            />
+            <div className={`absolute inset-y-0 right-0 w-full sm:w-[420px] overflow-y-auto overscroll-contain rounded-none sm:rounded-l-2xl transition-transform duration-300 ease-out ${
+              mobilePanelOpen && selectedLead ? "translate-x-0" : "translate-x-full"
+            } xl:static xl:translate-x-0 xl:w-[340px] xl:overflow-visible xl:rounded-2xl xl:min-h-[620px] h-full bg-white border border-slate-100/90 ${mobilePanelOpen && selectedLead ? "shadow-2xl" : ""} xl:shadow-[0_1px_3px_rgba(0,0,0,0.02),0_6px_16px_rgba(0,0,0,0.02)] p-4 sm:p-5 space-y-4 flex flex-col`}>
               {selectedLead && (
                 <>
                   {/* Header: ID, Status, Close */}
                   <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                     <div className="flex items-center gap-2">
                       <button
-                        onClick={() => dispatch(setSelectedLeadAction(null))}
+                        onClick={() => { setMobilePanelOpen(false); dispatch(setSelectedLeadAction(null)); }}
                         className="text-slate-400 hover:text-slate-600 p-1 rounded-md hover:bg-slate-50 transition-colors"
                         title="Close"
                       >
@@ -1774,8 +1786,8 @@ function LeadImportModal({
   const unmappedHeaders = preview.headers.filter((header) => !mappedColumns.has(header.key));
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-6xl max-h-[92vh] overflow-hidden flex flex-col" onClick={(event) => event.stopPropagation()}>
-        <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
+      <div className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl w-full max-w-6xl max-h-[92vh] overflow-hidden flex flex-col" onClick={(event) => event.stopPropagation()}>
+        <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-slate-100 flex items-center justify-between">
           <div>
             <h3 className="text-base font-extrabold text-slate-900">Review CSV Import</h3>
             <p className="text-xs text-slate-500 mt-1">Map uploaded columns to CRM fields before importing.</p>
@@ -1785,7 +1797,7 @@ function LeadImportModal({
           </button>
         </div>
 
-        <div className="overflow-y-auto p-6 space-y-6">
+        <div className="overflow-y-auto p-4 sm:p-6 space-y-6">
             {importing && (
               <div className="rounded-2xl border border-blue-100 bg-blue-50/70 p-4 space-y-2">
                 <div className="flex items-center justify-between text-xs font-semibold text-blue-800">
@@ -1811,7 +1823,7 @@ function LeadImportModal({
               <div className="border border-slate-200 rounded-xl divide-y divide-slate-100 overflow-hidden">
                 {leadImportFields.map((field) => (
                   <div key={field.key} className="flex items-center gap-3 px-3 py-2.5">
-                    <label className="w-36 shrink-0 text-xs font-semibold text-slate-700">
+                    <label className="w-28 sm:w-36 shrink-0 text-xs font-semibold text-slate-700">
                       {field.label}{field.required && <span className="text-red-500"> *</span>}
                     </label>
                     <select
@@ -1836,7 +1848,7 @@ function LeadImportModal({
                 <div className="space-y-2">
                   {customFields.map((field) => (
                     <div key={field.id} className="flex items-center gap-2">
-                      <span className="w-36 shrink-0 truncate text-xs font-semibold text-slate-700">{field.name}</span>
+                      <span className="w-28 sm:w-36 shrink-0 truncate text-xs font-semibold text-slate-700">{field.name}</span>
                       <select value={field.column || ""} onChange={(event) => onCustomFieldMappingChange(field.id, event.target.value)} className="flex-1 min-w-0 rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-xs text-slate-700">
                         <option value="">Choose CSV column</option>
                         {preview.headers.map((header) => <option key={header.key} value={header.key}>{header.label}</option>)}
@@ -1873,7 +1885,7 @@ function LeadImportModal({
                 </div>
                 <span className="text-[10px] font-semibold text-slate-500">{preview.headers.length} columns</span>
               </div>
-              <div className="border border-slate-200 rounded-xl overflow-auto min-h-[520px] max-h-[520px] flex-1">
+              <div className="border border-slate-200 rounded-xl overflow-auto min-h-[260px] max-h-[360px] lg:min-h-[520px] lg:max-h-[520px] flex-1">
                 <table className="min-w-full text-[11px] text-left">
                   <thead className="bg-slate-50 sticky top-0">
                     <tr>{preview.headers.map((header) => <th key={header.key} className="px-3 py-2 font-semibold text-slate-500 whitespace-nowrap">{header.label}</th>)}</tr>
@@ -1889,7 +1901,7 @@ function LeadImportModal({
           </div>
         </div>
 
-        <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-between gap-3">
+        <div className="px-4 sm:px-6 py-4 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <p className="text-[11px] text-slate-400"><span className="text-red-500">*</span> Full Name (or First + Last Name), Company, and Email are required.</p>
           <div className="flex items-center gap-2">
             <button onClick={onClose} disabled={importing} className="px-4 py-2.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer disabled:opacity-50">Cancel</button>
@@ -1998,11 +2010,11 @@ function LeadModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200" onClick={onClose}>
       <div
-        className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[92vh] overflow-hidden flex flex-col"
+        className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl w-full max-w-2xl max-h-[92vh] overflow-hidden flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header with gradient accent */}
-        <div className="relative px-6 py-5 border-b border-slate-100 bg-gradient-to-br from-slate-50 to-white">
+        <div className="relative px-4 sm:px-6 py-4 sm:py-5 border-b border-slate-100 bg-gradient-to-br from-slate-50 to-white">
           <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 rounded-t-3xl" />
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -2025,7 +2037,7 @@ function LeadModal({
         </div>
 
         {/* Modal Body */}
-        <form onSubmit={handleSubmit} className="px-6 py-5 space-y-5 overflow-y-auto custom-scrollbar flex-1">
+        <form onSubmit={handleSubmit} className="px-4 sm:px-6 py-5 space-y-5 overflow-y-auto custom-scrollbar flex-1">
           {errors.form && (
             <div className="bg-red-50 border border-red-200 text-red-700 text-xs font-medium px-3 py-2.5 rounded-xl flex items-center gap-2">
               <AlertCircle className="w-3.5 h-3.5 shrink-0" />
@@ -2039,15 +2051,15 @@ function LeadModal({
               <div className="w-1 h-4 bg-blue-500 rounded-full" />
               <h4 className="text-[11px] font-bold text-slate-700 uppercase tracking-wide">Contact Information</h4>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {field("name", "Full Name *", "text", "John Carter")}
               {field("company", "Company *", "text", "ABC Technologies")}
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {field("email", "Email *", "email", "john@abc.com")}
               {field("phone", "Phone", "tel", "+1 415 823 4567")}
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {field("location", "Location", "text", "San Francisco, USA")}
               {field("linkedin", "LinkedIn", "text", "linkedin.com/in/johncarter")}
             </div>
@@ -2059,11 +2071,11 @@ function LeadModal({
               <div className="w-1 h-4 bg-indigo-500 rounded-full" />
               <h4 className="text-[11px] font-bold text-slate-700 uppercase tracking-wide">Lead Details</h4>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {selectField("source", "Source", SOURCES)}
               {selectField("service", "Service", SERVICES)}
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {selectField("status", "Status", statusOptions)}
               {canAssign ? (
                 <div>
@@ -2095,11 +2107,11 @@ function LeadModal({
               <div className="w-1 h-4 bg-purple-500 rounded-full" />
               <h4 className="text-[11px] font-bold text-slate-700 uppercase tracking-wide">Project Requirements</h4>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {field("budget", "Budget", "text", "$20,000 – $50,000")}
               {field("timeline", "Timeline", "text", "1 – 3 months")}
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {field("companySize", "Company Size", "text", "50–200 employees")}
               {industryOptions.length > 0
                 ? selectField("industry", "Industry", industryOptions)
@@ -2117,7 +2129,7 @@ function LeadModal({
           </div>
 
           {/* Modal Footer */}
-          <div className="flex items-center justify-between gap-2 pt-4 border-t border-slate-100 sticky bottom-0 bg-white -mx-6 px-6 -mb-5 pb-5">
+          <div className="flex items-center justify-between gap-2 pt-4 border-t border-slate-100 sticky bottom-0 bg-white -mx-4 sm:-mx-6 px-4 sm:px-6 -mb-5 pb-5">
             <p className="text-[10px] text-slate-400">
               <span className="text-red-500">*</span> Required fields
             </p>

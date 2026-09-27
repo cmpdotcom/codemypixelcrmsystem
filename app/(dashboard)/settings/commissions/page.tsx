@@ -181,7 +181,8 @@ export default function CommissionsPage() {
 
         <div className="mt-4">
           <div className="overflow-hidden border border-slate-200 rounded-lg">
-            <table className="w-full">
+            <div className="overflow-x-auto">
+            <table className="w-full min-w-[560px]">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200">
                   <th className="text-left text-[10px] font-semibold text-slate-500 uppercase px-4 py-2.5">Trigger Milestone</th>
@@ -209,6 +210,7 @@ export default function CommissionsPage() {
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
 
           <div className="flex gap-2 mt-3 pt-2">
@@ -252,7 +254,8 @@ export default function CommissionsPage() {
 
         {closerType === "Percentage of Deal" && (
           <div className="mt-4 overflow-hidden border border-slate-200 rounded-lg">
-            <table className="w-full">
+            <div className="overflow-x-auto">
+            <table className="w-full min-w-[560px]">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200">
                   <th className="text-left text-[10px] font-semibold text-slate-500 uppercase px-4 py-2.5">Deal Trigger</th>
@@ -268,13 +271,15 @@ export default function CommissionsPage() {
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
         )}
 
         {closerType === "Tiered Percentage" && (
           <div className="mt-4">
             <div className="overflow-hidden border border-slate-200 rounded-lg">
-              <table className="w-full">
+              <div className="overflow-x-auto">
+              <table className="w-full min-w-[560px]">
                 <thead>
                   <tr className="bg-slate-50 border-b border-slate-200">
                     <th className="text-left text-[10px] font-semibold text-slate-500 uppercase px-4 py-2.5">Deal Value Tier</th>
@@ -300,6 +305,7 @@ export default function CommissionsPage() {
                   ))}
                 </tbody>
               </table>
+              </div>
             </div>
 
             <div className="flex gap-2 mt-3 pt-2">
@@ -330,7 +336,8 @@ export default function CommissionsPage() {
 
         {closerType === "Fixed per Deal" && (
           <div className="mt-4 overflow-hidden border border-slate-200 rounded-lg">
-            <table className="w-full">
+            <div className="overflow-x-auto">
+            <table className="w-full min-w-[560px]">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200">
                   <th className="text-left text-[10px] font-semibold text-slate-500 uppercase px-4 py-2.5">Trigger</th>
@@ -346,6 +353,7 @@ export default function CommissionsPage() {
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
         )}
       </FormCard>

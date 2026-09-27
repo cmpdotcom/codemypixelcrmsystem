@@ -331,7 +331,7 @@ export default function CommissionsPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={handleOpenCreate}
             className="bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs font-semibold py-2 px-3.5 rounded-xl shadow-md shadow-blue-500/25 flex items-center gap-1.5 transition-all cursor-pointer"
@@ -464,7 +464,7 @@ export default function CommissionsPage() {
 
       {/* Search & Filter Bar */}
       <div className="bg-white rounded-2xl border border-slate-100/90 shadow-sm p-3 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex-1 min-w-[260px] relative">
+        <div className="flex-1 basis-full sm:basis-auto min-w-0 sm:min-w-[260px] relative">
           <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             type="text"
@@ -677,7 +677,7 @@ export default function CommissionsPage() {
             </div>
 
             <form onSubmit={handleSubmitModal} className="p-5 space-y-4">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-[11px] font-semibold text-slate-600 mb-1">Team Member *</label>
                   <select
@@ -776,7 +776,7 @@ export default function CommissionsPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-[11px] font-semibold text-slate-600 mb-1">Status</label>
                   <select

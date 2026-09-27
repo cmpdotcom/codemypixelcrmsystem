@@ -381,14 +381,14 @@ export default function UsersSettingsPage() {
       {/* Toolbar */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 mb-5">
         <div className="flex flex-wrap items-center gap-2.5">
-          <div className="relative">
+          <div className="relative w-full sm:w-auto">
             <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search users..."
-              className="pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 w-56 shadow-2xs"
+              className="pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 w-full sm:w-56 shadow-2xs"
             />
           </div>
 
@@ -435,11 +435,11 @@ export default function UsersSettingsPage() {
 
       {/* Users Table */}
       <FormCard title="All Users" description={`${filteredUsers.length} users found in your workspace`}>
-        <div className="overflow-x-auto -mx-6">
-          <table className="w-full">
+        <div className="overflow-x-auto -mx-4 sm:-mx-6">
+          <table className="w-full min-w-[520px]">
             <thead>
               <tr className="border-b border-slate-200/80 bg-slate-50/50">
-                <th className="text-left text-[10px] font-semibold text-slate-500 uppercase tracking-wider px-6 py-3">
+                <th className="text-left text-[10px] font-semibold text-slate-500 uppercase tracking-wider px-4 sm:px-6 py-3">
                   User
                 </th>
                 <th className="text-left text-[10px] font-semibold text-slate-500 uppercase tracking-wider px-3 py-3">
@@ -454,7 +454,7 @@ export default function UsersSettingsPage() {
                 <th className="text-left text-[10px] font-semibold text-slate-500 uppercase tracking-wider px-3 py-3">
                   Created
                 </th>
-                <th className="text-right text-[10px] font-semibold text-slate-500 uppercase tracking-wider px-6 py-3">
+                <th className="text-right text-[10px] font-semibold text-slate-500 uppercase tracking-wider px-4 sm:px-6 py-3">
                   Actions
                 </th>
               </tr>
@@ -469,7 +469,7 @@ export default function UsersSettingsPage() {
               ) : (
                 filteredUsers.map((user, idx) => (
                   <tr key={user.id} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="px-6 py-3.5">
+                    <td className="px-4 sm:px-6 py-3.5">
                       <div className="flex items-center gap-3">
                         <div
                           className={`w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-semibold shrink-0 shadow-2xs ${
@@ -501,7 +501,7 @@ export default function UsersSettingsPage() {
                         {new Date(user.createdAt).toLocaleDateString()}
                       </span>
                     </td>
-                    <td className="px-6 py-3.5 text-right">
+                    <td className="px-4 sm:px-6 py-3.5 text-right">
                       <div className="flex items-center justify-end gap-2">
                         <button
                           onClick={() => handleOpenEditModal(user)}
@@ -541,15 +541,15 @@ export default function UsersSettingsPage() {
       {invitations.length > 0 && (
         <div className="mt-5">
           <FormCard title="Pending Invitations" description={`${invitations.length} invitation${invitations.length === 1 ? "" : "s"} awaiting acceptance`}>
-            <div className="overflow-x-auto -mx-6">
-              <table className="w-full">
+            <div className="overflow-x-auto -mx-4 sm:-mx-6">
+              <table className="w-full min-w-[520px]">
                 <thead>
                   <tr className="border-b border-slate-200/80 bg-slate-50/50">
-                    <th className="text-left text-[10px] font-semibold text-slate-500 uppercase tracking-wider px-6 py-3">Invitee</th>
+                    <th className="text-left text-[10px] font-semibold text-slate-500 uppercase tracking-wider px-4 sm:px-6 py-3">Invitee</th>
                     <th className="text-left text-[10px] font-semibold text-slate-500 uppercase tracking-wider px-3 py-3">Role</th>
                     <th className="text-left text-[10px] font-semibold text-slate-500 uppercase tracking-wider px-3 py-3">Team</th>
                     <th className="text-left text-[10px] font-semibold text-slate-500 uppercase tracking-wider px-3 py-3">Expires</th>
-                    <th className="text-right text-[10px] font-semibold text-slate-500 uppercase tracking-wider px-6 py-3">Actions</th>
+                    <th className="text-right text-[10px] font-semibold text-slate-500 uppercase tracking-wider px-4 sm:px-6 py-3">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -558,7 +558,7 @@ export default function UsersSettingsPage() {
                     const isBusy = invitationActionId === invitation.id;
                     return (
                       <tr key={invitation.id} className="hover:bg-slate-50/50 transition-colors">
-                        <td className="px-6 py-3.5">
+                        <td className="px-4 sm:px-6 py-3.5">
                           <div className="flex items-center gap-3">
                             <div className={`w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-semibold shrink-0 shadow-2xs ${avatarColors[idx % avatarColors.length]}`}>{getInitials(inviteeName)}</div>
                             <div><p className="text-xs font-semibold text-slate-900">{inviteeName}</p><p className="text-[11px] text-slate-400">{invitation.email}</p></div>
@@ -567,7 +567,7 @@ export default function UsersSettingsPage() {
                         <td className="px-3 py-3.5"><Badge label={invitation.role.name} color={(invitation.role.color || "blue") as UserItem["roleColor"]} /></td>
                         <td className="px-3 py-3.5"><span className="text-xs text-slate-600 font-medium">{invitation.team?.name || "Unassigned"}</span></td>
                         <td className="px-3 py-3.5"><span className="text-xs text-slate-500">{new Date(invitation.expiresAt).toLocaleDateString()}</span></td>
-                        <td className="px-6 py-3.5 text-right">
+                        <td className="px-4 sm:px-6 py-3.5 text-right">
                           <div className="flex items-center justify-end gap-2">
                             <button onClick={() => handleResendInvitation(invitation)} disabled={isBusy} className="p-1 text-slate-400 hover:text-blue-600 rounded-md hover:bg-blue-50 transition-colors cursor-pointer disabled:opacity-50" title="Resend invitation">
                               <RefreshCw className={`w-3.5 h-3.5 ${isBusy ? "animate-spin" : ""}`} />
@@ -589,7 +589,7 @@ export default function UsersSettingsPage() {
 
       {showInviteModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs" onClick={() => setShowInviteModal(false)}>
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 space-y-4" onClick={(event) => event.stopPropagation()}>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[92vh] overflow-y-auto p-4 sm:p-6 space-y-4" onClick={(event) => event.stopPropagation()}>
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div><h3 className="text-sm font-bold text-slate-900">Invite a team member</h3><p className="text-[11px] text-slate-500 mt-1">They’ll receive a secure link to create their own password.</p></div>
               <button onClick={() => setShowInviteModal(false)} className="p-1 rounded-lg hover:bg-slate-100 text-slate-400"><X className="w-4 h-4" /></button>
@@ -602,12 +602,12 @@ export default function UsersSettingsPage() {
               </div>
             ) : (
               <form onSubmit={handleInvite} className="space-y-4">
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <label className="text-xs font-semibold text-slate-700">First name<input value={inviteForm.firstName} onChange={(e) => setInviteForm({ ...inviteForm, firstName: e.target.value })} placeholder="Optional" className="mt-1.5 w-full px-3 py-2 text-xs border border-slate-200 rounded-lg" /></label>
                   <label className="text-xs font-semibold text-slate-700">Last name<input value={inviteForm.lastName} onChange={(e) => setInviteForm({ ...inviteForm, lastName: e.target.value })} placeholder="Optional" className="mt-1.5 w-full px-3 py-2 text-xs border border-slate-200 rounded-lg" /></label>
                 </div>
                 <label className="block text-xs font-semibold text-slate-700">Email address<input required type="email" value={inviteForm.email} onChange={(e) => setInviteForm({ ...inviteForm, email: e.target.value })} placeholder="name@company.com" className="mt-1.5 w-full px-3 py-2 text-xs border border-slate-200 rounded-lg" /></label>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <label className="text-xs font-semibold text-slate-700">Role<select required value={inviteForm.roleId} onChange={(e) => setInviteForm({ ...inviteForm, roleId: e.target.value })} className="mt-1.5 w-full px-3 py-2 text-xs border border-slate-200 rounded-lg bg-white">{inviteRoles.map((role) => <option key={role.id} value={role.id}>{role.name}</option>)}</select></label>
                   <label className="text-xs font-semibold text-slate-700">Team<select value={inviteForm.teamId} onChange={(e) => setInviteForm({ ...inviteForm, teamId: e.target.value })} className="mt-1.5 w-full px-3 py-2 text-xs border border-slate-200 rounded-lg bg-white"><option value="">No team yet</option>{teams.map((team) => <option key={team.id} value={team.id}>{team.name}</option>)}</select></label>
                 </div>
@@ -625,7 +625,7 @@ export default function UsersSettingsPage() {
           onClick={() => setShowModal(false)}
         >
           <div
-            className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 space-y-4 max-h-[90vh] overflow-y-auto"
+            className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-4 sm:p-6 space-y-4 max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
@@ -641,7 +641,7 @@ export default function UsersSettingsPage() {
             </div>
 
             <form onSubmit={handleFormSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">First Name *</label>
                   <input
@@ -690,7 +690,7 @@ export default function UsersSettingsPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Role</label>
                   <select

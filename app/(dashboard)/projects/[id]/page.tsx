@@ -527,9 +527,9 @@ export default function ProjectDetailPage() {
           </div>
 
           {taskView === "board" ? (
-            <div className="flex gap-4 overflow-x-auto pb-2">
+            <div className="flex gap-3 sm:gap-4 overflow-x-auto snap-x snap-mandatory lg:snap-none pb-2">
               {taskColumns.map((col) => (
-                <div key={col.id} className="min-w-[260px] flex-1">
+                <div key={col.id} className="min-w-[80vw] sm:min-w-[260px] flex-1 snap-start">
                   <div className={`flex items-center justify-between px-3 py-2 rounded-xl mb-3 ${col.headerBg}`}>
                     <span className="text-xs font-bold">{col.title}</span>
                     <span className="text-xs font-bold bg-white/60 px-1.5 py-0.5 rounded-md">{col.count}</span>
@@ -564,7 +564,8 @@ export default function ProjectDetailPage() {
             </div>
           ) : (
             <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
-              <table className="w-full">
+              <div className="overflow-x-auto">
+              <table className="w-full min-w-[560px]">
                 <thead>
                   <tr className="border-b border-slate-100 bg-slate-50/50">
                     <th className="text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wider px-4 py-3">Task</th>
@@ -599,6 +600,7 @@ export default function ProjectDetailPage() {
                   ))}
                 </tbody>
               </table>
+              </div>
             </div>
           )}
         </div>
@@ -729,7 +731,8 @@ export default function ProjectDetailPage() {
                 <span>Report Bug</span>
               </button>
             </div>
-            <table className="w-full">
+            <div className="overflow-x-auto">
+            <table className="w-full min-w-[560px]">
               <thead>
                 <tr className="border-b border-slate-100 bg-slate-50/50">
                   <th className="text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wider px-5 py-3">Bug ID</th>
@@ -763,6 +766,7 @@ export default function ProjectDetailPage() {
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
         </div>
       )}
@@ -791,7 +795,8 @@ export default function ProjectDetailPage() {
               <h3 className="text-sm font-bold text-slate-900">Recent Files</h3>
               <button className="text-xs text-blue-600 font-medium hover:underline">Upload</button>
             </div>
-            <table className="w-full">
+            <div className="overflow-x-auto">
+            <table className="w-full min-w-[560px]">
               <thead>
                 <tr className="border-b border-slate-100 bg-slate-50/50">
                   <th className="text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wider px-5 py-3">Filename</th>
@@ -824,6 +829,7 @@ export default function ProjectDetailPage() {
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
         </div>
       )}

@@ -324,7 +324,7 @@ export default function BugDetailPage() {
 
             <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm">
               <h3 className="mb-3 text-xs font-semibold text-slate-700">Environment Details</h3>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
                 {environmentDetails.map((env) => (
                   <div key={env.label} className="space-y-1">
                     <p className="text-[10px] font-medium uppercase tracking-wide text-slate-400">{env.label}</p>

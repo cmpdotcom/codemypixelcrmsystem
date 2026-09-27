@@ -92,6 +92,8 @@ export default function ClientsPage() {
   const { money, pageSize: defaultPageSize, loaded: settingsLoaded } = useSettings();
   const [clients, setClients] = useState<ClientItem[]>([]);
   const [selectedClient, setSelectedClient] = useState<ClientItem | null>(null);
+  // Below xl the detail panel is a slide-over sheet that only opens on an explicit row tap.
+  const [mobilePanelOpen, setMobilePanelOpen] = useState(false);
   const [kpi, setKpi] = useState<KPIStats>({
     totalClients: 0,
     activeClients: 0,
@@ -188,6 +190,7 @@ export default function ClientsPage() {
   const handleDeleteClient = async (id: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     if (!confirm("Are you sure you want to permanently delete this client?")) return;
+    setMobilePanelOpen(false);
     try {
       const res = await fetch(`/api/clients/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Failed to delete client");
@@ -293,7 +296,7 @@ export default function ClientsPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={handleOpenCreate}
             className="bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs font-semibold py-2 px-3.5 rounded-xl shadow-md shadow-blue-500/25 flex items-center gap-1.5 transition-all cursor-pointer"
@@ -367,7 +370,7 @@ export default function ClientsPage() {
         <div className="flex-1 min-w-0 space-y-4 w-full">
           {/* Search & Filter Bar */}
           <div className="bg-white rounded-2xl border border-slate-100/90 shadow-sm p-3 flex flex-wrap items-center justify-between gap-3">
-            <div className="flex-1 min-w-[260px] relative">
+            <div className="flex-1 basis-full sm:basis-auto min-w-0 sm:min-w-[260px] relative">
               <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
@@ -455,7 +458,7 @@ export default function ClientsPage() {
                       return (
                         <tr
                           key={client.id}
-                          onClick={() => setSelectedClient(client)}
+                          onClick={() => { setSelectedClient(client); setMobilePanelOpen(true); }}
                           className={`hover:bg-slate-50/80 transition-colors cursor-pointer ${
                             isDetailActive ? "bg-blue-50/40" : ""
                           }`}
@@ -529,7 +532,7 @@ export default function ClientsPage() {
                   <span className="font-bold text-slate-800">{totalCount}</span> clients
                 </p>
 
-                <div className="flex items-center gap-1">
+                <div className="flex flex-wrap items-center gap-1">
                   <button
                     onClick={() => setPage(Math.max(1, page - 1))}
                     disabled={page === 1}
@@ -555,7 +558,17 @@ export default function ClientsPage() {
 
         {/* Right Side: Detailed Slide Panel */}
         {selectedClient && (
-          <div className="w-full xl:w-[380px] shrink-0 bg-white rounded-2xl border border-slate-100/90 shadow-sm p-5 space-y-4">
+          <div className={`fixed inset-0 z-40 xl:static xl:inset-auto xl:z-auto xl:shrink-0 ${mobilePanelOpen ? "" : "pointer-events-none xl:pointer-events-auto"}`}>
+          <div
+            onClick={() => setMobilePanelOpen(false)}
+            className={`xl:hidden absolute inset-0 bg-slate-900/40 transition-opacity duration-300 ${mobilePanelOpen ? "opacity-100" : "opacity-0"}`}
+          />
+          <div className={`absolute inset-y-0 right-0 w-full sm:w-[420px] overflow-y-auto overscroll-contain transition-transform duration-300 ease-out ${mobilePanelOpen ? "translate-x-0" : "translate-x-full"} xl:static xl:translate-x-0 xl:w-[380px] xl:overflow-visible bg-white sm:rounded-l-2xl xl:rounded-2xl border border-slate-100/90 ${mobilePanelOpen ? "shadow-2xl" : ""} xl:shadow-sm p-4 sm:p-5 space-y-4`}>
+            <div className="xl:hidden flex justify-end -mb-2">
+              <button onClick={() => setMobilePanelOpen(false)} aria-label="Close details" className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
             <div className="flex items-start justify-between border-b border-slate-100 pb-4">
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 rounded-full flex items-center justify-center font-bold text-sm bg-blue-100 text-blue-700 shadow-2xs">
@@ -657,6 +670,7 @@ export default function ClientsPage() {
               </button>
             </div>
           </div>
+          </div>
         )}
       </div>
 
@@ -667,7 +681,7 @@ export default function ClientsPage() {
           onClick={() => setShowModal(false)}
         >
           <div
-            className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 space-y-4 max-h-[90vh] overflow-y-auto"
+            className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-4 sm:p-6 space-y-4 max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
@@ -695,7 +709,7 @@ export default function ClientsPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Official Email *</label>
                   <input
@@ -719,7 +733,7 @@ export default function ClientsPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Contact Person</label>
                   <input
@@ -742,7 +756,7 @@ export default function ClientsPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Industry</label>
                   <select
@@ -769,7 +783,7 @@ export default function ClientsPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Total Revenue ($)</label>
                   <input

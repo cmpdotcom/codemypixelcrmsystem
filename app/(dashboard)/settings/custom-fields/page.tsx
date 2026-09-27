@@ -158,11 +158,11 @@ export default function CustomFieldsPage() {
         title="Configured Custom Fields"
         description="Attributes currently active across leads, deals, clients, projects, and tasks"
       >
-        <div className="overflow-x-auto -mx-6">
-          <table className="w-full">
+        <div className="overflow-x-auto -mx-4 sm:-mx-6">
+          <table className="w-full min-w-[520px]">
             <thead>
               <tr className="border-b border-slate-200/80 bg-slate-50/50">
-                <th className="text-left text-[10px] font-semibold text-slate-500 uppercase tracking-wide px-6 py-2.5">
+                <th className="text-left text-[10px] font-semibold text-slate-500 uppercase tracking-wide px-4 sm:px-6 py-2.5">
                   Field Name
                 </th>
                 <th className="text-left text-[10px] font-semibold text-slate-500 uppercase tracking-wide px-3 py-2.5">
@@ -177,7 +177,7 @@ export default function CustomFieldsPage() {
                 <th className="text-left text-[10px] font-semibold text-slate-500 uppercase tracking-wide px-3 py-2.5">
                   Options
                 </th>
-                <th className="text-right text-[10px] font-semibold text-slate-500 uppercase tracking-wide px-6 py-2.5">
+                <th className="text-right text-[10px] font-semibold text-slate-500 uppercase tracking-wide px-4 sm:px-6 py-2.5">
                   Actions
                 </th>
               </tr>
@@ -192,7 +192,7 @@ export default function CustomFieldsPage() {
               ) : (
                 fields.map((field) => (
                   <tr key={field.id} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="px-6 py-3 text-xs font-semibold text-slate-800">
+                    <td className="px-4 sm:px-6 py-3 text-xs font-semibold text-slate-800">
                       {field.name}
                     </td>
                     <td className="px-3 py-3">
@@ -211,7 +211,7 @@ export default function CustomFieldsPage() {
                     <td className="px-3 py-3 text-xs text-slate-500 max-w-xs truncate">
                       {field.options || "—"}
                     </td>
-                    <td className="px-6 py-3 text-right">
+                    <td className="px-4 sm:px-6 py-3 text-right">
                       <button
                         type="button"
                         onClick={() => handleDelete(field.id)}

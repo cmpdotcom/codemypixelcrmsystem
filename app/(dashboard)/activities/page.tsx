@@ -242,14 +242,14 @@ export default function ActivitiesPage() {
 
   return (
     <>
-      <div className="p-6 md:p-8 max-w-[1600px] mx-auto w-full space-y-6 pb-12">
+      <div className="p-4 sm:p-6 md:p-8 max-w-[1600px] mx-auto w-full space-y-6 pb-12">
         {/* Title Bar */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">Activities</h2>
             <p className="text-xs text-slate-500 mt-1">Track all communications and interactions in one place.</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={() => openLogModal()}
               className="bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs font-semibold py-2.5 px-4 rounded-xl shadow-md shadow-blue-500/25 flex items-center gap-2 transition-all cursor-pointer"
@@ -295,7 +295,7 @@ export default function ActivitiesPage() {
           <div className="xl:col-span-8 bg-white rounded-2xl border border-slate-100/90 shadow-[0_1px_3px_rgba(0,0,0,0.02),0_6px_16px_rgba(0,0,0,0.02)] p-5 space-y-4">
             {/* Filter Tabs */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
-              <div className="flex items-center gap-1 overflow-x-auto custom-scrollbar pb-1 sm:pb-0">
+              <div className="flex flex-wrap items-center gap-1 overflow-x-auto custom-scrollbar pb-1 sm:pb-0">
                 {tabs.map((tab) => (
                   <button
                     key={tab.label}
@@ -475,7 +475,7 @@ export default function ActivitiesPage() {
                   <span className="font-bold text-slate-800">{Math.min(page * pageSize, total)}</span> of{" "}
                   <span className="font-bold text-slate-800">{total}</span> activities
                 </p>
-                <div className="flex items-center gap-1">
+                <div className="flex flex-wrap items-center gap-1">
                   <button onClick={() => setPage(Math.max(1, page - 1))} disabled={page === 1} className="p-1.5 rounded-lg border border-slate-200/80 text-slate-400 hover:text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed">
                     <ChevronLeft className="w-3.5 h-3.5" />
                   </button>
@@ -541,7 +541,7 @@ export default function ActivitiesPage() {
                 <h3 className="text-sm font-bold text-slate-900">Today's Summary</h3>
                 <CalendarDays className="w-4 h-4 text-slate-400" />
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="bg-blue-50 rounded-xl p-3">
                   <p className="text-[10px] font-semibold text-blue-500">Today's Activities</p>
                   <p className="text-2xl font-extrabold text-blue-700 mt-1">{activities.filter(a => new Date(a.createdAt).toDateString() === new Date().toDateString()).length}</p>
@@ -891,7 +891,7 @@ function LogActivityModal({
           </div>
 
           {/* Company + Contact */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="text-[11px] font-semibold text-slate-600 mb-1.5 block">Company</label>
               <input type="text" value={formData.company} onChange={(e) => setFormData({ ...formData, company: e.target.value })} placeholder="ABC Technologies" className="w-full text-xs border border-slate-200 rounded-xl px-3 py-2.5 bg-slate-50/50 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 focus:bg-white transition-all" />
@@ -903,7 +903,7 @@ function LogActivityModal({
           </div>
 
           {/* Performed By + Status */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="text-[11px] font-semibold text-slate-600 mb-1.5 block">Performed By</label>
               <input type="text" value={formData.performedBy} onChange={(e) => setFormData({ ...formData, performedBy: e.target.value })} placeholder="Your name" className="w-full text-xs border border-slate-200 rounded-xl px-3 py-2.5 bg-slate-50/50 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 focus:bg-white transition-all" />

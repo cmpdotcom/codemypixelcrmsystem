@@ -119,7 +119,7 @@ export default function LoginPage() {
       </div>
 
       {/* Top Header */}
-      <header className="relative z-10 max-w-7xl mx-auto w-full px-6 sm:px-10 py-6 flex items-center justify-between">
+      <header className="relative z-10 max-w-7xl mx-auto w-full px-4 sm:px-10 py-4 sm:py-6 flex items-center justify-between gap-3">
         <Link href="/" className="flex items-center gap-2.5 group">
           <Image
             src={brandLogo}
@@ -151,10 +151,10 @@ export default function LoginPage() {
       </header>
 
       {/* Main Content Area */}
-      <main className="relative z-10 max-w-7xl mx-auto w-full px-6 sm:px-10 py-2 flex-1 flex items-center">
+      <main className="relative z-10 max-w-7xl mx-auto w-full px-4 sm:px-10 py-2 flex-1 flex items-center">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center w-full my-auto">
           {/* Left Column: Brand Hero + Desk Setup Mockup */}
-          <div className="lg:col-span-6 xl:col-span-7 flex flex-col justify-between space-y-6">
+          <div className="order-last lg:order-none lg:col-span-6 xl:col-span-7 flex flex-col justify-between space-y-6">
             <div className="space-y-5">
               {/* Badge */}
               <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50/90 border border-blue-200/60 text-blue-600 text-xs font-semibold shadow-2xs backdrop-blur-xs">
@@ -253,8 +253,8 @@ export default function LoginPage() {
           </div>
 
           {/* Right Column: Floating Login Card */}
-          <div className="lg:col-span-6 xl:col-span-5 flex justify-center lg:justify-end">
-            <div className="w-full max-w-md bg-white/95 backdrop-blur-xl rounded-[28px] border border-white/90 shadow-[0_4px_24px_rgba(0,0,0,0.06),0_1px_3px_rgba(0,0,0,0.04)] p-8 sm:p-9 relative">
+          <div className="order-first lg:order-none lg:col-span-6 xl:col-span-5 flex justify-center lg:justify-end">
+            <div className="w-full max-w-md bg-white/95 backdrop-blur-xl rounded-[24px] sm:rounded-[28px] border border-white/90 shadow-[0_4px_24px_rgba(0,0,0,0.06),0_1px_3px_rgba(0,0,0,0.04)] p-5 sm:p-8 lg:p-9 relative">
               <div className="mb-6">
                 <h3 className="text-2xl font-bold text-slate-900 tracking-tight">
                   Welcome Back!

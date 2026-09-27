@@ -118,7 +118,7 @@ export default function ClosersPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Link
             href="/settings/commissions"
             className="rounded-xl border border-slate-200/80 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-2xs transition"
@@ -205,7 +205,7 @@ export default function ClosersPage() {
 
       {/* Top Closer Highlight Banner */}
       {topCloser && (
-        <div className="bg-gradient-to-r from-emerald-600 via-teal-600 to-blue-600 rounded-3xl p-6 text-white shadow-md flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="bg-gradient-to-r from-emerald-600 via-teal-600 to-blue-600 rounded-3xl p-4 sm:p-6 text-white shadow-md flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <div className="w-14 h-14 rounded-2xl bg-white/10 backdrop-blur-md flex items-center justify-center text-white border border-white/20 text-xl font-extrabold shadow-sm">
               <Award className="w-7 h-7 text-amber-300" />
@@ -222,7 +222,7 @@ export default function ClosersPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-6 border-t md:border-t-0 md:border-l border-white/20 pt-3 md:pt-0 md:pl-6">
+          <div className="grid grid-cols-3 gap-3 sm:gap-6 border-t md:border-t-0 md:border-l border-white/20 pt-3 md:pt-0 md:pl-6">
             <div>
               <span className="text-[10px] uppercase font-semibold text-white/70 block">Revenue Won</span>
               <span className="text-xl font-extrabold mt-0.5 block">{fmt(topCloser.revenueClosed)}</span>

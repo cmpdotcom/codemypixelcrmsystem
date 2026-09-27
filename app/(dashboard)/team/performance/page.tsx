@@ -113,7 +113,7 @@ export default function PerformancePage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Link
             href="/team/setters"
             className="rounded-xl border border-slate-200/80 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-2xs"
@@ -205,7 +205,7 @@ export default function PerformancePage() {
 
       {/* MVP Leader Spotlight */}
       {topPerformer && (
-        <div className="bg-gradient-to-r from-amber-500 via-orange-500 to-rose-600 rounded-3xl p-6 text-white shadow-md flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="bg-gradient-to-r from-amber-500 via-orange-500 to-rose-600 rounded-3xl p-4 sm:p-6 text-white shadow-md flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center text-white border border-white/30 text-xl font-extrabold shadow-sm">
               <Trophy className="w-7 h-7 text-yellow-200" />
@@ -222,7 +222,7 @@ export default function PerformancePage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-6 border-t md:border-t-0 md:border-l border-white/30 pt-3 md:pt-0 md:pl-6">
+          <div className="grid grid-cols-3 gap-3 sm:gap-6 border-t md:border-t-0 md:border-l border-white/30 pt-3 md:pt-0 md:pl-6">
             <div>
               <span className="text-[10px] uppercase font-semibold text-white/80 block">Impact Score</span>
               <span className="text-xl font-extrabold text-yellow-200 mt-0.5 block">{topPerformer.score} pts</span>

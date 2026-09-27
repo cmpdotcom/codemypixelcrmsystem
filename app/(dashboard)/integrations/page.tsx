@@ -198,7 +198,7 @@ export default function IntegrationsPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={() => setShowAddModal(true)}
             className="bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs font-semibold py-2 px-3.5 rounded-xl shadow-md shadow-blue-500/25 flex items-center gap-1.5 transition-all cursor-pointer"
@@ -267,7 +267,7 @@ export default function IntegrationsPage() {
 
       {/* Search & Filter Bar */}
       <div className="bg-white rounded-2xl border border-slate-100/90 shadow-sm p-3 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex-1 min-w-[260px] relative">
+        <div className="flex-1 basis-full sm:basis-auto min-w-0 sm:min-w-[260px] relative">
           <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             type="text"
@@ -391,7 +391,7 @@ export default function IntegrationsPage() {
       {/* Config Viewer Modal */}
       {configModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[92vh] overflow-y-auto">
             <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
               <div>
                 <h3 className="text-sm font-bold text-slate-900">{configModal.name} — Configuration</h3>
@@ -421,7 +421,7 @@ export default function IntegrationsPage() {
       {/* Add Integration Modal */}
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[92vh] overflow-y-auto">
             <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
               <h3 className="text-sm font-bold text-slate-900">Add Custom Integration</h3>
               <button
