@@ -3,22 +3,14 @@ import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { normalizePermissions } from "@/lib/permissions";
+import { authConfig } from "@/lib/auth.config";
 
-// The proxy calls auth() on every request (pages, API calls, prefetches). Reloading the role
-// from the database each time exhausted the DB connection limit, and any failed lookup
-// looked like "signed out". Refresh at most this often, and never sign out on a DB error.
+// Role/permissions are re-read from the database at most this often (per session), and a
+// failed lookup keeps the current session instead of signing the user out.
 const ROLE_REFRESH_MS = 60_000;
 
-if (!process.env.AUTH_URL && process.env.NEXT_PUBLIC_URL) {
-  process.env.AUTH_URL = process.env.NEXT_PUBLIC_URL;
-}
-
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  trustHost: true,
-  session: { strategy: "jwt" },
-  pages: {
-    signIn: "/login",
-  },
+  ...authConfig,
   providers: [
     Credentials({
       credentials: {
@@ -54,6 +46,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
   callbacks: {
+    ...authConfig.callbacks,
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
@@ -79,14 +72,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         console.error("[auth] Could not refresh role, keeping the current session", error);
       }
       return token;
-    },
-    async session({ session, token }) {
-      if (token && session.user) {
-        session.user.id = token.id as string;
-        session.user.roleName = token.roleName as string;
-        session.user.permissions = token.permissions as Record<string, unknown>;
-      }
-      return session;
     },
   },
 });

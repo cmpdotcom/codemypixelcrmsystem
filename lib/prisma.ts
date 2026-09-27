@@ -13,8 +13,10 @@ function withPoolLimits(url: string | undefined) {
   const add = (key: string, value: string) => {
     if (!new RegExp(`[?&]${key}=`).test(next)) next += `${next.includes("?") ? "&" : "?"}${key}=${value}`;
   };
-  add("connection_limit", process.env.DATABASE_CONNECTION_LIMIT || "3");
+  add("connection_limit", process.env.DATABASE_CONNECTION_LIMIT || "2");
   add("pool_timeout", "20");
+  // Hand idle connections back quickly instead of parking them for Prisma's 5-minute default.
+  add("max_idle_connection_lifetime", "30");
   return next;
 }
 
