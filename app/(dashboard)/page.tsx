@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import {
@@ -13,34 +13,17 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import {
-  LayoutDashboard,
   Users,
-  Activity,
   Briefcase,
-  Users2,
   UserPlus,
   FolderKanban,
-  CheckSquare,
-  Flag,
-  Bug,
-  Rocket,
-  UserCheck,
-  Code,
-  BarChart2,
-  CreditCard,
   DollarSign,
   FileText,
-  Settings,
-  Link as LinkIcon,
-  Zap,
-  Search,
-  Bell,
-  Grid,
   ChevronDown,
-  ChevronLeft,
   ChevronRight,
   ArrowUpRight,
   ArrowUp,
+  ArrowDown,
   Clock,
   Phone,
   MessageCircle,
@@ -52,343 +35,96 @@ import {
   Smartphone,
   Database,
   Check,
-  CheckCircle2,
+  Loader2,
+  Inbox,
 } from "lucide-react";
 import { hasPermission, PermissionAction } from "@/lib/permissions";
 
-// --- Data Definitions ---
+// --- Types for the /api/dashboard response ---
+interface DashboardData {
+  kpi: {
+    totalLeads: number;
+    leadsThisMonth: number;
+    activeDeals: number;
+    pipelineValue: number;
+    wonRevenueThisMonth: number;
+    activeProjects: number;
+    teamMembers: number;
+  };
+  revenueTrend: { name: string; value: number }[];
+  funnel: { name: string; value: number; percentage: string; color: string }[];
+  recentLeads: { id: string; name: string; desc: string; status: string; time: string }[];
+  activeDeals: { id: string; name: string; desc: string; value: number; stage: string; probability: number }[];
+  projectProgress: { id: string; name: string; desc: string; progress: number }[];
+  teamPerformance: { id: string; name: string; role: string; leads: number; deals: number; revenue: number }[];
+  todayTasks: { id: string; title: string; time: string; tag: string; status: string; completed: boolean }[];
+  activityTimeline: { id: string; action: string; type: string; by: string; time: string }[];
+}
 
-const revenueData = [
-  { name: "Jan", value: 20000 },
-  { name: "Feb", value: 30000 },
-  { name: "Mar", value: 45000 },
-  { name: "Apr", value: 50000 },
-  { name: "May", value: 65000 },
-  { name: "Jun", value: 80000 },
-  { name: "Jul", value: 92000 },
-  { name: "Aug", value: 125000 },
-  { name: "Sep", value: 95000 },
-  { name: "Oct", value: 105000 },
-  { name: "Nov", value: 110000 },
-  { name: "Dec", value: 120000 },
+const statusStyles: Record<string, string> = {
+  New: "bg-rose-50 text-rose-500 border border-rose-100",
+  Contacted: "bg-sky-50 text-sky-600 border border-sky-100",
+  Qualified: "bg-emerald-50 text-emerald-600 border border-emerald-100",
+  Meeting: "bg-amber-50 text-amber-600 border border-amber-100",
+  Proposal: "bg-blue-50 text-blue-600 border border-blue-100",
+  "Not Interested": "bg-red-50 text-red-500 border border-red-100",
+  Nurture: "bg-purple-50 text-purple-600 border border-purple-100",
+  Converted: "bg-emerald-50 text-emerald-600 border border-emerald-100",
+  Lost: "bg-slate-100 text-slate-500 border border-slate-200",
+};
+
+const stageStyles: Record<string, string> = {
+  qualified: "bg-purple-50 text-purple-600 border border-purple-100",
+  discovery: "bg-purple-50 text-purple-600 border border-purple-100",
+  proposal: "bg-blue-50 text-blue-600 border border-blue-100",
+  negotiation: "bg-amber-50 text-amber-600 border border-amber-100",
+  contract: "bg-emerald-50 text-emerald-600 border border-emerald-100",
+};
+
+const dealIcons = [Briefcase, Monitor, Smartphone, Database, Target];
+const avatarColors = [
+  "bg-blue-100 text-blue-700",
+  "bg-sky-100 text-sky-700",
+  "bg-amber-100 text-amber-700",
+  "bg-emerald-100 text-emerald-700",
+  "bg-purple-100 text-purple-700",
+  "bg-orange-100 text-orange-700",
 ];
+const activityIcons: Record<string, { icon: typeof Phone; bg: string }> = {
+  Call: { icon: Phone, bg: "bg-emerald-500" },
+  Email: { icon: Mail, bg: "bg-blue-500" },
+  Meeting: { icon: Calendar, bg: "bg-purple-500" },
+  WhatsApp: { icon: MessageCircle, bg: "bg-green-500" },
+  Note: { icon: FileText, bg: "bg-amber-500" },
+  Task: { icon: Check, bg: "bg-emerald-500" },
+  SMS: { icon: MessageCircle, bg: "bg-sky-500" },
+  Other: { icon: UserPlus, bg: "bg-slate-500" },
+};
 
-const funnelData = [
-  { name: "New Leads", value: "1,248", percentage: "100%", color: "#3b82f6" },
-  { name: "Contacted", value: "862", percentage: "69%", color: "#38bdf8" },
-  { name: "Qualified", value: "430", percentage: "34%", color: "#34d399" },
-  { name: "Meetings", value: "210", percentage: "17%", color: "#fbbf24" },
-  { name: "Proposals", value: "86", percentage: "7%", color: "#fb923c" },
-  { name: "Won", value: "32", percentage: "2.6%", color: "#c084fc" },
-];
+function getInitials(name: string) {
+  return name.split(" ").filter(Boolean).map((n) => n[0]).join("").slice(0, 2).toUpperCase() || "—";
+}
 
-const todayTasks = [
-  {
-    id: 1,
-    title: "Call with ABC Ltd.",
-    time: "10:00 AM",
-    tag: "Call",
-    tagColor: "bg-blue-50 text-blue-600 border border-blue-100",
-    icon: Phone,
-    iconColor: "text-blue-500",
-    iconBg: "bg-blue-50",
-    completed: false,
-  },
-  {
-    id: 2,
-    title: "Project requirement review",
-    time: "11:30 AM",
-    tag: "Project",
-    tagColor: "bg-sky-50 text-sky-600 border border-sky-100",
-    icon: FileText,
-    iconColor: "text-rose-500",
-    iconBg: "bg-rose-50",
-    completed: false,
-  },
-  {
-    id: 3,
-    title: "Follow up with John",
-    time: "01:00 PM",
-    tag: "Follow-up",
-    tagColor: "bg-teal-50 text-teal-600 border border-teal-100",
-    icon: MessageCircle,
-    iconColor: "text-emerald-500",
-    iconBg: "bg-emerald-50",
-    completed: false,
-  },
-  {
-    id: 4,
-    title: "Send proposal to TechCorp",
-    time: "03:00 PM",
-    tag: "Email",
-    tagColor: "bg-purple-50 text-purple-600 border border-purple-100",
-    icon: Mail,
-    iconColor: "text-pink-500",
-    iconBg: "bg-pink-50",
-    completed: false,
-  },
-  {
-    id: 5,
-    title: "UI design review",
-    time: "04:30 PM",
-    tag: "Development",
-    tagColor: "bg-blue-50 text-blue-600 border border-blue-100",
-    icon: Monitor,
-    iconColor: "text-indigo-500",
-    iconBg: "bg-indigo-50",
-    completed: false,
-  },
-];
+function getAvatarBg(name: string) {
+  const hash = name.charCodeAt(0) + (name.charCodeAt(name.length - 1) || 0);
+  return avatarColors[hash % avatarColors.length];
+}
 
-const recentLeads = [
-  {
-    initials: "AC",
-    name: "ABC Technologies",
-    desc: "Software Development",
-    status: "Qualified",
-    time: "2 min ago",
-    avatarBg: "bg-blue-100 text-blue-700",
-    statusStyle: "bg-emerald-50 text-emerald-600 border border-emerald-100",
-  },
-  {
-    initials: "GT",
-    name: "Global Tech Ltd.",
-    desc: "Custom ERP",
-    status: "Contacted",
-    time: "12 min ago",
-    avatarBg: "bg-sky-100 text-sky-700",
-    statusStyle: "bg-sky-50 text-sky-600 border border-sky-100",
-  },
-  {
-    initials: "SM",
-    name: "Skyline Media",
-    desc: "Website Development",
-    status: "New",
-    time: "1 hour ago",
-    avatarBg: "bg-emerald-100 text-emerald-700",
-    statusStyle: "bg-rose-50 text-rose-500 border border-rose-100",
-  },
-  {
-    initials: "BL",
-    name: "BrightLink Solutions",
-    desc: "Mobile App",
-    status: "Follow-up",
-    time: "3 hours ago",
-    avatarBg: "bg-orange-100 text-orange-700",
-    statusStyle: "bg-amber-50 text-amber-600 border border-amber-100",
-  },
-  {
-    initials: "NP",
-    name: "NextGen Pvt. Ltd.",
-    desc: "CRM Development",
-    status: "Not Interested",
-    time: "5 hours ago",
-    avatarBg: "bg-purple-100 text-purple-700",
-    statusStyle: "bg-red-50 text-red-500 border border-red-100",
-  },
-];
+function formatCurrency(value: number) {
+  return `$${value.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+}
 
-const activeDeals = [
-  {
-    icon: Briefcase,
-    iconBg: "bg-blue-50 text-blue-600",
-    name: "ABC Manufacturing",
-    desc: "ERP Development",
-    value: "$25,000",
-    stage: "Negotiation",
-    prob: "70%",
-    stageStyle: "bg-amber-50 text-amber-600 border border-amber-100",
-  },
-  {
-    icon: Monitor,
-    iconBg: "bg-orange-50 text-orange-500",
-    name: "TechCorp Global",
-    desc: "Website Redesign",
-    value: "$15,000",
-    stage: "Proposal",
-    prob: "50%",
-    stageStyle: "bg-blue-50 text-blue-600 border border-blue-100",
-  },
-  {
-    icon: Smartphone,
-    iconBg: "bg-sky-50 text-sky-600",
-    name: "Skyline Media",
-    desc: "Mobile App",
-    value: "$40,000",
-    stage: "Contract Sent",
-    prob: "80%",
-    stageStyle: "bg-emerald-50 text-emerald-600 border border-emerald-100",
-  },
-  {
-    icon: Database,
-    iconBg: "bg-purple-50 text-purple-600",
-    name: "NextGen Solutions",
-    desc: "CRM Implementation",
-    value: "$30,000",
-    stage: "Discovery",
-    prob: "40%",
-    stageStyle: "bg-purple-50 text-purple-600 border border-purple-100",
-  },
-  {
-    icon: Target,
-    iconBg: "bg-rose-50 text-rose-500",
-    name: "BrightLink Ltd.",
-    desc: "Custom Software",
-    value: "$12,000",
-    stage: "Meeting",
-    prob: "60%",
-    stageStyle: "bg-rose-50 text-rose-500 border border-rose-100",
-  },
-];
-
-const projectProgress = [
-  {
-    icon: FolderKanban,
-    name: "ABC ERP",
-    desc: "Development",
-    progress: 75,
-  },
-  {
-    icon: LayoutDashboard,
-    name: "TechCorp Website",
-    desc: "Design",
-    progress: 40,
-  },
-  {
-    icon: Smartphone,
-    name: "Skyline Mobile App",
-    desc: "QA",
-    progress: 60,
-  },
-  {
-    icon: Database,
-    name: "NextGen CRM",
-    desc: "Development",
-    progress: 20,
-  },
-  {
-    icon: Rocket,
-    name: "BrightLink Platform",
-    desc: "Deployment",
-    progress: 90,
-  },
-];
-
-const teamPerformance = [
-  {
-    img: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80",
-    name: "Ali Khan",
-    role: "Setter",
-    leads: "120",
-    deals: "—",
-    won: "—",
-    revenue: "—",
-    roleStyle: "bg-blue-50 text-blue-600 border border-blue-100",
-  },
-  {
-    img: "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=100&auto=format&fit=crop&q=80",
-    name: "Sara Ahmed",
-    role: "Setter",
-    leads: "98",
-    deals: "—",
-    won: "—",
-    revenue: "—",
-    roleStyle: "bg-blue-50 text-blue-600 border border-blue-100",
-  },
-  {
-    img: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80",
-    name: "Usman Tariq",
-    role: "Closer",
-    leads: "—",
-    deals: "18",
-    won: "8",
-    revenue: "$72,000",
-    roleStyle: "bg-purple-50 text-purple-600 border border-purple-100",
-  },
-  {
-    img: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=100&auto=format&fit=crop&q=80",
-    name: "Fatima Noor",
-    role: "Closer",
-    leads: "—",
-    deals: "15",
-    won: "6",
-    revenue: "$53,000",
-    roleStyle: "bg-purple-50 text-purple-600 border border-purple-100",
-  },
-  {
-    img: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&auto=format&fit=crop&q=80",
-    name: "Bilal Khan",
-    role: "Developer",
-    leads: "—",
-    deals: "—",
-    won: "12",
-    revenue: "—",
-    roleStyle: "bg-teal-50 text-teal-600 border border-teal-100",
-  },
-];
-
-const activityTimeline = [
-  {
-    icon: Phone,
-    action: "Call with ABC Ltd.",
-    time: "10:32 AM",
-    by: "Ahmed Raza",
-    iconBg: "bg-emerald-500",
-  },
-  {
-    icon: Mail,
-    action: "Proposal sent to TechCorp",
-    time: "11:15 AM",
-    by: "Sara Ahmed",
-    iconBg: "bg-blue-500",
-  },
-  {
-    icon: FileText,
-    action: "Contract signed - Skyline Media",
-    time: "01:45 PM",
-    by: "Usman Tariq",
-    iconBg: "bg-purple-500",
-  },
-  {
-    icon: Check,
-    action: "Project created - NextGen CRM",
-    time: "03:20 PM",
-    by: "System",
-    iconBg: "bg-emerald-500",
-  },
-  {
-    icon: UserPlus,
-    action: "New lead assigned to Ali",
-    time: "04:10 PM",
-    by: "System",
-    iconBg: "bg-amber-500",
-  },
-  {
-    icon: CreditCard,
-    action: "Payment received - $10,000",
-    time: "05:30 PM",
-    by: "System",
-    iconBg: "bg-pink-500",
-  },
-];
-
-// --- Subcomponents ---
-
-// Funnel Graphic (SVG Polygon Trapezoid Layers)
+// Funnel Graphic (SVG Polygon Trapezoid Layers) — decorative, proportions are illustrative
 const FunnelGraphic = () => {
-  // 6 layers: top widest to bottom narrowest
-  // Total width: 220, height: 180
   const layers = [
-    { topW: 200, botW: 172, y1: 0, y2: 24, fill: "#3b82f6" }, // blue
-    { topW: 168, botW: 140, y1: 28, y2: 52, fill: "#38bdf8" }, // sky
-    { topW: 136, botW: 108, y1: 56, y2: 80, fill: "#34d399" }, // emerald
-    { topW: 104, botW: 76, y1: 84, y2: 108, fill: "#fbbf24" }, // amber
-    { topW: 72, botW: 48, y1: 112, y2: 136, fill: "#fb923c" }, // orange
-    { topW: 44, botW: 30, y1: 140, y2: 164, fill: "#c084fc" }, // violet
+    { topW: 200, botW: 172, y1: 0, y2: 24, fill: "#3b82f6" },
+    { topW: 168, botW: 140, y1: 28, y2: 52, fill: "#38bdf8" },
+    { topW: 136, botW: 108, y1: 56, y2: 80, fill: "#34d399" },
+    { topW: 104, botW: 76, y1: 84, y2: 108, fill: "#fbbf24" },
+    { topW: 72, botW: 48, y1: 112, y2: 136, fill: "#fb923c" },
+    { topW: 44, botW: 30, y1: 140, y2: 164, fill: "#c084fc" },
   ];
-
   const centerX = 110;
-
   return (
     <svg viewBox="0 0 220 170" className="w-full h-44 drop-shadow-sm">
       {layers.map((l, i) => {
@@ -416,7 +152,11 @@ export default function Dashboard() {
   const { data: session } = useSession();
   const firstName = session?.user?.name?.split(" ")[0] ?? "User";
   const [mounted, setMounted] = useState(false);
-  const [tasks, setTasks] = useState(todayTasks);
+  const [data, setData] = useState<DashboardData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [tasks, setTasks] = useState<DashboardData["todayTasks"]>([]);
+
   const canView = (module: string) =>
     !session?.user?.roleName ||
     session.user.roleName === "Super Admin" ||
@@ -436,15 +176,59 @@ export default function Dashboard() {
     "Activities",
   ].some(canView);
 
-  useEffect(() => {
-    setMounted(true);
+  const fetchDashboard = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/dashboard");
+      if (!res.ok) throw new Error("Failed to load dashboard data");
+      const json: DashboardData = await res.json();
+      setData(json);
+      setTasks(json.todayTasks);
+    } catch {
+      setError("Could not load live dashboard data.");
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  const toggleTask = (id: number) => {
-    setTasks((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, completed: !t.completed } : t))
-    );
+  useEffect(() => {
+    setMounted(true);
+    fetchDashboard();
+  }, [fetchDashboard]);
+
+  const toggleTask = async (id: string) => {
+    const task = tasks.find((t) => t.id === id);
+    if (!task) return;
+    const nextStatus = task.completed ? "Todo" : "Done";
+    setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, completed: !t.completed, status: nextStatus } : t)));
+    try {
+      await fetch(`/api/tasks/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: nextStatus }),
+      });
+    } catch {
+      // Revert on failure
+      setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, completed: task.completed, status: task.status } : t)));
+    }
   };
+
+  const todayLabel = mounted
+    ? new Date().toLocaleDateString("en-US", { weekday: "long", day: "numeric", month: "long", year: "numeric" })
+    : "";
+
+  const revenueTrend = data?.revenueTrend || [];
+  const lastMonth = revenueTrend[revenueTrend.length - 1]?.value ?? 0;
+  const prevMonth = revenueTrend[revenueTrend.length - 2]?.value ?? 0;
+  const revenueDeltaPct = prevMonth > 0 ? Math.round(((lastMonth - prevMonth) / prevMonth) * 100) : null;
+
+  const funnel = data?.funnel || [];
+  const recentLeads = data?.recentLeads || [];
+  const activeDeals = data?.activeDeals || [];
+  const projectProgress = data?.projectProgress || [];
+  const teamPerformance = data?.teamPerformance || [];
+  const activityTimeline = data?.activityTimeline || [];
 
   return (
     <>
@@ -464,19 +248,31 @@ export default function Dashboard() {
               <div className="flex items-center gap-4">
                 <div className="text-left md:text-right">
                   <p className="text-xs font-semibold text-slate-800">
-                    Monday, 10 March 2025
+                    {todayLabel}
                   </p>
                   <p className="text-[11px] text-slate-400 flex items-center md:justify-end gap-1">
                     Make it a productive day! 🚀
                   </p>
                 </div>
-                <div className="bg-white border border-slate-200/80 rounded-xl px-3 py-1.5 text-xs font-semibold text-slate-700 flex items-center gap-2 cursor-pointer shadow-sm hover:bg-slate-50 transition-colors">
-                  This Month
-                  <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
-                </div>
+                <button
+                  onClick={fetchDashboard}
+                  className="bg-white border border-slate-200/80 rounded-xl px-3 py-1.5 text-xs font-semibold text-slate-700 flex items-center gap-2 cursor-pointer shadow-sm hover:bg-slate-50 transition-colors"
+                >
+                  {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin text-slate-400" /> : <ChevronDown className="w-3.5 h-3.5 text-slate-400" />}
+                  Refresh
+                </button>
               </div>
             </div>
           </div>
+
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 text-xs font-medium px-4 py-3 rounded-xl flex items-center gap-3">
+              <span className="flex-1">{error}</span>
+              <button onClick={fetchDashboard} className="text-red-700 hover:text-red-900 font-semibold underline underline-offset-2 cursor-pointer">
+                Retry
+              </button>
+            </div>
+          )}
 
           {/* Row 1: KPI Cards (5 Columns) */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
@@ -490,15 +286,12 @@ export default function Dashboard() {
               <div className="mt-3">
                 <p className="text-xs font-medium text-slate-500">Total Leads</p>
                 <h3 className="text-2xl font-bold text-slate-900 mt-0.5">
-                  1,248
+                  {loading ? "—" : (data?.kpi.totalLeads ?? 0).toLocaleString()}
                 </h3>
               </div>
               <div className="mt-3 flex items-center gap-1.5 text-xs">
-                <span className="flex items-center font-bold text-emerald-600">
-                  <ArrowUp className="w-3 h-3 mr-0.5" /> 12%
-                </span>
                 <span className="text-slate-400 text-[11px]">
-                  +134 this month
+                  {loading ? "Loading…" : `+${data?.kpi.leadsThisMonth ?? 0} this month`}
                 </span>
               </div>
             </div>}
@@ -512,14 +305,11 @@ export default function Dashboard() {
               </div>
               <div className="mt-3">
                 <p className="text-xs font-medium text-slate-500">Active Deals</p>
-                <h3 className="text-2xl font-bold text-slate-900 mt-0.5">86</h3>
+                <h3 className="text-2xl font-bold text-slate-900 mt-0.5">{loading ? "—" : data?.kpi.activeDeals ?? 0}</h3>
               </div>
               <div className="mt-3 flex items-center gap-1.5 text-xs">
-                <span className="flex items-center font-bold text-emerald-600">
-                  <ArrowUp className="w-3 h-3 mr-0.5" /> 8%
-                </span>
                 <span className="text-slate-400 text-[11px]">
-                  $320,000 pipeline
+                  {loading ? "Loading…" : `${formatCurrency(data?.kpi.pipelineValue ?? 0)} pipeline`}
                 </span>
               </div>
             </div>}
@@ -534,13 +324,10 @@ export default function Dashboard() {
               <div className="mt-3">
                 <p className="text-xs font-medium text-slate-500">Won Revenue</p>
                 <h3 className="text-2xl font-bold text-slate-900 mt-0.5">
-                  $125,000
+                  {loading ? "—" : formatCurrency(data?.kpi.wonRevenueThisMonth ?? 0)}
                 </h3>
               </div>
               <div className="mt-3 flex items-center gap-1.5 text-xs">
-                <span className="flex items-center font-bold text-emerald-600">
-                  <ArrowUp className="w-3 h-3 mr-0.5" /> 24%
-                </span>
                 <span className="text-slate-400 text-[11px]">This month</span>
               </div>
             </div>}
@@ -556,13 +343,10 @@ export default function Dashboard() {
                 <p className="text-xs font-medium text-slate-500">
                   Active Projects
                 </p>
-                <h3 className="text-2xl font-bold text-slate-900 mt-0.5">27</h3>
+                <h3 className="text-2xl font-bold text-slate-900 mt-0.5">{loading ? "—" : data?.kpi.activeProjects ?? 0}</h3>
               </div>
               <div className="mt-3 flex items-center gap-1.5 text-xs">
-                <span className="flex items-center font-bold text-emerald-600">
-                  <ArrowUp className="w-3 h-3 mr-0.5" /> 10%
-                </span>
-                <span className="text-slate-400 text-[11px]">18 on track</span>
+                <span className="text-slate-400 text-[11px]">Currently in progress</span>
               </div>
             </div>}
 
@@ -577,14 +361,11 @@ export default function Dashboard() {
                 <p className="text-xs font-medium text-slate-500">
                   Team Members
                 </p>
-                <h3 className="text-2xl font-bold text-slate-900 mt-0.5">42</h3>
+                <h3 className="text-2xl font-bold text-slate-900 mt-0.5">{loading ? "—" : data?.kpi.teamMembers ?? 0}</h3>
               </div>
               <div className="mt-3 flex items-center gap-1.5 text-xs">
-                <span className="flex items-center font-bold text-emerald-600">
-                  <ArrowUp className="w-3 h-3 mr-0.5" /> 5%
-                </span>
                 <span className="text-slate-400 text-[11px]">
-                  Across all departments
+                  Active across the workspace
                 </span>
               </div>
             </div>}
@@ -601,40 +382,26 @@ export default function Dashboard() {
                   </h3>
                   <div className="flex items-baseline gap-2 mt-2">
                     <span className="text-2xl font-extrabold text-slate-900">
-                      $125,000
+                      {formatCurrency(lastMonth)}
                     </span>
-                    <span className="flex items-center text-xs font-bold text-emerald-600">
-                      <ArrowUp className="w-3 h-3 mr-0.5" /> 24%
-                    </span>
+                    {revenueDeltaPct !== null && (
+                      <span className={`flex items-center text-xs font-bold ${revenueDeltaPct >= 0 ? "text-emerald-600" : "text-red-500"}`}>
+                        {revenueDeltaPct >= 0 ? <ArrowUp className="w-3 h-3 mr-0.5" /> : <ArrowDown className="w-3 h-3 mr-0.5" />}
+                        {Math.abs(revenueDeltaPct)}%
+                      </span>
+                    )}
                   </div>
                   <p className="text-[11px] text-slate-400 mt-0.5">
-                    Total revenue this month
+                    Won revenue, last 6 months
                   </p>
-                </div>
-                <div className="bg-white border border-slate-200/80 rounded-lg px-2.5 py-1 text-xs font-medium text-slate-700 flex items-center gap-1.5 cursor-pointer shadow-sm hover:bg-slate-50 transition-colors">
-                  Monthly
-                  <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
                 </div>
               </div>
 
-              {/* Area Chart with Highlighted $125K Dot at August */}
               <div className="h-56 w-full mt-4 relative">
-                {/* Visual Pill Indicator over August ($125K) */}
-                <div
-                  className="absolute pointer-events-none z-10 flex flex-col items-center"
-                  style={{ left: "62%", top: "18%" }}
-                >
-                  <div className="bg-slate-900 text-white text-[10px] font-bold px-2 py-0.5 rounded shadow-md">
-                    $125K
-                  </div>
-                  <div className="w-1.5 h-1.5 bg-slate-900 rotate-45 -mt-0.5"></div>
-                  <div className="w-2.5 h-2.5 rounded-full bg-blue-600 border-2 border-white shadow mt-0.5"></div>
-                </div>
-
-                {mounted ? (
+                {mounted && revenueTrend.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart
-                      data={revenueData}
+                      data={revenueTrend}
                       margin={{ top: 10, right: 10, left: -25, bottom: 0 }}
                     >
                       <defs>
@@ -674,8 +441,6 @@ export default function Dashboard() {
                         tickLine={false}
                         tick={{ fontSize: 11, fill: "#94a3b8" }}
                         tickFormatter={(v) => `${v / 1000}K`}
-                        ticks={[0, 50000, 100000, 150000, 200000]}
-                        domain={[0, 200000]}
                       />
                       <RechartsTooltip
                         contentStyle={{
@@ -684,7 +449,7 @@ export default function Dashboard() {
                           boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
                           fontSize: "12px",
                         }}
-                        formatter={(val: any) => [
+                        formatter={(val) => [
                           `$${Number(val).toLocaleString()}`,
                           "Revenue",
                         ]}
@@ -711,10 +476,6 @@ export default function Dashboard() {
                 <h3 className="text-sm font-bold text-slate-900">
                   Lead Conversion Funnel
                 </h3>
-                <div className="bg-white border border-slate-200/80 rounded-lg px-2.5 py-1 text-xs font-medium text-slate-700 flex items-center gap-1.5 cursor-pointer shadow-sm hover:bg-slate-50 transition-colors">
-                  This Month
-                  <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
-                </div>
               </div>
 
               <div className="flex items-center gap-4 pt-2">
@@ -725,7 +486,7 @@ export default function Dashboard() {
 
                 {/* Right: Funnel Data Rows */}
                 <div className="w-1/2 space-y-2">
-                  {funnelData.map((item, idx) => (
+                  {funnel.map((item, idx) => (
                     <div
                       key={idx}
                       className="flex items-center justify-between text-xs"
@@ -751,24 +512,28 @@ export default function Dashboard() {
               </div>
             </div>}
 
-            {/* 3. Today's Tasks (3 cols) - Placed in Row 2 directly matching the design! */}
+            {/* 3. Today's Tasks (3 cols) */}
             {canView("Tasks") && <div className="bg-white rounded-2xl border border-slate-100/90 shadow-[0_1px_3px_rgba(0,0,0,0.02),0_6px_16px_rgba(0,0,0,0.02)] p-5 lg:col-span-3 flex flex-col justify-between">
               <div className="flex justify-between items-center mb-3">
                 <h3 className="text-sm font-bold text-slate-900">
                   Today&apos;s Tasks
                 </h3>
-                <a
-                  href="#"
+                <Link
+                  href="/projects/tasks"
                   className="text-xs font-semibold text-blue-600 hover:text-blue-700"
                 >
                   View All
-                </a>
+                </Link>
               </div>
 
-              <div className="space-y-2.5">
-                {tasks.map((task) => {
-                  const Icon = task.icon;
-                  return (
+              {tasks.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-8 text-center flex-1">
+                  <Inbox className="w-7 h-7 text-slate-300 mb-2" />
+                  <p className="text-xs text-slate-400">Nothing due today.</p>
+                </div>
+              ) : (
+                <div className="space-y-2.5">
+                  {tasks.map((task) => (
                     <div
                       key={task.id}
                       onClick={() => toggleTask(task.id)}
@@ -786,10 +551,8 @@ export default function Dashboard() {
                       </div>
 
                       {/* Icon */}
-                      <div
-                        className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${task.iconBg} ${task.iconColor}`}
-                      >
-                        <Icon className="w-3.5 h-3.5" />
+                      <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 bg-blue-50 text-blue-500">
+                        <FileText className="w-3.5 h-3.5" />
                       </div>
 
                       {/* Details */}
@@ -809,15 +572,13 @@ export default function Dashboard() {
                       </div>
 
                       {/* Tag Badge */}
-                      <span
-                        className={`px-2 py-0.5 rounded-md text-[10px] font-semibold shrink-0 ${task.tagColor}`}
-                      >
+                      <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold shrink-0 bg-blue-50 text-blue-600 border border-blue-100">
                         {task.tag}
                       </span>
                     </div>
-                  );
-                })}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>}
           </div>
 
@@ -828,36 +589,40 @@ export default function Dashboard() {
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-sm font-bold text-slate-900">Recent Leads</h3>
                 <a
-                  href="#"
+                  href="/leads"
                   className="text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-0.5"
                 >
                   View All <ChevronRight className="w-3.5 h-3.5" />
                 </a>
               </div>
+              {recentLeads.length === 0 ? (
+                <p className="text-xs text-slate-400 py-6 text-center">No leads yet.</p>
+              ) : (
               <div className="space-y-3.5">
-                {recentLeads.map((lead, i) => (
-                  <div
-                    key={i}
+                {recentLeads.map((lead) => (
+                  <Link
+                    key={lead.id}
+                    href={`/leads?lead=${lead.id}`}
                     className="flex items-center justify-between p-1 -mx-1 rounded-xl hover:bg-slate-50 transition-colors cursor-pointer"
                   >
-                    <div className="flex items-center gap-2.5">
+                    <div className="flex items-center gap-2.5 min-w-0">
                       <div
-                        className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs ${lead.avatarBg}`}
+                        className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${getAvatarBg(lead.name)}`}
                       >
-                        {lead.initials}
+                        {getInitials(lead.name)}
                       </div>
-                      <div>
-                        <h4 className="text-xs font-bold text-slate-900 leading-tight">
+                      <div className="min-w-0">
+                        <h4 className="text-xs font-bold text-slate-900 leading-tight truncate">
                           {lead.name}
                         </h4>
-                        <p className="text-[11px] text-slate-400 mt-0.5">
+                        <p className="text-[11px] text-slate-400 mt-0.5 truncate">
                           {lead.desc}
                         </p>
                       </div>
                     </div>
-                    <div className="flex flex-col items-end gap-1">
+                    <div className="flex flex-col items-end gap-1 shrink-0">
                       <span
-                        className={`px-2 py-0.5 rounded text-[10px] font-bold ${lead.statusStyle}`}
+                        className={`px-2 py-0.5 rounded text-[10px] font-bold ${statusStyles[lead.status] || statusStyles.New}`}
                       >
                         {lead.status}
                       </span>
@@ -865,34 +630,36 @@ export default function Dashboard() {
                         {lead.time}
                       </span>
                     </div>
-                  </div>
+                  </Link>
                 ))}
               </div>
+              )}
             </div>}
 
             {/* 2. Active Deals */}
             {canView("Deals") && <div className="bg-white rounded-2xl border border-slate-100/90 shadow-[0_1px_3px_rgba(0,0,0,0.02),0_6px_16px_rgba(0,0,0,0.02)] p-5">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-sm font-bold text-slate-900">Active Deals</h3>
-                <a
-                  href="#"
+                <Link
+                  href="/deals"
                   className="text-xs font-semibold text-blue-600 hover:text-blue-700"
                 >
                   View All
-                </a>
+                </Link>
               </div>
+              {activeDeals.length === 0 ? (
+                <p className="text-xs text-slate-400 py-6 text-center">No active deals.</p>
+              ) : (
               <div className="space-y-3.5">
                 {activeDeals.map((deal, i) => {
-                  const Icon = deal.icon;
+                  const Icon = dealIcons[i % dealIcons.length];
                   return (
                     <div
-                      key={i}
+                      key={deal.id}
                       className="flex items-center justify-between p-1 -mx-1 rounded-xl hover:bg-slate-50 transition-colors cursor-pointer"
                     >
                       <div className="flex items-center gap-2.5 min-w-0 pr-2">
-                        <div
-                          className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${deal.iconBg}`}
-                        >
+                        <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 bg-blue-50 text-blue-600">
                           <Icon className="w-4 h-4" />
                         </div>
                         <div className="truncate">
@@ -906,16 +673,16 @@ export default function Dashboard() {
                       </div>
                       <div className="flex items-center gap-3 shrink-0">
                         <span className="text-xs font-bold text-slate-900">
-                          {deal.value}
+                          {formatCurrency(deal.value)}
                         </span>
                         <div className="flex flex-col items-end gap-1 w-20">
                           <span
-                            className={`px-2 py-0.5 rounded text-[10px] font-bold text-center w-full truncate ${deal.stageStyle}`}
+                            className={`px-2 py-0.5 rounded text-[10px] font-bold text-center w-full truncate capitalize ${stageStyles[deal.stage] || "bg-slate-100 text-slate-500 border border-slate-200"}`}
                           >
                             {deal.stage}
                           </span>
                           <span className="text-[10px] text-slate-400">
-                            {deal.prob}
+                            {deal.probability}%
                           </span>
                         </div>
                       </div>
@@ -923,6 +690,7 @@ export default function Dashboard() {
                   );
                 })}
               </div>
+              )}
             </div>}
 
             {/* 3. Project Progress */}
@@ -931,49 +699,50 @@ export default function Dashboard() {
                 <h3 className="text-sm font-bold text-slate-900">
                   Project Progress
                 </h3>
-                <a
-                  href="#"
+                <Link
+                  href="/projects"
                   className="text-xs font-semibold text-blue-600 hover:text-blue-700"
                 >
                   View All
-                </a>
+                </Link>
               </div>
+              {projectProgress.length === 0 ? (
+                <p className="text-xs text-slate-400 py-6 text-center">No active projects.</p>
+              ) : (
               <div className="space-y-4">
-                {projectProgress.map((project, i) => {
-                  const Icon = project.icon;
-                  return (
-                    <div
-                      key={i}
-                      className="p-1 -mx-1 rounded-xl hover:bg-slate-50 transition-colors cursor-pointer"
-                    >
-                      <div className="flex items-center justify-between mb-1.5">
-                        <div className="flex items-center gap-2.5">
-                          <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
-                            <Icon className="w-4 h-4" />
-                          </div>
-                          <div>
-                            <h4 className="text-xs font-bold text-slate-900">
-                              {project.name}
-                            </h4>
-                            <p className="text-[11px] text-slate-400">
-                              {project.desc}
-                            </p>
-                          </div>
+                {projectProgress.map((project) => (
+                  <div
+                    key={project.id}
+                    className="p-1 -mx-1 rounded-xl hover:bg-slate-50 transition-colors cursor-pointer"
+                  >
+                    <div className="flex items-center justify-between mb-1.5">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                          <FolderKanban className="w-4 h-4" />
                         </div>
-                        <span className="text-xs font-bold text-slate-700">
-                          {project.progress}%
-                        </span>
+                        <div className="min-w-0">
+                          <h4 className="text-xs font-bold text-slate-900 truncate">
+                            {project.name}
+                          </h4>
+                          <p className="text-[11px] text-slate-400">
+                            {project.desc}
+                          </p>
+                        </div>
                       </div>
-                      <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden ml-10 max-w-[calc(100%-40px)]">
-                        <div
-                          className="bg-blue-600 h-1.5 rounded-full transition-all duration-700 ease-out"
-                          style={{ width: `${project.progress}%` }}
-                        />
-                      </div>
+                      <span className="text-xs font-bold text-slate-700 shrink-0">
+                        {project.progress}%
+                      </span>
                     </div>
-                  );
-                })}
+                    <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden ml-10 max-w-[calc(100%-40px)]">
+                      <div
+                        className="bg-blue-600 h-1.5 rounded-full transition-all duration-700 ease-out"
+                        style={{ width: `${project.progress}%` }}
+                      />
+                    </div>
+                  </div>
+                ))}
               </div>
+              )}
             </div>}
           </div>
 
@@ -985,52 +754,47 @@ export default function Dashboard() {
                 <h3 className="text-sm font-bold text-slate-900">
                   Team Performance
                 </h3>
-                <div className="bg-white border border-slate-200/80 rounded-lg px-2.5 py-1 text-xs font-medium text-slate-700 flex items-center gap-1.5 cursor-pointer shadow-sm hover:bg-slate-50 transition-colors">
-                  This Month
-                  <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
-                </div>
+                <Link href="/team/performance" className="text-xs font-semibold text-blue-600 hover:text-blue-700">View All</Link>
               </div>
+              {teamPerformance.length === 0 ? (
+                <p className="text-xs text-slate-400 py-6 text-center">No performance data yet.</p>
+              ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-xs text-left">
                   <thead className="text-[11px] text-slate-400 font-semibold border-b border-slate-100">
                     <tr>
                       <th className="pb-2.5 font-medium">Team Member</th>
                       <th className="pb-2.5 font-medium">Role</th>
-                      <th className="pb-2.5 font-medium">Leads</th>
-                      <th className="pb-2.5 font-medium">Deals</th>
-                      <th className="pb-2.5 font-medium">Won</th>
+                      <th className="pb-2.5 font-medium">Qualified Leads</th>
+                      <th className="pb-2.5 font-medium">Deals Won</th>
                       <th className="pb-2.5 font-medium text-right">Revenue</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50">
-                    {teamPerformance.map((member, i) => (
-                      <tr key={i} className="hover:bg-slate-50/60 transition-colors">
+                    {teamPerformance.map((member) => (
+                      <tr key={member.id} className="hover:bg-slate-50/60 transition-colors">
                         <td className="py-2.5 font-semibold text-slate-900 flex items-center gap-2">
-                          <img
-                            src={member.img}
-                            alt={member.name}
-                            className="w-6 h-6 rounded-full object-cover border border-slate-100"
-                          />
+                          <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold ${getAvatarBg(member.name)}`}>
+                            {getInitials(member.name)}
+                          </div>
                           <span>{member.name}</span>
                         </td>
                         <td className="py-2.5">
-                          <span
-                            className={`px-2 py-0.5 rounded text-[10px] font-bold ${member.roleStyle}`}
-                          >
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-600 border border-blue-100">
                             {member.role}
                           </span>
                         </td>
                         <td className="py-2.5 text-slate-600">{member.leads}</td>
                         <td className="py-2.5 text-slate-600">{member.deals}</td>
-                        <td className="py-2.5 text-slate-600">{member.won}</td>
                         <td className="py-2.5 font-bold text-slate-900 text-right">
-                          {member.revenue}
+                          {formatCurrency(member.revenue)}
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
+              )}
             </div>}
 
             {/* 2. Activity Timeline (4 cols) */}
@@ -1039,20 +803,19 @@ export default function Dashboard() {
                 <h3 className="text-sm font-bold text-slate-900">
                   Activity Timeline
                 </h3>
-                <a
-                  href="#"
-                  className="text-xs font-semibold text-blue-600 hover:text-blue-700"
-                >
-                  View All
-                </a>
+                <Link href="/activities" className="text-xs font-semibold text-blue-600 hover:text-blue-700">View All</Link>
               </div>
+              {activityTimeline.length === 0 ? (
+                <p className="text-xs text-slate-400 py-6 text-center">No recent activity.</p>
+              ) : (
               <div className="space-y-3.5 relative">
-                {activityTimeline.map((item, i) => {
-                  const Icon = item.icon;
+                {activityTimeline.map((item) => {
+                  const config = activityIcons[item.type] || activityIcons.Other;
+                  const Icon = config.icon;
                   return (
-                    <div key={i} className="flex items-center gap-3">
+                    <div key={item.id} className="flex items-center gap-3">
                       <div
-                        className={`w-6 h-6 rounded-full flex items-center justify-center text-white shrink-0 ${item.iconBg}`}
+                        className={`w-6 h-6 rounded-full flex items-center justify-center text-white shrink-0 ${config.bg}`}
                       >
                         <Icon className="w-3 h-3" />
                       </div>
@@ -1073,6 +836,7 @@ export default function Dashboard() {
                   );
                 })}
               </div>
+              )}
             </div>}
 
             {/* 3. Promotional Card: Turn Opportunities Into Success (3 cols) */}
@@ -1128,15 +892,15 @@ export default function Dashboard() {
                   business — all in one place.
                 </p>
                 <div className="mt-4">
-                  <button className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold py-2 px-4 rounded-xl transition-all shadow-sm shadow-blue-500/25 flex items-center gap-1.5 cursor-pointer">
+                  <Link href="/reports" className="inline-flex bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold py-2 px-4 rounded-xl transition-all shadow-sm shadow-blue-500/25 items-center gap-1.5 cursor-pointer">
                     View Reports <ArrowUpRight className="w-3.5 h-3.5" />
-                  </button>
+                  </Link>
                 </div>
               </div>
 
               <div className="mt-5 pt-3 border-t border-blue-200/50 flex items-start gap-2">
                 <span className="text-2xl text-blue-400 font-serif leading-none inline-block">
-                  “
+                  &ldquo;
                 </span>
                 <div>
                   <p className="text-xs italic text-slate-700">
