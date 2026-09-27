@@ -11,6 +11,7 @@ import {
   FolderKanban,
   Loader2,
   Phone,
+  RefreshCw,
   Rocket,
   ShieldCheck,
   Trophy,
@@ -211,12 +212,40 @@ export default function WorkflowPage() {
   const canManage = !!board?.canManage;
 
   return (
-    <div className="mx-auto w-full max-w-[1600px] space-y-6 p-6 pb-12 md:p-8">
-      <div>
-        <h2 className="text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">Workflow</h2>
-        <p className="mt-1 text-xs text-slate-500">
-          Setter → Closer → Delivery. Every hand-off waiting on an executive decision, in one place.
-        </p>
+    <div className="mx-auto w-full max-w-[1600px] space-y-5 p-4 pb-12 sm:p-6 md:p-8">
+      <div className="relative overflow-hidden rounded-[28px] bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950 px-6 py-7 text-white shadow-xl shadow-slate-200/50 sm:px-8">
+        <div className="pointer-events-none absolute -right-16 -top-24 h-64 w-64 rounded-full bg-blue-500/20 blur-3xl" />
+        <div className="pointer-events-none absolute bottom-0 right-1/3 h-24 w-24 rounded-full bg-indigo-400/10 blur-2xl" />
+        <div className="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+          <div className="max-w-2xl">
+            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-blue-100">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_0_4px_rgba(52,211,153,0.12)]" />
+              Operations workspace
+            </div>
+            <h2 className="text-3xl font-black tracking-tight sm:text-4xl">Workflow command center</h2>
+            <p className="mt-2 max-w-xl text-sm leading-6 text-slate-300">
+              Move every opportunity from interested lead to active delivery with a clear owner at every hand-off.
+            </p>
+          </div>
+          <div className="flex items-center justify-between gap-4 lg:justify-end">
+            <div className="text-left lg:text-right">
+              <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">Board status</p>
+              <p className="mt-1 flex items-center gap-1.5 text-xs font-semibold text-white lg:justify-end">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                Live · {loadedAt ? `updated ${new Date(loadedAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}` : "just now"}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => load()}
+              disabled={loading}
+              className="inline-flex h-10 items-center gap-2 rounded-xl border border-white/15 bg-white/10 px-3.5 text-xs font-bold text-white transition hover:bg-white/15 disabled:opacity-50"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
+              Refresh
+            </button>
+          </div>
+        </div>
       </div>
 
       {error && (
@@ -239,32 +268,39 @@ export default function WorkflowPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-3.5 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {steps.map((step, index) => {
           const Icon = step.icon;
           return (
-            <div key={step.label} className="relative flex items-center gap-3.5 rounded-2xl border border-slate-100/90 bg-white p-4 shadow-sm">
-              <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${step.tone}`}>
-                <Icon className="h-5 w-5" />
+            <div key={step.label} className="group relative rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm shadow-slate-200/40 transition hover:-translate-y-0.5 hover:shadow-md sm:p-5">
+              <div className="flex items-start justify-between gap-3">
+                <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${step.tone}`}>
+                  <Icon className="h-[18px] w-[18px]" />
+                </div>
+                <span className="text-2xl font-black tracking-tight text-slate-900">{step.count}</span>
               </div>
-              <div>
-                <p className="text-[11px] font-medium text-slate-500">{index + 1}. {step.label}</p>
-                <h3 className="text-xl font-extrabold text-slate-900">{step.count}</h3>
-                <p className="text-[10px] text-slate-400">{step.sub}</p>
+              <div className="mt-4">
+                <p className="text-[11px] font-bold text-slate-700">{index + 1}. {step.label}</p>
+                <p className="mt-1 text-[10px] text-slate-400">{step.sub}</p>
               </div>
-              {index < steps.length - 1 && <ArrowRight className="absolute -right-3 top-1/2 hidden h-4 w-4 -translate-y-1/2 text-slate-300 xl:block" />}
+              {index < steps.length - 1 && <ArrowRight className="absolute -right-3 top-1/2 z-10 hidden h-4 w-4 -translate-y-1/2 text-slate-300 sm:block" />}
             </div>
           );
         })}
       </div>
 
-      {/* 1. Interested leads → assign a closer */}
-      <Section
-        title="1 · Interested leads waiting for a closer"
-        subtitle="Setters marked these leads interested in a meeting. Pick the closer who should take the meeting."
-        empty="No leads are waiting. When a setter marks a lead interested it shows up here."
-        count={board?.awaitingCloser.length || 0}
-      >
+      <div className="grid gap-5 xl:grid-cols-2">
+        {/* 1. Interested leads → assign a closer */}
+        <Section
+          step="01"
+          icon={Phone}
+          tone="bg-amber-50 text-amber-600"
+          title="Interested leads"
+          subtitle="Waiting for a closer to take the meeting."
+          empty="No leads are waiting for a closer."
+          emptyHint="New interested leads will appear here automatically."
+          count={board?.awaitingCloser.length || 0}
+        >
         {board?.awaitingCloser.map((lead) => (
           <div key={lead.id} className="flex flex-col gap-3 border-b border-slate-50 py-3 last:border-0 lg:flex-row lg:items-center">
             <div className="min-w-0 flex-1">
@@ -316,15 +352,19 @@ export default function WorkflowPage() {
         {canManage && board && board.people.closers.length === 0 && board.awaitingCloser.length > 0 && (
           <p className="pt-2 text-[11px] text-amber-700">No active users have the Closer role yet — invite one from Users.</p>
         )}
-      </Section>
+        </Section>
 
-      {/* 2. Deals with closers */}
-      <Section
-        title="2 · With closers"
-        subtitle="Open deals. The closer runs the meeting and marks the deal Won when the client agrees to work with you."
-        empty="No open deals with closers right now."
-        count={board?.withClosers.length || 0}
-      >
+        {/* 2. Deals with closers */}
+        <Section
+          step="02"
+          icon={UserCheck}
+          tone="bg-indigo-50 text-indigo-600"
+          title="With closers"
+          subtitle="Open deals currently being worked by a closer."
+          empty="No open deals with closers."
+          emptyHint="Assigned deals will be tracked here until they are won."
+          count={board?.withClosers.length || 0}
+        >
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead>
@@ -373,15 +413,19 @@ export default function WorkflowPage() {
             </tbody>
           </table>
         </div>
-      </Section>
+        </Section>
 
-      {/* 3. Won deals → start the project */}
-      <Section
-        title="3 · Won deals waiting for a delivery team"
-        subtitle="The client said yes. Create the project and assign developers — and a tester or DevOps if needed."
-        empty="No won deals are waiting for a project."
-        count={board?.awaitingDelivery.length || 0}
-      >
+        {/* 3. Won deals → start the project */}
+        <Section
+          step="03"
+          icon={Trophy}
+          tone="bg-emerald-50 text-emerald-600"
+          title="Won deals"
+          subtitle="Ready to become a staffed delivery project."
+          empty="No won deals are waiting for delivery."
+          emptyHint="A project can be started as soon as a deal is marked won."
+          count={board?.awaitingDelivery.length || 0}
+        >
         {board?.awaitingDelivery.map((deal) => (
           <div key={deal.id} className="flex flex-col gap-3 border-b border-slate-50 py-3 last:border-0 sm:flex-row sm:items-center">
             <div className="min-w-0 flex-1">
@@ -400,15 +444,19 @@ export default function WorkflowPage() {
             )}
           </div>
         ))}
-      </Section>
+        </Section>
 
-      {/* 4. Active projects and their coverage */}
-      <Section
-        title="4 · Active projects"
-        subtitle="Who is developing, testing and deploying each project. Add a tester or DevOps at any time from the project page."
-        empty="No active projects."
-        count={board?.activeProjects.length || 0}
-      >
+        {/* 4. Active projects and their coverage */}
+        <Section
+          step="04"
+          icon={FolderKanban}
+          tone="bg-blue-50 text-blue-600"
+          title="Active projects"
+          subtitle="Delivery coverage across development, QA, and DevOps."
+          empty="No active projects."
+          emptyHint="Projects created from won deals will show their team coverage here."
+          count={board?.activeProjects.length || 0}
+        >
         {board?.activeProjects.map((project) => (
           <div key={project.id} className="flex flex-col gap-2 border-b border-slate-50 py-3 last:border-0 lg:flex-row lg:items-center">
             <div className="min-w-0 lg:w-72">
@@ -437,7 +485,8 @@ export default function WorkflowPage() {
             </Link>
           </div>
         ))}
-      </Section>
+        </Section>
+      </div>
 
       {startingDeal && board && (
         <StartProjectModal
@@ -456,28 +505,50 @@ export default function WorkflowPage() {
 }
 
 function Section({
+  step,
+  icon: Icon,
+  tone,
   title,
   subtitle,
   empty,
+  emptyHint,
   count,
   children,
 }: {
+  step: string;
+  icon: typeof Phone;
+  tone: string;
   title: string;
   subtitle: string;
   empty: string;
+  emptyHint: string;
   count: number;
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-2xl border border-slate-100/90 bg-white p-5 shadow-sm">
-      <div className="mb-2 flex items-start justify-between gap-3 border-b border-slate-100 pb-3">
-        <div>
-          <h3 className="text-sm font-extrabold text-slate-900">{title}</h3>
-          <p className="mt-0.5 text-[11px] text-slate-500">{subtitle}</p>
+    <section className="overflow-hidden rounded-[22px] border border-slate-200/80 bg-white shadow-sm shadow-slate-200/40">
+      <div className="flex items-start gap-3 border-b border-slate-100 px-5 py-4">
+        <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${tone}`}>
+          <Icon className="h-4 w-4" />
         </div>
-        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-bold text-slate-600">{count}</span>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-black tracking-[0.16em] text-slate-400">{step}</span>
+            <h3 className="truncate text-sm font-extrabold text-slate-900">{title}</h3>
+          </div>
+          <p className="mt-1 text-[11px] text-slate-500">{subtitle}</p>
+        </div>
+        <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-black text-slate-600">{count}</span>
       </div>
-      {count === 0 ? <p className="py-4 text-center text-xs text-slate-400">{empty}</p> : children}
+      {count === 0 ? (
+        <div className="flex min-h-[142px] flex-col items-center justify-center px-6 py-7 text-center">
+          <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-slate-50 text-slate-300">
+            <Icon className="h-4 w-4" />
+          </div>
+          <p className="text-xs font-bold text-slate-600">{empty}</p>
+          <p className="mt-1 max-w-xs text-[11px] leading-5 text-slate-400">{emptyHint}</p>
+        </div>
+      ) : <div className="px-5 py-1">{children}</div>}
     </section>
   );
 }
