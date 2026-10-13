@@ -716,6 +716,27 @@ function LeadsPage() {
     }
   };
 
+  const handleBulkUnassign = () => {
+    const ids = [...selectedRows];
+    setConfirmDialog({
+      title: `Unassign ${ids.length} lead${ids.length > 1 ? "s" : ""}?`,
+      message: "This will remove their current setter assignment. You can assign them again at any time.",
+      confirmLabel: "Unassign",
+      onConfirm: async () => {
+        setConfirmDialog(null);
+        try {
+          await dispatch(bulkActionThunk({ action: "clearSetter", ids })).unwrap();
+          setSelectedRows([]);
+          setSelectAll(false);
+          setShowBulkActions(false);
+          setToast(`${ids.length} lead${ids.length > 1 ? "s" : ""} unassigned`);
+        } catch {
+          setError("Failed to unassign leads");
+        }
+      },
+    });
+  };
+
   const handleDeleteLead = (id: string) => {
     const lead = leads.find((item) => item.id === id) || (selectedLead?.id === id ? selectedLead : null);
     setConfirmDialog({
@@ -888,14 +909,22 @@ function LeadsPage() {
             </div>
             <div className="flex flex-wrap items-center gap-2">
               {canAssignLeads && (
-                <select
-                  onChange={(event) => { if (event.target.value) handleBulkAssign(event.target.value); event.target.value = ""; }}
-                  className="bg-white border border-slate-200 text-xs font-semibold text-slate-700 px-3 py-1.5 rounded-lg cursor-pointer"
-                  defaultValue=""
-                >
-                  <option value="">Assign to...</option>
-                  {assignees.map((assignee) => <option key={assignee.id} value={assignee.id}>{assignee.name} ({assignee.role})</option>)}
-                </select>
+                <>
+                  <select
+                    onChange={(event) => { if (event.target.value) handleBulkAssign(event.target.value); event.target.value = ""; }}
+                    className="bg-white border border-slate-200 text-xs font-semibold text-slate-700 px-3 py-1.5 rounded-lg cursor-pointer"
+                    defaultValue=""
+                  >
+                    <option value="">Assign to...</option>
+                    {assignees.map((assignee) => <option key={assignee.id} value={assignee.id}>{assignee.name} ({assignee.role})</option>)}
+                  </select>
+                  <button
+                    onClick={handleBulkUnassign}
+                    className="bg-white border border-amber-200 text-amber-700 text-xs font-semibold px-3 py-1.5 rounded-lg hover:bg-amber-50 cursor-pointer"
+                  >
+                    Unassign
+                  </button>
+                </>
               )}
               <select
                 onChange={(e) => { if (e.target.value) handleBulkStatus(e.target.value); e.target.value = ""; }}
