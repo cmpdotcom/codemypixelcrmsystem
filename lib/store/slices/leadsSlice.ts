@@ -392,6 +392,12 @@ const leadsSlice = createSlice({
                 lead.setterImg = assignee.image;
               }
             });
+            // Assigned leads no longer belong in the active unassigned result set.
+            if (state.filters.setterFilter === "__unassigned__") {
+              const removed = state.leads.filter((item) => ids.includes(item.id)).length;
+              state.leads = state.leads.filter((item) => !ids.includes(item.id));
+              state.total = Math.max(0, state.total - removed);
+            }
           }
         }
       })

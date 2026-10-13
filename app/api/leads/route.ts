@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getActor, leadScope, resolveUserIdByName, findActiveUser, fullName, notify } from "@/lib/workflow";
 
+const UNASSIGNED_SETTER_FILTER = "__unassigned__";
+
 // GET /api/leads - List leads with pagination, search, filters
 export async function GET(request: NextRequest) {
   try {
@@ -33,7 +35,14 @@ export async function GET(request: NextRequest) {
     where.source = source;
   }
   if (setter && setter !== "All Setters" && actor.isManager) {
-    where.setter = setter;
+    if (setter === UNASSIGNED_SETTER_FILTER) {
+      // A lead is unassigned only when neither its user relation nor its legacy
+      // display name has been set. Checking both avoids showing partially migrated data.
+      where.setterId = null;
+      where.setter = null;
+    } else {
+      where.setter = setter;
+    }
   }
 
   const [leads, total] = await Promise.all([

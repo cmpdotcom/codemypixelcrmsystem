@@ -279,6 +279,7 @@ const SOURCES = ["LinkedIn", "Website", "Referral", "Instagram", "Cold Call", "G
 const STATUSES = ["New", "Contacted", "Qualified", "Meeting", "Proposal", "Not Interested", "Nurture", "Converted", "Lost"];
 const SERVICES = ["Custom ERP", "Website", "Mobile App", "CRM", "ERP", "Dashboard", "E-commerce", "Other"];
 const CLOSED_LEAD_STATUSES = ["Converted", "Lost", "Not Interested"];
+const UNASSIGNED_SETTER_FILTER = "__unassigned__";
 
 export default function LeadsPageWrapper() {
   return (
@@ -1018,6 +1019,7 @@ function LeadsPage() {
                 </select>
                 {canAssignLeads && <select value={setterFilter} onChange={(event) => dispatch(setSetterFilterAction(event.target.value))} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700">
                   <option value="">All Setters</option>
+                  <option value={UNASSIGNED_SETTER_FILTER}>Unassigned Leads</option>
                   {assignees.map((assignee) => <option key={assignee.id} value={assignee.name}>{assignee.name}</option>)}
                 </select>}
                 {activeFilterCount > 0 && (
