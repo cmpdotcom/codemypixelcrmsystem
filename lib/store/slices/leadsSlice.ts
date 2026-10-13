@@ -63,6 +63,8 @@ export interface LeadFilters {
   activeTab: string;
   sourceFilter: string;
   setterFilter: string;
+  importedFrom: string;
+  importedTo: string;
 }
 
 interface LeadsState {
@@ -95,6 +97,8 @@ const initialState: LeadsState = {
     activeTab: "All Leads",
     sourceFilter: "",
     setterFilter: "",
+    importedFrom: "",
+    importedTo: "",
   },
 };
 
@@ -132,6 +136,8 @@ export const fetchLeads = createAsyncThunk(
     if (filters.activeTab !== "All Leads") params.set("status", filters.activeTab);
     if (filters.sourceFilter) params.set("source", filters.sourceFilter);
     if (filters.setterFilter) params.set("setter", filters.setterFilter);
+    if (filters.importedFrom) params.set("importedFrom", filters.importedFrom);
+    if (filters.importedTo) params.set("importedTo", filters.importedTo);
     const res = await fetch(`/api/leads?${params}`);
     if (!res.ok) {
       const payload = await res.json().catch(() => null);
@@ -260,9 +266,19 @@ const leadsSlice = createSlice({
       state.filters.setterFilter = action.payload;
       state.filters.page = 1;
     },
+    setImportedFrom(state, action: PayloadAction<string>) {
+      state.filters.importedFrom = action.payload;
+      state.filters.page = 1;
+    },
+    setImportedTo(state, action: PayloadAction<string>) {
+      state.filters.importedTo = action.payload;
+      state.filters.page = 1;
+    },
     clearLeadFilters(state) {
       state.filters.sourceFilter = "";
       state.filters.setterFilter = "";
+      state.filters.importedFrom = "";
+      state.filters.importedTo = "";
       state.filters.page = 1;
     },
     setSelectedLead(state, action: PayloadAction<Lead | null>) {
@@ -414,6 +430,8 @@ export const {
   setActiveTab,
   setSourceFilter,
   setSetterFilter,
+  setImportedFrom,
+  setImportedTo,
   clearLeadFilters,
   setSelectedLead,
   patchSelectedLead,

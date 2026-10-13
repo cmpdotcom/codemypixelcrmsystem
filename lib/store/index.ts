@@ -29,6 +29,8 @@ export {
   setActiveTab,
   setSourceFilter,
   setSetterFilter,
+  setImportedFrom,
+  setImportedTo,
   clearLeadFilters,
   setSelectedLead,
   patchSelectedLead,
