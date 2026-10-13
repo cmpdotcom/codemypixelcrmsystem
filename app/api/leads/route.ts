@@ -17,6 +17,8 @@ export async function GET(request: NextRequest) {
   const status = searchParams.get("status") || "";
   const source = searchParams.get("source") || "";
   const setter = searchParams.get("setter") || "";
+  const importedFrom = searchParams.get("importedFrom") || "";
+  const importedTo = searchParams.get("importedTo") || "";
 
   const scope = leadScope(actor);
   const where: Record<string, unknown> = { AND: [scope] };
@@ -43,6 +45,14 @@ export async function GET(request: NextRequest) {
     } else {
       where.setter = setter;
     }
+  }
+  // Date inputs are calendar days. Include the entire selected end date.
+  const isDate = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value);
+  if (isDate(importedFrom) || isDate(importedTo)) {
+    const createdAt: { gte?: Date; lte?: Date } = {};
+    if (isDate(importedFrom)) createdAt.gte = new Date(`${importedFrom}T00:00:00.000Z`);
+    if (isDate(importedTo)) createdAt.lte = new Date(`${importedTo}T23:59:59.999Z`);
+    where.createdAt = createdAt;
   }
 
   const [leads, total] = await Promise.all([

@@ -55,6 +55,8 @@ import {
   setActiveTab as setActiveTabAction,
   setSourceFilter as setSourceFilterAction,
   setSetterFilter as setSetterFilterAction,
+  setImportedFrom as setImportedFromAction,
+  setImportedTo as setImportedToAction,
   clearLeadFilters,
   setSelectedLead as setSelectedLeadAction,
   clearLeadsError,
@@ -309,7 +311,7 @@ function LeadsPage() {
     selectedLead,
     loading,
     error: leadsError,
-    filters: { page, pageSize, searchQuery, activeTab, sourceFilter, setterFilter },
+    filters: { page, pageSize, searchQuery, activeTab, sourceFilter, setterFilter, importedFrom, importedTo },
   } = useAppSelector((state) => state.leads);
   const [showFilters, setShowFilters] = useState(false);
   const [showColumns, setShowColumns] = useState(false);
@@ -361,7 +363,7 @@ function LeadsPage() {
 
   useEffect(() => {
     dispatch(fetchLeadsThunk());
-  }, [dispatch, page, pageSize, searchQuery, activeTab, sourceFilter, setterFilter]);
+  }, [dispatch, page, pageSize, searchQuery, activeTab, sourceFilter, setterFilter, importedFrom, importedTo]);
 
   // Only hit the API once the user pauses typing, instead of on every keystroke.
   useEffect(() => {
@@ -795,7 +797,7 @@ function LeadsPage() {
     })),
   ];
   const statusOptions = leadSettings.statuses.length ? leadSettings.statuses.map((status) => status.name) : STATUSES;
-  const activeFilterCount = (sourceFilter ? 1 : 0) + (setterFilter ? 1 : 0);
+  const activeFilterCount = (sourceFilter ? 1 : 0) + (setterFilter ? 1 : 0) + (importedFrom || importedTo ? 1 : 0);
   const isFiltered = !!searchQuery || activeFilterCount > 0 || activeTab !== "All Leads";
   const firstLoad = loading && leads.length === 0;
   // With the xl side panel open the table loses ~360px, so drop the columns the panel already shows.
@@ -1022,6 +1024,12 @@ function LeadsPage() {
                   <option value={UNASSIGNED_SETTER_FILTER}>Unassigned Leads</option>
                   {assignees.map((assignee) => <option key={assignee.id} value={assignee.name}>{assignee.name}</option>)}
                 </select>}
+                <label className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-700">
+                  <span className="whitespace-nowrap text-slate-500">Imported</span>
+                  <input aria-label="Imported from date" type="date" value={importedFrom} max={importedTo || undefined} onChange={(event) => dispatch(setImportedFromAction(event.target.value))} className="min-w-0 bg-transparent outline-none" />
+                  <span className="text-slate-300">–</span>
+                  <input aria-label="Imported to date" type="date" value={importedTo} min={importedFrom || undefined} onChange={(event) => dispatch(setImportedToAction(event.target.value))} className="min-w-0 bg-transparent outline-none" />
+                </label>
                 {activeFilterCount > 0 && (
                   <button onClick={() => dispatch(clearLeadFilters())} className="text-xs font-semibold text-blue-600 hover:text-blue-700 text-left sm:ml-1">Clear filters</button>
                 )}
