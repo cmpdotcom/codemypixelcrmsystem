@@ -15,6 +15,10 @@ function optionalDate(value: unknown) {
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
+function isValidEmail(value: string) {
+  return /^\S+@\S+\.\S+$/.test(value);
+}
+
 // POST /api/leads/import - Insert a validated batch of leads in one database call.
 export async function POST(request: NextRequest) {
   const session = await auth();
@@ -62,13 +66,15 @@ export async function POST(request: NextRequest) {
     const row = entry as Record<string, unknown>;
     const name = typeof row.name === "string" ? row.name.trim() : "";
     const company = typeof row.company === "string" ? row.company.trim() : "";
-    const email = typeof row.email === "string" ? row.email.trim() : "";
-    if (!name || !company || !/^\S+@\S+\.\S+$/.test(email)) continue;
+    const rawEmail = typeof row.email === "string" ? row.email.trim() : "";
+    const email = isValidEmail(rawEmail) ? rawEmail : "";
+    const phone = optionalString(row.phone);
+    if (!name || !company || (!email && !phone)) continue;
     validLeads.push({
       name,
       company,
       email,
-      phone: optionalString(row.phone),
+      phone,
       location: optionalString(row.location),
       linkedin: optionalString(row.linkedin),
       source: optionalString(row.source) || "Website",
@@ -91,12 +97,17 @@ export async function POST(request: NextRequest) {
 
   // Imports can be retried after a network interruption. Avoid creating the same
   // email twice, including duplicate rows within the same uploaded file.
-  const existing = await prisma.lead.findMany({
-    where: { email: { in: validLeads.map((lead) => lead.email) } },
-    select: { email: true },
-  });
+  const importedEmails = validLeads.map((lead) => lead.email).filter(Boolean);
+  const existing = importedEmails.length
+    ? await prisma.lead.findMany({
+        where: { email: { in: importedEmails } },
+        select: { email: true },
+      })
+    : [];
   const seenEmails = new Set(existing.map((lead) => lead.email.toLowerCase()));
   const newLeads = validLeads.filter((lead) => {
+    // Phone-only leads have no email to de-duplicate against; keep each row.
+    if (!lead.email) return true;
     const email = lead.email.toLowerCase();
     if (seenEmails.has(email)) return false;
     seenEmails.add(email);
