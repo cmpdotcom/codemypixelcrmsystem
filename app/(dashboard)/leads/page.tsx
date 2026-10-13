@@ -143,7 +143,7 @@ const leadImportFields: { key: LeadImportField; label: string; required?: boolea
   { key: "firstName", label: "First Name (combine)" },
   { key: "lastName", label: "Last Name (combine)" },
   { key: "company", label: "Company", required: true },
-  { key: "email", label: "Email", required: true },
+  { key: "email", label: "Email" },
   { key: "phone", label: "Phone" },
   { key: "location", label: "Location" },
   { key: "linkedin", label: "LinkedIn" },
@@ -160,7 +160,7 @@ const leadImportFields: { key: LeadImportField; label: string; required?: boolea
 ];
 
 const leadImportAliases: Record<LeadImportField, string[]> = {
-  name: ["name", "fullname", "full name", "contactname", "leadname"],
+  name: ["name", "fullname", "full name", "contactname", "leadname", "companyname"],
   firstName: ["firstname", "first name", "givenname", "given name"],
   lastName: ["lastname", "last name", "surname", "familyname", "family name"],
   company: ["company", "companyname", "business", "organization"],
@@ -570,11 +570,13 @@ function LeadsPage() {
 
   const confirmImport = async () => {
     if (!importPreview) return;
-    const requiredFields = leadImportFields.filter((field) => field.required);
     const hasNameMapping = Boolean(importMapping.name || (importMapping.firstName && importMapping.lastName));
-    const missingField = requiredFields.find((field) => field.key === "name" ? !hasNameMapping : !importMapping[field.key]);
-    if (missingField) {
-      setError(`Please map Full Name, or map both First Name and Last Name.`);
+    if (!hasNameMapping || !importMapping.company) {
+      setError("Please map Full Name (or both First and Last Name) and Company.");
+      return;
+    }
+    if (!importMapping.email && !importMapping.phone) {
+      setError("Please map Email or Phone. Each lead needs at least one contact method.");
       return;
     }
 
@@ -587,9 +589,10 @@ function LeadsPage() {
           : [importMapping.firstName ? row[importMapping.firstName] : "", importMapping.lastName ? row[importMapping.lastName] : ""].filter(Boolean).join(" ");
         const company = importMapping.company ? row[importMapping.company] : "";
         const email = importMapping.email ? row[importMapping.email] : "";
-        return Boolean(name?.trim() && company?.trim() && email?.match(/^\S+@\S+\.\S+$/));
+        const phone = importMapping.phone ? row[importMapping.phone] : "";
+        return Boolean(name?.trim() && company?.trim() && (email?.match(/^\S+@\S+\.\S+$/) || phone?.trim()));
       });
-      if (validRows.length === 0) throw new Error("No valid rows found. Check the required field mappings and email values.");
+      if (validRows.length === 0) throw new Error("No valid rows found. Each lead needs a name, company, and either a valid email or phone number.");
 
       setImportProgress({ completed: 0, total: validRows.length });
       const importPayload = validRows.map((row) => {
