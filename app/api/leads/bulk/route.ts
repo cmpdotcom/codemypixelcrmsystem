@@ -72,5 +72,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true, updated: result.count });
   }
 
+  if (action === "clearSetter") {
+    if (!actor.isManager) {
+      return NextResponse.json({ error: "Only workspace managers can unassign leads" }, { status: 403 });
+    }
+    const result = await prisma.lead.updateMany({
+      where,
+      data: { setter: null, setterId: null, setterImg: null },
+    });
+    return NextResponse.json({ success: true, updated: result.count });
+  }
+
   return NextResponse.json({ error: "Invalid action" }, { status: 400 });
 }

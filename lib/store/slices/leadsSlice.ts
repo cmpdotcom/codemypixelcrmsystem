@@ -415,6 +415,21 @@ const leadsSlice = createSlice({
               state.total = Math.max(0, state.total - removed);
             }
           }
+        } else if (type === "clearSetter") {
+          ids.forEach((id) => {
+            const lead = state.leads.find((item) => item.id === id);
+            if (lead) {
+              lead.setterId = null;
+              lead.setter = null;
+              lead.setterImg = null;
+            }
+          });
+          // The matching rows disappear immediately when viewing one setter's queue.
+          if (state.filters.setterFilter && state.filters.setterFilter !== "__unassigned__") {
+            const removed = state.leads.filter((item) => ids.includes(item.id)).length;
+            state.leads = state.leads.filter((item) => !ids.includes(item.id));
+            state.total = Math.max(0, state.total - removed);
+          }
         }
       })
       .addCase(bulkAction.rejected, (state, action) => {
